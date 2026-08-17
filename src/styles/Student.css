@@ -1,0 +1,246 @@
+.student{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100vh;
+    color: whitesmoke;
+    justify-content: space-between;
+    padding-top: 60px;
+}
+
+.student h1{
+    padding: 0;
+    margin: 0;
+    font-style: italic;
+    color: var(--text-color-g);
+    font-size: 40px;
+    cursor: pointer;
+}
+
+.s-name{
+    color: rgb(197, 196, 196);
+}
+
+.s-header{
+    display: flex;
+    justify-content: space-between;
+    color: var(--primary-dark);
+    background-color: rgb(1, 49, 20);
+    padding-inline: 50px;
+    min-height: 60px;
+    position: fixed;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+    box-shadow: 0 0 10px gray;
+}
+
+
+.right-icons{
+    gap: 10px;
+    font-size: 28px;
+}
+
+.notif-box{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 300px;
+    height: 400px;
+    z-index: 10;
+    border-radius: 10px;
+    color: var(--text);
+    font-size: small;
+    transform: translateY(101%);
+    background-color: var(--bg);
+    padding: 10px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    border: 1px solid gray;
+    overflow-y: auto;
+
+    h2{
+        align-self: flex-start;
+        color: var(--primary-dark);
+        width: 100%;
+        padding-bottom: 10px;
+        border-bottom: 1px solid white;
+    }
+    p{
+        cursor: pointer;
+        width: 100%;
+        padding: 5px;
+        transition: all 0.2s ease;
+        padding-bottom: 5px;
+        border-bottom: 1px solid gray;
+    }
+    p:hover{
+        background-color: gray;
+        border-radius: 5px;
+
+    }
+}
+
+.menu, .notif, .profile{
+    position: relative;
+    height: 40px;
+    width: 40px;
+    display: flex;
+    justify-content: center;
+    border-radius: 5px;
+    transition: all 0.3s linear;
+}
+
+.menu:hover, .notif:hover, .profile:hover{
+    background-color: black;
+}
+
+.right-icons div:hover .icon{
+    color: white;
+}
+.icon{
+    cursor: pointer;
+    color: var(--text-color-g);
+    transition: all 0.3s linear;
+}
+.profile{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.logout{
+    position: absolute;
+    width: 100px;
+    height: fit-content;
+    padding: 10px;
+    bottom: 0;
+    transform: translateY(110%);
+    right: 0;
+    border: 1px solid gray;
+    border-radius: 5px;
+    background-color: black;
+    display: flex;
+    flex-direction: column;
+}
+
+.logout button{
+    border: none;
+    background: white;
+    height: 30px;
+    width: 90px;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+.logout button:hover{
+    opacity: 0.7;
+}
+.s-header div{
+    display: flex;
+    align-items: center;
+}
+
+.h-left{
+    gap: 50px;
+}
+
+.s-body{
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+}
+
+.b-menu{
+    height: 100%;
+    background-color: rgb(45, 46, 45);
+    width: 250px;
+    transition: all 0.5s ease;
+    position: fixed;
+    left: 0;
+    top: calc(0 - 60px);
+    color: rgb(197, 196, 196);
+    z-index: 100;
+}
+
+.menu-info{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 40px;
+    margin-bottom: 20px;
+    color: rgb(197, 196, 196);
+    overflow: hidden;
+}
+
+.menu-info div{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    border-radius: 10px;
+}
+.menu-info h2{
+    color: var(--text-color-g);
+}
+.menu-info h1{
+    font-style: normal;
+    margin: 0;
+}
+.menu-info p{
+    font-style: italic;
+}
+.menu-info h4{
+    align-self: flex-start;
+}
+
+.b-menu.close{
+    transform: translateX(-100%);
+}
+
+.b-menu.closeBar{
+    transform: translateX(-100%);
+}
+
+.b-wrapper{
+    height: 100%;
+    width: 250px;
+    transition: all 0.5s ease;
+}
+.b-wrapper.close{
+    width: 0;
+}
+
+
+.b-content{
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.b-content::before{
+    content: "";
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    background-image: black;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    z-index: -1;
+    opacity: 0.3;
+}
+
+.box{
+    height: 300px;
+    width: 90%;
+    border: 3px solid var(--text-color-g);
+    border-radius: 20px;
+}
+

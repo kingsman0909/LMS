@@ -1,0 +1,379 @@
+import React, { useState, useEffect } from 'react';
+import '../../styles/Admin.css';
+import LineSidebar from './animatedComponents/Sidebar';
+import Applicant from './AdminPage/Applicants';
+import AllStudents from './AdminPage/AllStudents';
+import AllSubjects from './AdminPage/AllSubjects';
+import Sections from './AdminPage/Sections';
+import AllPrograms from './AdminPage/AllPrograms';
+import AllProfessor from './AdminPage/AllProfessor';
+import Announcements from './AdminPage/Announcements';
+import Schedule from './AdminPage/Schedule';
+
+import {
+    HiMenu,
+    HiBell,
+    HiUserCircle,
+    HiOutlineUsers,
+    HiOutlineAcademicCap,
+    HiOutlineBookOpen,
+    HiOutlineSpeakerphone
+} from 'react-icons/hi';
+
+import {
+    useNavigate,
+    Routes,
+    Route
+} from 'react-router-dom';
+
+const fetchAnnouncements = async () => {
+    try {
+        const token = localStorage.getItem(`${props.role}_token`);
+
+        const response = await fetch(
+            'http://localhost:3000/api/auth/announcements',
+            {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        console.log(data);
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
+        setAnnouncements(data.announcements);
+    } catch (error) {
+        console.error("hello");
+    }
+};
+
+const Admin = ({role}) => {
+
+    const [openMenu, setOpenMenu] = useState(false);
+    const [openProfile, setOpenProfile] = useState(false);
+    const [openNotif, setOpenNotif] = useState(false);
+    const [academicTerm, setAcademicTerm] = useState([]);
+    const [programs, setPrograms] = useState([]);
+    const [announcements, setAnnouncements] = useState([]);
+
+    const navigate = useNavigate();
+
+    const fetchTerm = async () => {
+        try {
+        const token = localStorage.getItem('admin_token');
+
+        const response = await fetch(
+            'http://localhost:3000/api/auth/getAcademicTerm',
+            {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        console.log(data);
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
+        console.log(data.term.id);
+        setAcademicTerm(data.term);
+    } catch (error) {
+        console.error("hello");
+    }
+    };
+
+    useEffect(() => {
+        fetchTerm();
+        fetchPrograms();
+    }, []);
+    
+    const fetchPrograms = async () => {
+
+    try {
+
+        const token = localStorage.getItem("admin_token");
+
+        const response = await fetch(
+            "http://localhost:3000/api/auth/getPrograms",
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message || "Failed to fetch programs"
+            );
+        }
+
+        setPrograms(data.programs);
+
+    } catch (error) {
+
+        console.error(
+            "Failed to fetch programs:",
+            error
+        );
+
+        alert(
+            "Unable to load available programs."
+        );
+    }
+};
+
+
+    const handleLogout = () => {
+
+        localStorage.removeItem(`${role}_token`);
+
+        navigate('/');
+
+    };
+      const handlePage = (index, label) =>{
+    switch(index){
+      case 0:
+        navigate('/admin');
+        break;
+      case 1:
+        navigate('/admin/applicants')
+        break;
+    case 2:
+        navigate('/admin/programs');
+        break;
+    case 3:
+        navigate('/admin/allStudents');
+        break;
+    case 4:
+        navigate('/admin/professors');
+        break;
+    case 5:
+        navigate('/admin/allSubjects');
+        break;
+    case 6:
+        navigate('/admin/schedules');
+        break;
+    case 7:
+        navigate('/admin/sections');
+        break;
+    case 8:
+        navigate('/admin/announcements');
+        break;
+      default:
+        alert("Error in navigating page!");
+        break;
+    }
+  }
+  
+    return (
+
+        <div className="admin-dashboard">
+
+            {/* ================= HEADER ================= */}
+
+            <header className="admin-header">
+
+                <div className="admin-header-left">
+
+                    <div className="admin-logo">
+                        LMS
+                    </div>
+
+                    <div className="admin-title">
+
+                        <h3>
+                            Administration Panel
+                        </h3>
+
+                        <span>
+                            Learning Management System
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div className="admin-header-right">
+
+
+                    {/* MENU */}
+
+                    <button
+                        className="admin-header-button"
+                        onClick={() => setOpenMenu(!openMenu)}
+                    >
+
+                        <HiMenu />
+
+                    </button>
+
+
+                    {/* NOTIFICATION */}
+
+                    <div className="admin-notification-wrapper">
+
+                        <button
+                            className="admin-header-button"
+                            onClick={() => setOpenNotif(!openNotif)}
+                        >
+
+                            <HiBell />
+
+                            {announcements.length > 0 && (
+
+                                <span className="notification-badge">
+                                    {announcements.length}
+                                </span>
+
+                            )}
+
+                        </button>
+
+
+                        {openNotif && (
+
+                            <div className="admin-notification-box">
+
+                                <div className="notification-header">
+
+                                    <h3>
+                                        Notifications
+                                    </h3>
+
+                                    <span>
+                                        {announcements.length} new
+                                    </span>
+
+                                </div>
+
+
+                                <div className="notification-list">
+
+                                    {announcements.map((notification) => (
+
+                                        <div
+                                            className="notification-item"
+                                            key={notification.id}
+                                        >
+
+                                            <HiBell />
+
+                                            <div>
+
+                                                <strong>
+                                                    {notification.title}
+                                                </strong>
+
+                                                <p>
+                                                    {notification.message}
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    ))}
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+                    </div>
+
+
+                    {/* PROFILE */}
+
+                    <div className="admin-profile-wrapper">
+
+                        <button
+                            className="admin-profile-button"
+                            onClick={() => setOpenProfile(!openProfile)}
+                        >
+
+                            <HiUserCircle />
+
+                            <span>
+                                Admin
+                            </span>
+
+                        </button>
+
+
+                        {openProfile && (
+
+                            <div className="admin-profile-menu">
+
+                                <button onClick={handleLogout}>
+                                    Logout
+                                </button>
+
+                            </div>
+
+                        )}
+
+                    </div>
+
+                </div>
+            </header>
+
+        <div className='admin-content'>
+            {/* ================= NAVBAR ================= */}
+            <div className={`admin-nav-wrapper ${openMenu ? "":"close"}`}>
+                <div className={`admin-nav ${openMenu ? "":"close"}`}>
+                    <h2>A.Y {academicTerm.school_year}<br></br>{academicTerm.semester}</h2>
+                <LineSidebar 
+                    items={['Dashboard','Applicants', 'Programs', 'Students', 
+                            'Professors', 'subjects', 'schedules', 
+                             'sections', 'Announcements ', 'Enrollments']}
+                    accentColor="rgb(50, 231, 50)"
+                    textColor="#c4c4c4"
+                    markerColor="#6c6c6c"
+                    showIndex
+                    showMarker
+                    proximityRadius={100}
+                    maxShift={30}
+                    falloff="smooth"
+                    markerLength={60}
+                    markerGap={0}
+                    tickScale={0.5}
+                    scaleTick
+                    itemGap={20}
+                    fontSize={1.1}
+                    smoothing={100}
+                    defaultActive={1}
+                    onItemClick={(index, label) => handlePage(index, label)}
+                        />
+                </div>
+            </div>
+
+            <Routes>
+                <Route path='/applicants' element={<Applicant />}></Route>
+                <Route path='/allStudents' element={<AllStudents />} />
+                <Route path='/allSubjects' element={<AllSubjects programs={programs}/>} />
+                <Route path='/sections' element={<Sections term={academicTerm}/>} />
+                <Route path='/programs' element={<AllPrograms />} />
+                <Route path='/schedules' element={<Schedule />} />
+                <Route path='/professors' element={<AllProfessor />} />
+                <Route path='/announcements' element={<Announcements />} />
+            </Routes>
+        </div>
+
+        </div>
+
+    );
+};
+export default Admin;

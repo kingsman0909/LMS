@@ -1,0 +1,25 @@
+import { useState, useEffect } from 'react'
+import './App.css' 
+import Landing from './components/auth/Landing';
+import Student from './components/pages/Student'
+import Profesor from './components/pages/Profesor';
+import { Routes, Route } from "react-router-dom";
+import Protect from './components/auth/ProtectedRoutes';
+import Enrol from './components/register/Enrol';
+import Admin from './components/pages/Admin';
+import AdminLogin from './components/pages/AdminLogin';
+
+function App() {
+  return (
+    <Routes>
+            <Route path="/" element={<Landing/>} />
+            <Route path='/student/*' element={<Protect allowedRole={"student"}><Student role="student"/></Protect>} />
+            <Route path='/profesor/*' element={<Protect allowedRole={"professor"}><Profesor role="professor"/></Protect>} />
+            <Route path='/admin/login' element={<AdminLogin />} />
+            <Route path='/admin/*' element={<Protect allowedRole={"admin"} ><Admin role="admin"/></Protect>} />
+            <Route path='/enrolment' element={<Enrol />}></Route>
+    </Routes>
+  )
+}
+
+export default App

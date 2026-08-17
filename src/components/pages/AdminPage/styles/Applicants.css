@@ -1,0 +1,281 @@
+.applicants-page {
+    width: 100%;
+    min-height: 100%;
+    padding: 5px;
+    color: #f5f5f5;
+}
+
+.applicants-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+.applicants-header h1 {
+    margin: 0;
+    font-size: 28px;
+    color: var(--primary-dark);
+}
+
+.applicants-header p {
+    margin: 6px 0 0;
+    color: #89928d;
+    font-size: 13px;
+}
+
+.applicant-count {
+    padding: 10px 15px;
+    border: 1px solid rgba(50,231,50,.2);
+    border-radius: 10px;
+    color: rgb(50,231,50);
+    background: rgba(50,231,50,.06);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.applicant-count span {
+    color: #8b938e;
+    font-size: 11px;
+    font-weight: normal;
+}
+
+.applicant-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 5px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    background: rgba(255,255,255,.035);
+}
+
+.applicant-tabs button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 18px;
+    border: none;
+    border-radius: 9px;
+    color: #89928d;
+    background: transparent;
+    cursor: pointer;
+    transition: .25s ease;
+}
+
+.applicant-tabs button:hover {
+    color: #fff;
+    background: rgba(255,255,255,.05);
+}
+
+.applicant-tabs button.active {
+    color: #061006;
+    background: rgb(50,231,50);
+}
+
+.applicant-tabs button span {
+    min-width: 20px;
+    padding: 2px 6px;
+    border-radius: 20px;
+    color: #cbd3ce;
+    background: rgba(255,255,255,.1);
+    font-size: 10px;
+}
+
+.applicant-tabs button.active span {
+    color: rgb(50,231,50);
+    background: #061006;
+}
+
+.applications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.application-card {
+    display: grid;
+    grid-template-columns: 1.3fr 1.8fr auto;
+    align-items: center;
+    gap: 25px;
+    padding: 18px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 16px;
+    background: rgba(20,27,23,.55);
+    backdrop-filter: blur(15px);
+    transition: .25s ease;
+}
+
+.application-card:hover {
+    border-color: rgba(50,231,50,.25);
+    transform: translateY(-2px);
+}
+
+.application-card.approved {
+    border-color: rgba(50,231,50,.25);
+}
+
+.application-card.rejected {
+    opacity: .55;
+}
+
+.applicant-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.applicant-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(50,231,50,.35);
+    border-radius: 50%;
+    color: rgb(50,231,50);
+    background: rgba(50,231,50,.08);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.applicant-avatar.professor {
+    border-color: rgba(100,180,255,.35);
+    color: #75baff;
+    background: rgba(100,180,255,.08);
+}
+
+.applicant-info h2 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.applicant-info p {
+    margin: 3px 0;
+    color: #a0aaa4;
+    font-size: 11px;
+}
+
+.applicant-info small {
+    color: #68716b;
+    font-size: 9px;
+}
+
+.application-details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.application-details div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.application-details span {
+    color: #68716b;
+    font-size: 9px;
+}
+
+.application-details strong {
+    color: #d8dedb;
+    font-size: 11px;
+}
+
+.application-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.application-actions button {
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: .2s ease;
+}
+
+.approve-btn {
+    border: 1px solid rgba(50,231,50,.35);
+    color: rgb(50,231,50);
+    background: rgba(50,231,50,.08);
+}
+
+.approve-btn:hover {
+    color: #061006;
+    background: rgb(50,231,50);
+}
+
+.reject-btn {
+    border: 1px solid rgba(255,100,100,.25);
+    color: #ff9292;
+    background: rgba(255,100,100,.06);
+}
+
+.reject-btn:hover {
+    color: #fff;
+    background: #b74747;
+}
+
+.approved-status {
+    color: rgb(50,231,50);
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.rejected-status {
+    color: #ff8585;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.applicant-model{
+    position: fixed;
+    min-width: 300px;
+    width: 70vw;
+    padding-inline: 10px;
+    top: 150px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--text);
+    border-radius: 20px;
+}
+
+@media (max-width: 1000px) {
+
+    .application-card {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .application-actions {
+        justify-content: flex-start;
+    }
+
+}
+
+@media (max-width: 600px) {
+
+    .applicants-header {
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .applicants-header h1 {
+        font-size: 22px;
+    }
+
+    .applicant-tabs {
+        overflow-x: auto;
+    }
+
+    .application-details {
+        grid-template-columns: 1fr 1fr;
+    }
+
+}
