@@ -408,7 +408,7 @@ drop table courses;
 drop table enrollments;
 SET FOREIGN_KEY_CHECKS = 1; -- enable foreign key checks turn it to 0 to delete table with foreign key
 	
-delete from sections
+delete from student_applications
 where id > 0;
 
 select * from time_slots;
@@ -428,7 +428,6 @@ select * from announcements;
 select * from academic_terms;
 select * from student_enrollments;
 select * from class_schedules;
-
 
 SHOW CREATE TABLE class_schedules;
 SHOW CREATE TABLE time_slots;
@@ -492,6 +491,8 @@ SET SESSION cte_max_recursion_depth = 5000;
 
 delete from student_applications
 where status = "pending" and id > 0;
+
+
 INSERT INTO student_applications
 (
     email,
@@ -606,4 +607,59 @@ SELECT
 FROM numbers;
 
 
-
+INSERT INTO student_applications
+(
+    email,
+    username,
+    password,
+    firstname,
+    middlename,
+    lastname,
+    course_id,
+    year_level,
+    section,
+    phone,
+    gender,
+    birthdate,
+    address,
+    status
+)
+SELECT
+    CONCAT('bscs_test_', n, '@example.com') AS email,
+    CONCAT('bscs_test_', n) AS username,
+    '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890' AS password,
+    CONCAT('BSCSFirst', n) AS firstname,
+    'Test' AS middlename,
+    CONCAT('BSCSStudent', n) AS lastname,
+    1 AS course_id,
+    CASE
+        WHEN n <= 125 THEN 1
+        WHEN n <= 250 THEN 2
+        WHEN n <= 375 THEN 3
+        ELSE 4
+    END AS year_level,
+    NULL AS section,
+    CONCAT('09', LPAD(n, 9, '0')) AS phone,
+    CASE
+        WHEN MOD(n, 2) = 0 THEN 'Male'
+        ELSE 'Female'
+    END AS gender,
+    DATE_ADD('2000-01-01', INTERVAL MOD(n, 3000) DAY) AS birthdate,
+    CONCAT('Test Address ', n) AS address,
+    'pending' AS status
+FROM (
+    SELECT
+        ones.n
+        + tens.n * 10
+        + hundreds.n * 100
+        + 1 AS n
+    FROM
+        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+         UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones
+    CROSS JOIN
+        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+         UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) tens
+    CROSS JOIN
+        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4) hundreds
+) numbers
+WHERE n <= 500;

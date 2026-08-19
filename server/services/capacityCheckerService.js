@@ -19,6 +19,8 @@ const DAY_ORDER = [
 
 const MAX_SIMULATED_SECTIONS = 500;
 
+const MAX_GLOBAL_SIMULATION_NODES = 50000;
+
 const yearLevelMap = {
     1: "1st Year",
     2: "2nd Year",
@@ -40,13 +42,15 @@ const log = (...args) => {
 
 /*
 |--------------------------------------------------------------------------
-| BASIC MAP HELPERS
+| BASIC OCCUPANCY HELPERS
 |--------------------------------------------------------------------------
 */
 
 function hasConflict(map, resourceId, slots) {
 
-    const occupied = map.get(Number(resourceId));
+    const id = Number(resourceId);
+
+    const occupied = map.get(id);
 
     if (!occupied) {
         return false;
@@ -65,13 +69,13 @@ function hasConflict(map, resourceId, slots) {
 
 function reserve(map, resourceId, slots) {
 
-    resourceId = Number(resourceId);
+    const id = Number(resourceId);
 
-    if (!map.has(resourceId)) {
-        map.set(resourceId, new Set());
+    if (!map.has(id)) {
+        map.set(id, new Set());
     }
 
-    const occupied = map.get(resourceId);
+    const occupied = map.get(id);
 
     for (const slot of slots) {
         occupied.add(Number(slot.id));
@@ -313,6 +317,14 @@ async function getProfessorMap(subjectIds) {
 |--------------------------------------------------------------------------
 | EXISTING OCCUPANCY
 |--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| Existing schedules are LOCKED.
+|
+| We NEVER regenerate them.
+|
+|--------------------------------------------------------------------------
 */
 
 async function getExistingOccupancy(
@@ -328,38 +340,150 @@ async function getExistingOccupancy(
             new Map()
     };
 
+
     const [rows] = await db.query(`
         SELECT
             cs.professor_id,
             cs.room_id,
             cs.time_slot_id
+
         FROM class_schedules cs
+
         WHERE cs.academic_term_id = ?
     `, [
         academicTermId
     ]);
+
 
     log(
         "Existing schedule records:",
         rows.length
     );
 
+
     for (const row of rows) {
 
-        reserve(
-            occupancy.professorSlots,
-            row.professor_id,
-            [{ id: row.time_slot_id }]
-        );
+        if (row.professor_id != null) {
 
-        reserve(
-            occupancy.roomSlots,
-            row.room_id,
-            [{ id: row.time_slot_id }]
-        );
+            reserve(
+                occupancy.professorSlots,
+                row.professor_id,
+                [
+                    {
+                        id:
+                            row.time_slot_id
+                    }
+                ]
+            );
+        }
+
+
+        if (row.room_id != null) {
+
+            reserve(
+                occupancy.roomSlots,
+                row.room_id,
+                [
+                    {
+                        id:
+                            row.time_slot_id
+                    }
+                ]
+            );
+        }
     }
 
+
     return occupancy;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| EXISTING SCHEDULED SECTIONS
+|--------------------------------------------------------------------------
+|
+| Only sections with actual schedules are counted as existing capacity.
+|
+|--------------------------------------------------------------------------
+*/
+
+async function getExistingSections(
+    academicTermId
+) {
+
+    const [rows] = await db.query(`
+        SELECT
+            s.id,
+            s.section_name,
+            s.program_id,
+            s.year_level,
+            s.max_students,
+
+            COUNT(DISTINCT cs.id) AS schedule_count,
+
+            COUNT(DISTINCT ss.student_id) AS student_count
+
+        FROM sections s
+
+        LEFT JOIN class_schedules cs
+            ON cs.section_id = s.id
+            AND cs.academic_term_id = ?
+
+        LEFT JOIN student_sections ss
+            ON ss.section_id = s.id
+            AND ss.academic_term_id = ?
+
+        WHERE s.academic_term_id = ?
+
+        GROUP BY
+            s.id,
+            s.section_name,
+            s.program_id,
+            s.year_level,
+            s.max_students
+
+        ORDER BY
+            s.program_id,
+            s.year_level,
+            s.id
+    `, [
+        academicTermId,
+        academicTermId,
+        academicTermId
+    ]);
+
+
+    return rows.map(row => ({
+
+        id:
+            Number(row.id),
+
+        sectionName:
+            row.section_name,
+
+        programId:
+            Number(row.program_id),
+
+        yearLevel:
+            Number(row.year_level),
+
+        maxStudents:
+            Number(
+                row.max_students ||
+                SECTION_CAPACITY
+            ),
+
+        scheduleCount:
+            Number(
+                row.schedule_count || 0
+            ),
+
+        studentCount:
+            Number(
+                row.student_count || 0
+            )
+    }));
 }
 
 
@@ -377,6 +501,7 @@ async function getCurriculum(
 
     const normalizedYear =
         yearLevelMap[Number(yearLevel)];
+
 
     const [rows] = await db.query(`
         SELECT
@@ -415,13 +540,14 @@ async function getCurriculum(
         normalizedYear
     ]);
 
+
     return rows;
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| BUILD REQUIREMENTS
+| REQUIREMENTS
 |--------------------------------------------------------------------------
 */
 
@@ -431,13 +557,18 @@ function buildRequirements(subjects) {
 
     let id = 0;
 
+
     for (const subject of subjects) {
 
         const lectureUnits =
-            Number(subject.lecture_units || 0);
+            Number(
+                subject.lecture_units || 0
+            );
 
         const labUnits =
-            Number(subject.lab_units || 0);
+            Number(
+                subject.lab_units || 0
+            );
 
 
         /*
@@ -450,7 +581,8 @@ function buildRequirements(subjects) {
 
             requirements.push({
 
-                id: id++,
+                id:
+                    id++,
 
                 subject_id:
                     Number(subject.subject_id),
@@ -480,7 +612,8 @@ function buildRequirements(subjects) {
 
             requirements.push({
 
-                id: id++,
+                id:
+                    id++,
 
                 subject_id:
                     Number(subject.subject_id),
@@ -500,13 +633,14 @@ function buildRequirements(subjects) {
         }
     }
 
+
     return requirements;
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| VALID ROOM
+| ROOM FILTER
 |--------------------------------------------------------------------------
 */
 
@@ -520,11 +654,13 @@ function getSuitableRooms(
             ? "laboratory"
             : "lecture";
 
+
     return rooms.filter(room => {
 
         return (
 
-            String(room.room_type).toLowerCase() ===
+            String(room.room_type)
+                .toLowerCase() ===
             requiredType
 
             &&
@@ -557,6 +693,7 @@ function findAssignment({
     occupancy,
 
     sectionOccupiedSlots
+
 }) {
 
     if (!professors.length) {
@@ -587,11 +724,12 @@ function findAssignment({
 
     /*
     |--------------------------------------------------------------------------
-    | TRY EVERY RESOURCE COMBINATION
+    | SAME CONSTRAINTS AS SCHEDULER
     |--------------------------------------------------------------------------
     */
 
     for (const window of windows) {
+
 
         /*
         |--------------------------------------------------------------------------
@@ -600,6 +738,7 @@ function findAssignment({
         */
 
         let sectionConflict = false;
+
 
         for (const slot of window.slots) {
 
@@ -613,6 +752,7 @@ function findAssignment({
                 break;
             }
         }
+
 
         if (sectionConflict) {
             continue;
@@ -659,12 +799,6 @@ function findAssignment({
                 }
 
 
-                /*
-                |--------------------------------------------------------------------------
-                | VALID ASSIGNMENT
-                |--------------------------------------------------------------------------
-                */
-
                 return {
 
                     success: true,
@@ -693,7 +827,8 @@ function findAssignment({
 
         reason:
             `All professor/room/time combinations ` +
-            `exhausted for ${requirement.subject_code} ` +
+            `exhausted for ` +
+            `${requirement.subject_code} ` +
             `(${requirement.type})`
     };
 }
@@ -701,13 +836,17 @@ function findAssignment({
 
 /*
 |--------------------------------------------------------------------------
-| SIMULATE ONE SECTION
+| SIMULATE ONE NEW SECTION
 |--------------------------------------------------------------------------
 */
 
 function simulateSection({
 
     sectionNumber,
+
+    programId,
+
+    yearLevel,
 
     requirements,
 
@@ -718,15 +857,11 @@ function simulateSection({
     windows,
 
     occupancy
+
 }) {
 
-    log(
-        `\n========== SIMULATING SECTION ${sectionNumber} ==========`
-    );
-
-
     const sectionId =
-        `SIMULATED-${sectionNumber}`;
+        `SIMULATED-${programId}-${yearLevel}-${sectionNumber}`;
 
 
     const sectionOccupiedSlots =
@@ -738,20 +873,14 @@ function simulateSection({
 
     /*
     |--------------------------------------------------------------------------
-    | IMPORTANT:
     | HARDEST REQUIREMENTS FIRST
     |--------------------------------------------------------------------------
-    |
-    | Lab first because laboratories normally have fewer rooms.
-    |
     */
 
     const sortedRequirements =
         [...requirements].sort((a, b) => {
 
-            if (
-                a.type !== b.type
-            ) {
+            if (a.type !== b.type) {
 
                 return (
                     a.type === "laboratory"
@@ -760,6 +889,7 @@ function simulateSection({
                 );
             }
 
+
             return (
                 b.hours -
                 a.hours
@@ -767,19 +897,15 @@ function simulateSection({
         });
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | DO NOT MUTATE ORIGINAL OCCUPANCY UNTIL COMPLETE
-    |--------------------------------------------------------------------------
-    */
-
     const tempOccupancy =
-        cloneOccupancy(occupancy);
+        cloneOccupancy(
+            occupancy
+        );
 
 
     /*
     |--------------------------------------------------------------------------
-    | TRY EACH SUBJECT
+    | ASSIGN ALL SUBJECTS
     |--------------------------------------------------------------------------
     */
 
@@ -787,7 +913,9 @@ function simulateSection({
 
         const professors =
             professorMap.get(
-                Number(requirement.subject_id)
+                Number(
+                    requirement.subject_id
+                )
             ) || [];
 
 
@@ -800,29 +928,10 @@ function simulateSection({
 
         const candidateWindows =
             windows.get(
-                Number(requirement.hours)
+                Number(
+                    requirement.hours
+                )
             ) || [];
-
-
-        log(
-            `${requirement.subject_code} ` +
-            `${requirement.type}`
-        );
-
-        log(
-            "  professors:",
-            professors.length
-        );
-
-        log(
-            "  rooms:",
-            suitableRooms.length
-        );
-
-        log(
-            "  windows:",
-            candidateWindows.length
-        );
 
 
         const result =
@@ -847,13 +956,13 @@ function simulateSection({
             });
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | THIS SECTION CANNOT BE CREATED
+        |--------------------------------------------------------------------------
+        */
+
         if (!result.success) {
-
-            log(
-                "  ❌ FAILED:",
-                result.reason
-            );
-
 
             return {
 
@@ -876,7 +985,7 @@ function simulateSection({
 
         /*
         |--------------------------------------------------------------------------
-        | RESERVE SIMULATED RESOURCES
+        | RESERVE PROFESSOR
         |--------------------------------------------------------------------------
         */
 
@@ -889,6 +998,12 @@ function simulateSection({
         );
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | RESERVE ROOM
+        |--------------------------------------------------------------------------
+        */
+
         reserve(
             tempOccupancy.roomSlots,
 
@@ -897,6 +1012,12 @@ function simulateSection({
             assignment.window.slots
         );
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESERVE SECTION
+        |--------------------------------------------------------------------------
+        */
 
         for (
             const slot
@@ -912,29 +1033,14 @@ function simulateSection({
         assignments.push(
             assignment
         );
-
-
-        log(
-            `  ✅ ${requirement.subject_code} ` +
-            `→ Prof ${assignment.professor.id} ` +
-            `→ Room ${assignment.room.id} ` +
-            `→ ${assignment.window.day} ` +
-            `(${assignment.window.slots[0].start_time} - ` +
-            `${assignment.window.slots.at(-1).end_time})`
-        );
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | SECTION SUCCESS
+    | SUCCESS
     |--------------------------------------------------------------------------
     */
-
-    log(
-        `✅ SECTION ${sectionNumber} SUCCESS`
-    );
-
 
     return {
 
@@ -950,7 +1056,15 @@ function simulateSection({
 
 /*
 |--------------------------------------------------------------------------
-| SIMULATE PROGRAM / YEAR
+| SIMULATE ONE PROGRAM / YEAR
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| We receive GLOBAL occupancy.
+|
+| We do NOT reset it.
+|
 |--------------------------------------------------------------------------
 */
 
@@ -968,35 +1082,11 @@ async function simulateProgramYear({
 
     windows,
 
-    baseOccupancy
+    occupancy,
+
+    globalState
+
 }) {
-
-    const programName =
-        `Program ${programId}`;
-
-
-    log(
-        "\n------------------------------------------------------------"
-    );
-
-    log(
-        `SIMULATING ${programName}`
-    );
-
-    log(
-        `YEAR LEVEL: ${yearLevelMap[yearLevel]}`
-    );
-
-    log(
-        "------------------------------------------------------------"
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | CURRICULUM
-    |--------------------------------------------------------------------------
-    */
 
     const subjects =
         await getCurriculum(
@@ -1004,12 +1094,6 @@ async function simulateProgramYear({
             yearLevel,
             academicTermId
         );
-
-
-    log(
-        "Curriculum subjects:",
-        subjects.length
-    );
 
 
     if (!subjects.length) {
@@ -1022,9 +1106,9 @@ async function simulateProgramYear({
 
             yearLevel,
 
-            sections: 0,
+            sectionsCreated: 0,
 
-            capacity: 0,
+            additionalCapacity: 0,
 
             reason:
                 "No curriculum subjects."
@@ -1032,68 +1116,11 @@ async function simulateProgramYear({
     }
 
 
-    console.table(
-        subjects.map(subject => ({
-
-            subject_id:
-                subject.subject_id,
-
-            code:
-                subject.subject_code,
-
-            name:
-                subject.subject_name,
-
-            lecture:
-                subject.lecture_units,
-
-            lab:
-                subject.lab_units
-        }))
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | REQUIREMENTS
-    |--------------------------------------------------------------------------
-    */
-
     const requirements =
         buildRequirements(
             subjects
         );
 
-
-    log(
-        "Requirements:",
-        requirements.length
-    );
-
-
-    console.table(
-        requirements.map(r => ({
-
-            subject_id:
-                r.subject_id,
-
-            subject:
-                r.subject_code,
-
-            type:
-                r.type,
-
-            hours:
-                r.hours
-        }))
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | NO REQUIREMENTS
-    |--------------------------------------------------------------------------
-    */
 
     if (!requirements.length) {
 
@@ -1105,9 +1132,9 @@ async function simulateProgramYear({
 
             yearLevel,
 
-            sections: 0,
+            sectionsCreated: 0,
 
-            capacity: 0,
+            additionalCapacity: 0,
 
             reason:
                 "No lecture/laboratory requirements."
@@ -1115,21 +1142,11 @@ async function simulateProgramYear({
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | SIMULATE SECTIONS
-    |--------------------------------------------------------------------------
-    */
-
     let currentOccupancy =
-        cloneOccupancy(
-            baseOccupancy
-        );
+        occupancy;
 
 
     let sectionsCreated = 0;
-
-    let totalAssignments = 0;
 
     const simulatedSections = [];
 
@@ -1142,10 +1159,64 @@ async function simulateProgramYear({
         sectionNumber++
     ) {
 
+
+        /*
+        |--------------------------------------------------------------------------
+        | GLOBAL NODE LIMIT
+        |--------------------------------------------------------------------------
+        */
+
+        globalState.nodes++;
+
+
+        if (
+            globalState.nodes >
+            MAX_GLOBAL_SIMULATION_NODES
+        ) {
+
+            return {
+
+                success:
+                    sectionsCreated > 0,
+
+                programId,
+
+                yearLevel,
+
+                sectionsCreated,
+
+                additionalCapacity:
+                    sectionsCreated *
+                    SECTION_CAPACITY,
+
+                simulatedSections,
+
+                stoppedByGlobalLimit:
+                    true,
+
+                reason:
+                    "Global simulation node limit reached.",
+
+                occupancy:
+                    currentOccupancy
+            };
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | TRY ONE NEW SECTION
+        |--------------------------------------------------------------------------
+        */
+
         const result =
             simulateSection({
 
                 sectionNumber,
+
+                programId,
+
+                yearLevel,
 
                 requirements,
 
@@ -1160,15 +1231,22 @@ async function simulateProgramYear({
             });
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | NO MORE CAPACITY FOR THIS PROGRAM/YEAR
+        |--------------------------------------------------------------------------
+        */
+
         if (!result.success) {
 
             log(
-                `❌ STOPPING ${programName} ` +
+                `No more capacity for ` +
+                `Program ${programId} ` +
                 `${yearLevelMap[yearLevel]}`
             );
 
             log(
-                "Failure:",
+                "Reason:",
                 result.reason
             );
 
@@ -1178,7 +1256,7 @@ async function simulateProgramYear({
 
         /*
         |--------------------------------------------------------------------------
-        | COMMIT SIMULATED RESOURCES
+        | COMMIT SIMULATION
         |--------------------------------------------------------------------------
         */
 
@@ -1188,9 +1266,6 @@ async function simulateProgramYear({
 
         sectionsCreated++;
 
-        totalAssignments +=
-            result.assignments.length;
-
 
         simulatedSections.push({
 
@@ -1199,57 +1274,7 @@ async function simulateProgramYear({
             assignments:
                 result.assignments
         });
-
-
-        log(
-            `Sections simulated: ${sectionsCreated}`
-        );
-
-        log(
-            `Simulated seats: ` +
-            `${sectionsCreated * SECTION_CAPACITY}`
-        );
     }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | RESULT
-    |--------------------------------------------------------------------------
-    */
-
-    const capacity =
-        sectionsCreated *
-        SECTION_CAPACITY;
-
-
-    log(
-        "\n**************** PROGRAM RESULT ****************"
-    );
-
-    log(
-        `Program: ${programName}`
-    );
-
-    log(
-        `Year: ${yearLevelMap[yearLevel]}`
-    );
-
-    log(
-        `Sections: ${sectionsCreated}`
-    );
-
-    log(
-        `Capacity: ${capacity}`
-    );
-
-    log(
-        `Assignments: ${totalAssignments}`
-    );
-
-    log(
-        "************************************************"
-    );
 
 
     return {
@@ -1261,15 +1286,16 @@ async function simulateProgramYear({
 
         yearLevel,
 
-        sections:
-            sectionsCreated,
+        sectionsCreated,
 
-        capacity,
+        additionalCapacity:
+            sectionsCreated *
+            SECTION_CAPACITY,
 
-        assignments:
-            totalAssignments,
+        simulatedSections,
 
-        simulatedSections
+        occupancy:
+            currentOccupancy
     };
 }
 
@@ -1303,6 +1329,7 @@ async function getPrograms() {
 async function checkEnrollmentCapacity({
 
     academicTermId
+
 }) {
 
     log(
@@ -1325,7 +1352,7 @@ async function checkEnrollmentCapacity({
 
     /*
     |--------------------------------------------------------------------------
-    | LOAD RESOURCES
+    | LOAD BASE DATA
     |--------------------------------------------------------------------------
     */
 
@@ -1333,7 +1360,8 @@ async function checkEnrollmentCapacity({
         programs,
         timeSlots,
         rooms,
-        existingOccupancy
+        existingOccupancy,
+        existingSections
     ] = await Promise.all([
 
         getPrograms(),
@@ -1344,40 +1372,79 @@ async function checkEnrollmentCapacity({
 
         getExistingOccupancy(
             academicTermId
+        ),
+
+        getExistingSections(
+            academicTermId
         )
     ]);
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | EXISTING SECTION SUMMARY
+    |--------------------------------------------------------------------------
+    */
+
+    const scheduledSections =
+        existingSections.filter(
+            section =>
+                section.scheduleCount > 0
+        );
+
+
+    const incompleteSections =
+        existingSections.filter(
+            section =>
+                section.scheduleCount === 0
+        );
+
+
+    const existingSectionCapacity =
+        scheduledSections.reduce(
+
+            (sum, section) =>
+                sum +
+                Math.max(
+                    SECTION_CAPACITY,
+                    section.maxStudents
+                ),
+
+            0
+        );
+
+
     log(
-        "\nRESOURCE SUMMARY"
+        "Existing sections:",
+        existingSections.length
     );
 
     log(
-        "Programs:",
-        programs.length
+        "Scheduled sections:",
+        scheduledSections.length
     );
 
     log(
-        "Time slots:",
-        timeSlots.length
+        "Incomplete/unscheduled sections:",
+        incompleteSections.length
     );
 
     log(
-        "Rooms:",
-        rooms.length
+        "Existing section capacity:",
+        existingSectionCapacity
     );
 
 
     /*
     |--------------------------------------------------------------------------
-    | ROOM SUMMARY
+    | RESOURCE SUMMARY
     |--------------------------------------------------------------------------
     */
 
     const lectureRooms =
         rooms.filter(
-            r =>
-                String(r.room_type)
+            room =>
+                String(room.room_type)
                     .toLowerCase() ===
                 "lecture"
         );
@@ -1385,22 +1452,11 @@ async function checkEnrollmentCapacity({
 
     const laboratoryRooms =
         rooms.filter(
-            r =>
-                String(r.room_type)
+            room =>
+                String(room.room_type)
                     .toLowerCase() ===
                 "laboratory"
         );
-
-
-    log(
-        "Lecture rooms:",
-        lectureRooms.length
-    );
-
-    log(
-        "Laboratory rooms:",
-        laboratoryRooms.length
-    );
 
 
     /*
@@ -1425,6 +1481,10 @@ async function checkEnrollmentCapacity({
         new Set();
 
 
+    const curriculumCache =
+        new Map();
+
+
     for (const program of programs) {
 
         for (
@@ -1441,20 +1501,22 @@ async function checkEnrollmentCapacity({
                 );
 
 
+            curriculumCache.set(
+                `${program.id}-${year}`,
+                subjects
+            );
+
+
             for (const subject of subjects) {
 
                 allSubjectIds.add(
-                    Number(subject.subject_id)
+                    Number(
+                        subject.subject_id
+                    )
                 );
             }
         }
     }
-
-
-    log(
-        "Unique curriculum subjects:",
-        allSubjectIds.size
-    );
 
 
     /*
@@ -1487,15 +1549,9 @@ async function checkEnrollmentCapacity({
     }
 
 
-    log(
-        "Qualified professors:",
-        uniqueProfessorIds.size
-    );
-
-
     /*
     |--------------------------------------------------------------------------
-    | BUILD WINDOWS
+    | BUILD REQUIRED WINDOWS
     |--------------------------------------------------------------------------
     */
 
@@ -1503,37 +1559,25 @@ async function checkEnrollmentCapacity({
         new Set();
 
 
-    for (const program of programs) {
+    for (
+        const subjects
+        of curriculumCache.values()
+    ) {
+
+        const requirements =
+            buildRequirements(
+                subjects
+            );
+
 
         for (
-            let year = 1;
-            year <= 4;
-            year++
+            const requirement
+            of requirements
         ) {
 
-            const subjects =
-                await getCurriculum(
-                    program.id,
-                    year,
-                    academicTermId
-                );
-
-
-            const requirements =
-                buildRequirements(
-                    subjects
-                );
-
-
-            for (
-                const requirement
-                of requirements
-            ) {
-
-                requiredHours.add(
-                    requirement.hours
-                );
-            }
+            requiredHours.add(
+                requirement.hours
+            );
         }
     }
 
@@ -1544,34 +1588,61 @@ async function checkEnrollmentCapacity({
 
     for (const hours of requiredHours) {
 
-        const generated =
+        windows.set(
+
+            hours,
+
             buildWindows(
                 slotsByDay,
                 hours
-            );
-
-
-        windows.set(
-            hours,
-            generated
-        );
-
-
-        log(
-            `${hours}-hour windows:`,
-            generated.length
+            )
         );
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | SIMULATE EVERY PROGRAM / YEAR
+    | GLOBAL SIMULATION
+    |--------------------------------------------------------------------------
+    |
+    | CRITICAL:
+    |
+    | ONE OCCUPANCY MAP FOR THE ENTIRE UNIVERSITY.
+    |
+    | This prevents:
+    |
+    | BSCS using Prof 1 Monday 8AM
+    | and then
+    | BSIT using Prof 1 Monday 8AM
+    |
     |--------------------------------------------------------------------------
     */
 
+    let globalOccupancy =
+        cloneOccupancy(
+            existingOccupancy
+        );
+
+
+    const globalState = {
+
+        nodes: 0
+    };
+
+
     const programResults = [];
 
+
+    let additionalSections = 0;
+
+    let additionalCapacity = 0;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SIMULATE PROGRAMS GLOBALLY
+    |--------------------------------------------------------------------------
+    */
 
     for (const program of programs) {
 
@@ -1581,11 +1652,26 @@ async function checkEnrollmentCapacity({
             year++
         ) {
 
+            /*
+            |--------------------------------------------------------------------------
+            | STOP IF GLOBAL LIMIT REACHED
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                globalState.nodes >
+                MAX_GLOBAL_SIMULATION_NODES
+            ) {
+
+                break;
+            }
+
+
             const result =
                 await simulateProgramYear({
 
                     programId:
-                        program.id,
+                        Number(program.id),
 
                     yearLevel:
                         year,
@@ -1598,49 +1684,76 @@ async function checkEnrollmentCapacity({
 
                     windows,
 
-                    baseOccupancy:
-                        existingOccupancy
+                    occupancy:
+                        globalOccupancy,
+
+                    globalState
                 });
 
 
-            programResults.push(
-                result
-            );
+            /*
+            |--------------------------------------------------------------------------
+            | IMPORTANT:
+            |
+            | KEEP SUCCESSFUL ASSIGNMENTS.
+            |--------------------------------------------------------------------------
+            */
+
+            if (result.occupancy) {
+
+                globalOccupancy =
+                    result.occupancy;
+            }
+
+
+            additionalSections +=
+                Number(
+                    result.sectionsCreated || 0
+                );
+
+
+            additionalCapacity +=
+                Number(
+                    result.additionalCapacity || 0
+                );
+
+
+            programResults.push({
+
+                programId:
+                    result.programId,
+
+                yearLevel:
+                    result.yearLevel,
+
+                sections:
+                    result.sectionsCreated || 0,
+
+                capacity:
+                    result.additionalCapacity || 0,
+
+                reason:
+                    result.reason || null
+            });
         }
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | UNIVERSITY TOTAL
-    |--------------------------------------------------------------------------
-    */
-
-    const totalAvailableCapacity =
-        programResults.reduce(
-
-            (sum, result) =>
-                sum +
-                Number(
-                    result.capacity || 0
-                ),
-
-            0
-        );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | EXISTING STUDENTS
+    | STUDENTS
     |--------------------------------------------------------------------------
     */
 
     const [studentRows] = await db.query(`
         SELECT
             COUNT(*) AS total
+
         FROM student s
+
         JOIN student_sections ss
             ON ss.student_id = s.id
+
         WHERE ss.academic_term_id = ?
     `, [
         academicTermId
@@ -1657,19 +1770,14 @@ async function checkEnrollmentCapacity({
     |--------------------------------------------------------------------------
     | PENDING APPLICANTS
     |--------------------------------------------------------------------------
-    |
-    | IMPORTANT:
-    |
-    | Pending applicants DO NOT control the simulation.
-    |
-    | They are only used AFTER we calculate capacity.
-    |
     */
 
     const [pendingRows] = await db.query(`
         SELECT
             COUNT(*) AS total
+
         FROM student_applications
+
         WHERE status = 'pending'
     `);
 
@@ -1682,28 +1790,45 @@ async function checkEnrollmentCapacity({
 
     /*
     |--------------------------------------------------------------------------
-    | FINAL CALCULATION
+    | FINAL CAPACITY
+    |--------------------------------------------------------------------------
+    |
+    | EXISTING CAPACITY
+    | +
+    | NEW SIMULATED CAPACITY
+    |
     |--------------------------------------------------------------------------
     */
 
+    const totalUniversityCapacity =
+        existingSectionCapacity +
+        additionalCapacity;
+
+
     const remainingCapacity =
         Math.max(
+
             0,
-            totalAvailableCapacity -
+
+            totalUniversityCapacity -
             currentStudents
         );
 
 
     const canAccommodate =
         Math.min(
+
             pendingApplicants,
+
             remainingCapacity
         );
 
 
     const cannotAccommodate =
         Math.max(
+
             0,
+
             pendingApplicants -
             remainingCapacity
         );
@@ -1711,7 +1836,7 @@ async function checkEnrollmentCapacity({
 
     /*
     |--------------------------------------------------------------------------
-    | FINAL DEBUG
+    | LOG RESULT
     |--------------------------------------------------------------------------
     */
 
@@ -1728,6 +1853,31 @@ async function checkEnrollmentCapacity({
     );
 
     log(
+        "Existing scheduled sections:",
+        scheduledSections.length
+    );
+
+    log(
+        "Existing capacity:",
+        existingSectionCapacity
+    );
+
+    log(
+        "Additional sections possible:",
+        additionalSections
+    );
+
+    log(
+        "Additional capacity:",
+        additionalCapacity
+    );
+
+    log(
+        "Total university capacity:",
+        totalUniversityCapacity
+    );
+
+    log(
         "Current students:",
         currentStudents
     );
@@ -1735,11 +1885,6 @@ async function checkEnrollmentCapacity({
     log(
         "Pending applicants:",
         pendingApplicants
-    );
-
-    log(
-        "Simulated university capacity:",
-        totalAvailableCapacity
     );
 
     log(
@@ -1758,6 +1903,11 @@ async function checkEnrollmentCapacity({
     );
 
     log(
+        "Global simulation nodes:",
+        globalState.nodes
+    );
+
+    log(
         "============================================================"
     );
 
@@ -1773,27 +1923,91 @@ async function checkEnrollmentCapacity({
         success: true,
 
         message:
-            "University capacity successfully simulated.",
+            "University capacity successfully simulated using scheduler constraints.",
 
         academicTermId,
+
+        /*
+        |--------------------------------------------------------------------------
+        | EXISTING
+        |--------------------------------------------------------------------------
+        */
+
+        existingSections:
+            scheduledSections.length,
+
+        existingSectionCapacity,
+
+        incompleteSections:
+            incompleteSections.length,
+
+        /*
+        |--------------------------------------------------------------------------
+        | NEW
+        |--------------------------------------------------------------------------
+        */
+
+        additionalSections,
+
+        additionalCapacity,
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOTAL
+        |--------------------------------------------------------------------------
+        */
+
+        universityCapacity:
+            totalUniversityCapacity,
+
+        totalAvailableCapacity:
+            totalUniversityCapacity,
+
+        totalUniversityCapacityAfterSimulation:
+            totalUniversityCapacity,
+
+        /*
+        |--------------------------------------------------------------------------
+        | STUDENTS
+        |--------------------------------------------------------------------------
+        */
 
         currentStudents,
 
         pendingApplicants,
-
-        universityCapacity:
-            totalAvailableCapacity,
-
-        totalAvailableCapacity,
-
-        totalUniversityCapacityAfterSimulation:
-            totalAvailableCapacity,
 
         remainingCapacity,
 
         canAccommodate,
 
         cannotAccommodate,
+
+        /*
+        |--------------------------------------------------------------------------
+        | DEBUG
+        |--------------------------------------------------------------------------
+        */
+
+        simulation: {
+
+            globalNodes:
+                globalState.nodes,
+
+            maxGlobalNodes:
+                MAX_GLOBAL_SIMULATION_NODES,
+
+            sectionCapacity:
+                SECTION_CAPACITY,
+
+            existingSchedulesLocked:
+                true
+        },
+
+        /*
+        |--------------------------------------------------------------------------
+        | RESOURCES
+        |--------------------------------------------------------------------------
+        */
 
         resources: {
 
@@ -1828,6 +2042,7 @@ async function checkEnrollmentCapacity({
 
                 windows:
                     Object.fromEntries(
+
                         [...windows.entries()]
                             .map(
                                 ([hours, values]) => [
@@ -1838,6 +2053,12 @@ async function checkEnrollmentCapacity({
                     )
             }
         },
+
+        /*
+        |--------------------------------------------------------------------------
+        | PROGRAM RESULTS
+        |--------------------------------------------------------------------------
+        */
 
         programResults
     };
@@ -1888,9 +2109,7 @@ const checkCapacity = async (req, res) => {
             "\n[CAPACITY CHECKER ERROR]"
         );
 
-        console.error(
-            error
-        );
+        console.error(error);
 
 
         return res.status(500).json({
