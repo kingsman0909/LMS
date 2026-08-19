@@ -121,7 +121,7 @@
 }
 
 
-.section-header {
+.a-section-header {
     padding: 22px;
 
     display: flex;
@@ -132,7 +132,7 @@
 }
 
 
-.section-header h2 {
+.a-section-header h2 {
     margin: 0;
 
     font-size: 19px;
@@ -140,7 +140,7 @@
 }
 
 
-.section-header p {
+.a-section-header p {
     margin: 5px 0 0;
 
     font-size: 13px;

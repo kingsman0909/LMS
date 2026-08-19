@@ -11,7 +11,9 @@ const {loginProf, login, me, enroll,//this enroll is just a mistake it should be
      createSubject, createProgram, deleteSubject,
      getProgramsWithSections, generateSchedule,
      getSchedules, getScheduleSections, getEnrollmentCapacity,
-     getEnrollmentCapacities, checkEnrollmentCapacity,
+     getEnrollmentCapacities, checkUniversityCapacity,
+     getSchedulesBySection, getStudentSubjects, getProfStudent,
+     getTotalStudents,
      announcement, createAnnounce } = require("../controllers/authController");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/CheckRole");
@@ -31,7 +33,9 @@ router.post("/admin/schedule/generate", verifyToken, checkRole("admin"), generat
 
 router.delete("/admin/:id/deleteSubject", verifyToken, checkRole("admin"), deleteSubject);
 
-router.get("/admin/checkEnrollmentCapacity", verifyToken, checkRole("admin"), checkEnrollmentCapacity);
+router.get("/student/getSchedule", verifyToken, checkRole("student"), getSchedulesBySection);
+
+router.get("/admin/checkUniversityCapacity", verifyToken, checkRole("admin"), checkUniversityCapacity);
 router.get("/admin/getEnrollmentCapacities", verifyToken, checkRole("admin"), getEnrollmentCapacities);
 router.get("/admin/getEnrollmentCapacity", verifyToken, checkRole("admin"), getEnrollmentCapacity);
 router.get("/admin/getScheduleSections", verifyToken, checkRole("admin"), getScheduleSections);
@@ -40,13 +44,17 @@ router.get("/getAcademicTerm", verifyToken, getAcademicTerm)
 router.get("/admin/getSections", verifyToken, getSection);
 router.get("/admin/getSectionById/:id", verifyToken, getSectionById)
 router.get('/getSubjects', verifyToken, getSubjects);
+router.get('/getStudentSubjects', verifyToken, getStudentSubjects);
 router.get("/applicants", verifyToken,  checkRole("admin"), getApplicants)
 router.get("/announcements", verifyToken, announcement);
 router.get("/admin/getStudents", verifyToken,  checkRole("admin"), getStudents);
 router.get("/admin/getProfessor", verifyToken,  checkRole("admin"), getProfessor);
+router.get("/admin/getTotalStudents", verifyToken, checkRole("admin"), getTotalStudents);
 router.get("/getPrograms", getPrograms);
 router.get("/admin/getProgramsWithSections", verifyToken, checkRole("admin"), getProgramsWithSections);
 router.get("/me", verifyToken, me);
+
+router.get("/profesor/getStudents", verifyToken, checkRole("professor"), getProfStudent);
 
 module.exports = router;
 

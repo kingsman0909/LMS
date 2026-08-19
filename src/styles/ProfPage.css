@@ -208,6 +208,8 @@
     width: 100%;
     border-collapse: collapse;
     min-width: 1050px;
+    overflow: auto;
+    background: rgb(199, 235, 196);
 }
 
 .students-table th {
@@ -226,8 +228,13 @@
     vertical-align: middle;
 }
 
+
 .students-table tbody tr:hover {
     background: #191919;
+
+    strong{
+        color: white;
+    }
 }
 
 
@@ -258,8 +265,9 @@
 
 .student-info strong {
     display: block;
-    color: #eee;
+    color: black;
 }
+
 
 .student-info small,
 .course-name + small {
@@ -270,7 +278,7 @@
 
 .course-name {
     display: block;
-    color: #ddd;
+    color: #777;
     font-size: 13px;
 }
 

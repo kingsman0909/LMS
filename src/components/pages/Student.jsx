@@ -25,6 +25,8 @@ const Student = (props) => {
   const[open, setOpen] = useState(false);
   const[openNotif, setOpenNotif]= useState(false);
   const[announcement, setAnnouncement] = useState(null);
+  const [academicTerm, setAcademicTerm] = useState([]);
+  
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -36,6 +38,33 @@ const Student = (props) => {
     "/student/courses": 4,
     "/student/enrollment": 5
   };
+
+  const fetchTerm = async () => {
+        try {
+        const token = localStorage.getItem(`${props.role}_token`);
+
+        const response = await fetch(
+            'http://localhost:3000/api/auth/getAcademicTerm',
+            {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        console.log(data);
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
+        console.log(data.term.id);
+        setAcademicTerm(data.term);
+    } catch (error) {
+        alert(error.message);
+    }
+    };
 
   const fetchAnnouncements = async () => {
     try {
@@ -65,6 +94,7 @@ const Student = (props) => {
 
 useEffect(() => {
     fetchAnnouncements();
+    fetchTerm();
 }, []);
 
   const notificationRef = useRef(null);
@@ -109,6 +139,7 @@ useEffect(() => {
 
           const data = await response.json();
           setUser(data.user);
+          console.log(data.user);
           setLoading(false);
 
       };
@@ -192,8 +223,8 @@ useEffect(() => {
                   <p>Learning Management System</p>
                 </div>
                 <div>
-                  <h4>First Semester</h4>
-                  <h2>A.Y 2026-2027</h2>
+                  <h4>{academicTerm.semester}</h4>
+                  <h2>A.Y {academicTerm.school_year}</h2>
                 </div>
               </div>
             <LineSidebar className={`b-menu ${open ? "" : "closeBar"}`}
@@ -224,9 +255,9 @@ useEffect(() => {
           <Routes>
                 <Route path="/" element={<Homepage announcement={announcement}/>} />
                 <Route path='/PendingTask' element={<Pendingtask />} />
-                <Route path='/Schedule' element={<Schedule />} />
+                <Route path='/Schedule' element={<Schedule user={user} academicTerm={academicTerm}/>} />
                 <Route path="/billing" element={<Billing />} />
-                <Route path='/courses' element={<Courses />} />
+                <Route path='/courses' element={<Courses user={user} academicTerm={academicTerm}/>} />
                 <Route path='/enrollment' element={<Enrollment user={user}/>} />
           </Routes>
         </div>

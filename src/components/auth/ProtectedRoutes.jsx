@@ -37,13 +37,16 @@ const ProtectedRoutes = (props) => {
         else {
             setAuthenticated(false);
         }
-
+    
         setLoading(false);
         }
         verify();
         }
         catch(err){
             console.log("error in verifying ", err.message);
+            alert(err.message)
+            setLoading(false);
+
         }
 
     }, [props.allowedRole]);

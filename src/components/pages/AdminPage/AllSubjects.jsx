@@ -107,7 +107,7 @@ const allSubjects = ({programs}) => {
             throw new Error(data.message);
         }
     } catch (error) {
-        alert(error.message);
+        alert(`Error in creating subjects: ${error.message}`);
     }
     };
 
@@ -117,11 +117,17 @@ const allSubjects = ({programs}) => {
             <div className="subjects-header">
                 <h2>Subjects</h2>
 
-                <button
+
+                <div>
+                    <button>
+                        + Assign Professor
+                    </button>
+                    <button
                     onClick={() => setShowModal(true)}
-                >
-                    + Add Subject
-                </button>
+                    >
+                        + Add Subject
+                    </button>
+                </div>
             </div>
 
             <table>
@@ -191,7 +197,7 @@ const allSubjects = ({programs}) => {
                         />
 
                         <label>
-                            <p>Units</p>
+                            <p>Lab Units</p>
                         </label>
                         <input
                             type="number"
@@ -200,6 +206,7 @@ const allSubjects = ({programs}) => {
                             onChange={handleChange}
                         />
 
+                        <label><p>Lecture Units</p></label>
                         <input
                             type="number"
                             name="lecture_units"

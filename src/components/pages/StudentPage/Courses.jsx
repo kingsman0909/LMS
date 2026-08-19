@@ -7,16 +7,20 @@ import {
     FiArrowRight
 } from "react-icons/fi";
 
-const Courses = () => {
+const Courses = (props) => {
 
     const[courses, setCourses] = useState([]);
 
     const fetchSubjects = async () => {
+
+        if (!props.academicTerm?.id) return;
+        if (!props.user?.profile?.id) return;
+
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem(`${props.user.role}_token`);
     
             const response = await fetch(
-                'http://localhost:3000/api/auth/getSubjects',
+                `http://localhost:3000/api/auth/getStudentSubjects?academicTermId=${props.academicTerm.id}&studentId=${props.user.profile.id}`,
                 {
                     method: 'GET',
                     headers: {
@@ -26,7 +30,7 @@ const Courses = () => {
             );
     
             const data = await response.json();
-
+            console.log(data);
             if (!response.ok) {
                 throw new Error(data.message);
             }
@@ -82,21 +86,6 @@ const Courses = () => {
 
 
                         <h2>{course.subject_name}</h2>
-
-
-                        <div className="course-details">
-
-                            <div>
-                                <FiUser />
-                                <span>{course.instructor}</span>
-                            </div>
-
-                            <div>
-                                <FiClock />
-                                <span>{course.schedule}</span>
-                            </div>
-
-                        </div>
 
 
                         <div className="progress-section">

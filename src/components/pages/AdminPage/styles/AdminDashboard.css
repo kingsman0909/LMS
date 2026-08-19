@@ -1,0 +1,755 @@
+.d-admin-dashboard {
+    width: 100%;
+    min-height: 100%;
+    padding: 30px;
+    box-sizing: border-box;
+    color: black;
+}
+
+
+/* =========================================
+   HEADER
+========================================= */
+
+.d-admin-dashboard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    color: white;
+}
+
+.dashboard-eyebrow {
+    margin: 0 0 5px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    opacity: 0.55;
+}
+
+.d-admin-dashboard-header h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.dashboard-subtitle {
+    margin: 7px 0 0;
+    opacity: 0.6;
+    font-size: 14px;
+}
+
+.dashboard-refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 10px 15px;
+
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 10px;
+
+    background: white;
+
+    cursor: pointer;
+
+    font-size: 13px;
+}
+
+.dashboard-refresh-btn:hover {
+    background: #f5f5f5;
+}
+
+
+/* =========================================
+   ACADEMIC TERM
+========================================= */
+
+.academic-term-card {
+    display: flex;
+    align-items: center;
+
+    gap: 18px;
+
+    padding: 20px 22px;
+
+    margin-bottom: 25px;
+
+    background: white;
+
+    border: 1px solid rgba(0, 0, 0, 0.07);
+
+    border-radius: 14px;
+
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.academic-term-icon {
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: rgba(50, 231, 50, 0.12);
+
+    color: rgb(50, 180, 50);
+
+    font-size: 22px;
+}
+
+.academic-term-info {
+    flex: 1;
+}
+
+.academic-term-info span {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    opacity: 0.5;
+}
+
+.academic-term-info h2 {
+    margin: 3px 0;
+    font-size: 18px;
+}
+
+.academic-term-info p {
+    margin: 0;
+    font-size: 13px;
+    opacity: 0.6;
+}
+
+.academic-term-date {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 13px;
+
+    opacity: 0.65;
+}
+
+
+/* =========================================
+   STAT CARDS
+========================================= */
+
+.dashboard-stats {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 18px;
+
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    padding: 20px;
+
+    background: white;
+
+    border: 1px solid rgba(0, 0, 0, 0.07);
+
+    border-radius: 14px;
+
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.stat-card-top {
+    display: flex;
+    justify-content: space-between;
+}
+
+.stat-icon {
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 10px;
+
+    background: rgba(50, 231, 50, 0.1);
+
+    color: rgb(50, 180, 50);
+
+    font-size: 19px;
+}
+
+.stat-value {
+    margin-top: 17px;
+
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.stat-label {
+    margin-top: 4px;
+
+    font-size: 13px;
+
+    opacity: 0.55;
+}
+
+
+/* =========================================
+   MAIN GRID
+========================================= */
+
+.dashboard-main-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 18px;
+
+    margin-bottom: 18px;
+}
+
+.dashboard-card {
+    background: white;
+
+    border: 1px solid rgba(0, 0, 0, 0.07);
+
+    border-radius: 14px;
+
+    padding: 22px;
+
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.03);
+
+    box-sizing: border-box;
+}
+
+.dashboard-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    margin-bottom: 20px;
+}
+
+.dashboard-card-header h2 {
+    margin: 0;
+
+    font-size: 17px;
+}
+
+.dashboard-card-header p {
+    margin: 5px 0 0;
+
+    font-size: 12px;
+
+    opacity: 0.55;
+}
+
+.dashboard-card-header > svg {
+    font-size: 20px;
+
+    opacity: 0.45;
+}
+
+
+/* =========================================
+   ENROLLMENT
+========================================= */
+
+.enrollment-content {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 15px;
+}
+
+.enrollment-stat {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+
+    font-size: 12px;
+
+    opacity: 0.65;
+}
+
+.enrollment-number {
+    font-size: 23px;
+
+    font-weight: 700;
+
+    opacity: 1;
+}
+
+.enrollment-bar {
+    height: 7px;
+
+    margin-top: 22px;
+
+    border-radius: 20px;
+
+    background: #eeeeee;
+
+    overflow: hidden;
+}
+
+.enrollment-approved {
+    height: 100%;
+
+    background: rgb(50, 231, 50);
+}
+
+.dashboard-link-btn {
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    margin-top: 18px;
+
+    padding: 0;
+
+    border: none;
+
+    background: transparent;
+
+    cursor: pointer;
+
+    font-size: 13px;
+
+    font-weight: 600;
+}
+
+.dashboard-link-btn:hover {
+    opacity: 0.6;
+}
+
+
+/* =========================================
+   SCHEDULE
+========================================= */
+
+.schedule-status {
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+    margin-bottom: 20px;
+}
+
+.status-icon {
+    width: 44px;
+    height: 44px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    font-size: 21px;
+}
+
+.status-icon.success {
+    background: rgba(50, 231, 50, 0.12);
+
+    color: rgb(50, 180, 50);
+}
+
+.status-icon.warning {
+    background: rgba(255, 180, 0, 0.12);
+
+    color: #d69b00;
+}
+
+.schedule-status h3 {
+    margin: 0;
+
+    font-size: 14px;
+}
+
+.schedule-status p {
+    margin: 4px 0 0;
+
+    font-size: 12px;
+
+    opacity: 0.55;
+}
+
+.schedule-details {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 10px;
+
+    margin-bottom: 20px;
+}
+
+.schedule-details div {
+    padding: 10px;
+
+    background: #f7f7f7;
+
+    border-radius: 9px;
+}
+
+.schedule-details span {
+    display: block;
+
+    font-size: 10px;
+
+    opacity: 0.5;
+}
+
+.schedule-details strong {
+    display: block;
+
+    margin-top: 4px;
+
+    font-size: 17px;
+}
+
+.success-text {
+    color: rgb(50, 180, 50);
+}
+
+.danger-text {
+    color: #dc3545;
+}
+
+.dashboard-primary-btn {
+    width: 100%;
+
+    padding: 11px;
+
+    border: none;
+
+    border-radius: 9px;
+
+    background: rgb(50, 231, 50);
+
+    cursor: pointer;
+
+    font-weight: 600;
+
+    color: black;
+}
+
+.dashboard-primary-btn:hover {
+    opacity: 0.85;
+}
+
+
+/* =========================================
+   RESOURCE
+========================================= */
+
+.resource-item {
+    margin-bottom: 20px;
+}
+
+.resource-label {
+    display: flex;
+
+    justify-content: space-between;
+
+    margin-bottom: 7px;
+
+    font-size: 13px;
+}
+
+.resource-label strong {
+    font-size: 12px;
+}
+
+.resource-progress {
+    height: 8px;
+
+    background: #eeeeee;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+}
+
+.resource-progress div {
+    height: 100%;
+
+    background: rgb(50, 231, 50);
+
+    border-radius: 20px;
+}
+
+
+/* =========================================
+   ALERTS
+========================================= */
+
+.alerts-list {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+.alert-item {
+    display: flex;
+
+    align-items: center;
+
+    gap: 11px;
+
+    padding: 11px;
+
+    border-radius: 9px;
+
+    background: #fafafa;
+
+    font-size: 12px;
+}
+
+.alert-icon {
+    width: 30px;
+    height: 30px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 8px;
+
+    background: rgba(255, 180, 0, 0.12);
+
+    color: #d69b00;
+}
+
+.no-alerts {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 8px;
+
+    padding: 30px 10px;
+
+    font-size: 13px;
+
+    opacity: 0.55;
+}
+
+.no-alerts svg {
+    color: rgb(50, 180, 50);
+}
+
+
+/* =========================================
+   RECENT APPLICATIONS
+========================================= */
+
+.recent-applications {
+    margin-bottom: 20px;
+}
+
+.applications-table {
+    width: 100%;
+}
+
+.table-header,
+.table-row {
+    display: grid;
+
+    grid-template-columns:
+        2fr 1fr 1fr 1fr;
+
+    align-items: center;
+
+    gap: 15px;
+}
+
+.table-header {
+    padding: 10px 12px;
+
+    font-size: 10px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.7px;
+
+    opacity: 0.45;
+}
+
+.table-row {
+    padding: 13px 12px;
+
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+
+    font-size: 12px;
+}
+
+.student-name {
+    font-weight: 600;
+}
+
+.application-status {
+    display: inline-block;
+
+    padding: 5px 9px;
+
+    border-radius: 20px;
+
+    font-size: 10px;
+
+    font-weight: 600;
+}
+
+.application-status.approved {
+    background: rgba(50, 231, 50, 0.12);
+
+    color: rgb(40, 150, 40);
+}
+
+.application-status.pending {
+    background: rgba(255, 180, 0, 0.12);
+
+    color: #b58300;
+}
+
+.application-status.rejected {
+    background: rgba(220, 53, 69, 0.1);
+
+    color: #dc3545;
+}
+
+.empty-table {
+    padding: 30px;
+
+    text-align: center;
+
+    font-size: 13px;
+
+    opacity: 0.5;
+}
+
+
+/* =========================================
+   LOADING
+========================================= */
+
+.admin-dashboard-loading {
+    min-height: 400px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    opacity: 0.6;
+}
+
+.loading-icon {
+    font-size: 25px;
+
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+
+}
+
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1100px) {
+
+    .dashboard-stats {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 850px) {
+
+    .dashboard-main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .academic-term-date {
+        display: none;
+    }
+
+}
+
+@media (max-width: 600px) {
+
+    .admin-dashboard {
+        padding: 18px;
+    }
+
+    .admin-dashboard-header {
+        flex-direction: column;
+
+        gap: 15px;
+    }
+
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .enrollment-content {
+        grid-template-columns: 1fr;
+    }
+
+    .schedule-details {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .table-header {
+        display: none;
+    }
+
+    .table-row {
+        grid-template-columns: 1fr;
+
+        gap: 6px;
+    }
+
+}

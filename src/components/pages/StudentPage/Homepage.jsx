@@ -6,6 +6,19 @@ import {useState, useEffect} from 'react';
 const Homepage = ({announcement}) => {
     const [announcements, setAnnouncements] = useState([]);
 
+    const today = new Date();
+
+    const day = today.getDate();
+
+    const month = today.toLocaleString("en-US", {
+        month: "long"
+    });
+
+    const year = today.getFullYear();
+
+    const weekday = today.toLocaleString("en-US", {
+        weekday: "long"
+    });
     useEffect(() => {
         setAnnouncements(announcement);
     }, [announcement]);
@@ -107,22 +120,22 @@ const Homepage = ({announcement}) => {
 
                     <div className="date-main">
                         <h1>
-                            14
+                            {day}
                         </h1>
 
                         <div>
                             <h3>
-                                July
+                                {month}
                             </h3>
 
                             <span>
-                                2026
+                                {year}
                             </span>
                         </div>
                     </div>
 
                     <div className="date-bottom">
-                        Tuesday
+                        {weekday}
                     </div>
 
                 </div>

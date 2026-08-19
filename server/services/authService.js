@@ -11,7 +11,7 @@ const Academic = require('../model/AcademicTerm');
 const Subject = require('../model/Subjects');
 const { TbWashDryP } = require("react-icons/tb");
 const scheduleModel = require("../model/Schedule");
-const checker = require("../services/capacityCheckerService");
+const capacityChecker = require("../services/capacityCheckerService");
 
 
 const loginUser = async ({ username, password }, allowedRole) => {
@@ -172,6 +172,186 @@ const generateSectionName = (number) => {
 
     return name;
 };
+
+
+
+const apply = async (data) => {
+
+    const {
+        firstname,
+        middlename,
+        lastname,
+        email,
+        username,
+        password,
+        program_id,
+        year_level,
+        phone,
+        gender,
+        birthdate,
+        address
+    } = data;
+
+
+    // CHECK USERNAME IN USERS TABLE
+
+    const existingUser =
+        await User.findByUsername(username);
+
+    if (existingUser) {
+
+        throw new Error(
+            "Username already exists."
+        );
+
+    }
+
+
+    // CHECK EMAIL IN USERS TABLE
+
+    const existingEmail =
+        await User.findByEmail(email);
+
+    if (existingEmail) {
+
+        throw new Error(
+            "Email already exists."
+        );
+
+    }
+
+
+    // CHECK EXISTING STUDENT APPLICATION
+
+    const existingApplication =
+        await StudentApplication.findByUsername(username);
+
+    if (existingApplication) {
+
+        throw new Error(
+            "An application with this username already exists."
+        );
+
+    }
+
+
+    // CHECK EXISTING APPLICATION EMAIL
+
+    const existingApplicationEmail =
+        await StudentApplication.findByEmail(email);
+
+    if (existingApplicationEmail) {
+
+        throw new Error(
+            "An application with this email already exists."
+        );
+
+    }
+
+
+    // CHECK COURSE
+
+    console.log(program_id, "service");
+    const program =
+        await Programs.findById(program_id);
+
+    if (!program) {
+
+        throw new Error(
+            "Selected course does not exist."
+        );
+
+    }
+
+
+    // CREATE APPLICATION
+
+    await StudentApplication.createApplication({
+
+        firstname,
+        middlename,
+        lastname,
+
+        email,
+        username,
+        password,
+
+        program_id,
+        year_level,
+
+        phone,
+        gender,
+        birthdate,
+        address
+
+    });
+
+
+    return {
+
+        message:
+            "Application submitted successfully. Please wait for admin approval."
+
+    };
+
+};
+
+const generateStudentId = (userId) => {
+    return `2026-${String(userId).padStart(4, "0")}`;
+};
+
+const getSectionsForSchedule = async (
+    academicTermId
+) => {
+
+    if (!academicTermId) {
+        throw new Error(
+            "Academic term ID is required."
+        );
+    }
+
+    return await Section.getSectionsForSchedule(
+        academicTermId
+    );
+};
+
+const getSchedulesByTerm = async (academicTermId) => {
+
+    if (!academicTermId) {
+        throw new Error(
+            "Academic term ID is required."
+        );
+    }
+
+    const schedules =
+        await scheduleModel.getSchedulesByTerm(
+            academicTermId
+        );
+
+    return schedules;
+};
+
+const getSchedulesBySection = async (academicTermId, sectionId) => {
+
+    if (!academicTermId) {
+        throw new Error(
+            "Academic term ID is required."
+        );
+    }
+    if(!sectionId){
+        throw new Error(
+            "Section ID is required."
+        );
+    }
+
+    const schedules =
+        await scheduleModel.getSchedulesBySection(
+            academicTermId, sectionId
+        );
+
+    return schedules;
+};
+
 async function assignSection(
     admin_id,
     student_id,
@@ -386,163 +566,6 @@ async function assignSection(
 }
 
 
-const apply = async (data) => {
-
-    const {
-        firstname,
-        middlename,
-        lastname,
-        email,
-        username,
-        password,
-        program_id,
-        year_level,
-        phone,
-        gender,
-        birthdate,
-        address
-    } = data;
-
-
-    // CHECK USERNAME IN USERS TABLE
-
-    const existingUser =
-        await User.findByUsername(username);
-
-    if (existingUser) {
-
-        throw new Error(
-            "Username already exists."
-        );
-
-    }
-
-
-    // CHECK EMAIL IN USERS TABLE
-
-    const existingEmail =
-        await User.findByEmail(email);
-
-    if (existingEmail) {
-
-        throw new Error(
-            "Email already exists."
-        );
-
-    }
-
-
-    // CHECK EXISTING STUDENT APPLICATION
-
-    const existingApplication =
-        await StudentApplication.findByUsername(username);
-
-    if (existingApplication) {
-
-        throw new Error(
-            "An application with this username already exists."
-        );
-
-    }
-
-
-    // CHECK EXISTING APPLICATION EMAIL
-
-    const existingApplicationEmail =
-        await StudentApplication.findByEmail(email);
-
-    if (existingApplicationEmail) {
-
-        throw new Error(
-            "An application with this email already exists."
-        );
-
-    }
-
-
-    // CHECK COURSE
-
-    console.log(program_id, "service");
-    const program =
-        await Programs.findById(program_id);
-
-    if (!program) {
-
-        throw new Error(
-            "Selected course does not exist."
-        );
-
-    }
-
-
-    // CREATE APPLICATION
-
-    await StudentApplication.createApplication({
-
-        firstname,
-        middlename,
-        lastname,
-
-        email,
-        username,
-        password,
-
-        program_id,
-        year_level,
-
-        phone,
-        gender,
-        birthdate,
-        address
-
-    });
-
-
-    return {
-
-        message:
-            "Application submitted successfully. Please wait for admin approval."
-
-    };
-
-};
-
-const generateStudentId = (userId) => {
-    return `2026-${String(userId).padStart(4, "0")}`;
-};
-
-const getSectionsForSchedule = async (
-    academicTermId
-) => {
-
-    if (!academicTermId) {
-        throw new Error(
-            "Academic term ID is required."
-        );
-    }
-
-    return await Section.getSectionsForSchedule(
-        academicTermId
-    );
-};
-
-const getSchedulesByTerm = async (academicTermId) => {
-
-    if (!academicTermId) {
-        throw new Error(
-            "Academic term ID is required."
-        );
-    }
-
-    const schedules =
-        await scheduleModel.getSchedulesByTerm(
-            academicTermId
-        );
-
-    return schedules;
-};
-
-
 const approveApplicant = async (req) => {
 
     const applicantId = req.params.id;
@@ -659,11 +682,45 @@ const getApplicants = async () => {
 
 };
 
-const getStudents = async () => {
+const getStudents = async (
+    page,
+    limit,
+    search
+) => {
 
-    console.log("service reach");
-    const students = await Student.getAllStudent();
+    console.log(
+        "service reach",
+        "page:", page,
+        "limit:", limit,
+        "search:", search
+    );
+
+    const result =
+        await Student.getAllStudent(
+            page,
+            limit,
+            search
+        );
+
+    return {
+        students:
+            result.students.map(removeSensitiveFields),
+
+        total: result.total,
+
+        page: result.page,
+
+        limit: result.limit,
+
+        hasMore: result.hasMore
+    };
+};
+
+
+const getProfStudent = async (termId, profId) => {
+    const students = await Student.getProfStudents(termId, profId);
     return students.map(removeSensitiveFields);
+
 
 };
 
@@ -699,50 +756,35 @@ const getSectionById = async (id) => {
 
 };
 
-const getEnrollmentCapacity = async (
-    programId,
-    yearLevel,
-    academicTermId
-) => {
 
-    if (
-        !programId ||
-        !yearLevel ||
-        !academicTermId
-    ) {
-        throw new Error(
-            "programId, yearLevel, and academicTermId are required."
-        );
-    }
-
-    return await Section.getEnrollmentCapacity(
-        programId,
-        yearLevel,
-        academicTermId
-    );
-};
-
-const getEnrollmentCapacities = async (
+const checkUniversityCapacity = async (
     academicTermId
 ) => {
 
     if (!academicTermId) {
+
         throw new Error(
-            "academicTermId is required."
+            "Academic term ID is required."
         );
     }
 
-    return await Section.getEnrollmentCapacities(
-        Number(academicTermId)
-    );
+
+    const result =
+        await capacityChecker.checkEnrollmentCapacity({
+            academicTermId
+        });
+
+
+    return result;
 };
+
+
 
 module.exports = {
     loginUser,
     createAnnounce,
     apply,
-    getEnrollmentCapacity,
-    getEnrollmentCapacities,
+    checkUniversityCapacity,
     getApplicants,
     approveApplicant,
     getStudents,
@@ -754,5 +796,7 @@ module.exports = {
     createProgram,
     deleteSubject,
     getSchedulesByTerm,
-    getSectionsForSchedule
+    getSectionsForSchedule,
+    getSchedulesBySection,
+    getProfStudent
 };

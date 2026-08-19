@@ -18,7 +18,7 @@ import {
 
 import "../../../styles/ProfPage.css";
 
-const ProfStudent = () => {
+const ProfStudent = (props) => {
 
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,87 +44,66 @@ const ProfStudent = () => {
 
     const loadStudents = async () => {
 
-      try {
+        const userId = props.user?.profile?.id;
+        const academicTermId = props.academicTerm?.id;
 
-        // Example future API:
-        // const token = localStorage.getItem("token");
+        if (!userId || !academicTermId) {
+            return;
+        }
 
-        // const response = await fetch(
-        //   "http://localhost:3000/api/professor/students",
-        //   {
-        //     headers: {
-        //       Authorization: `Bearer ${token}`
-        //     }
-        //   }
-        // );
+        try {
 
-        // const data = await response.json();
-        // setStudents(data.students);
+            setLoading(true);
 
-        const demoStudents = [
-          {
-            id: 1,
-            name: "Juan Dela Cruz",
-            studentId: "2026-0001",
-            email: "juan@example.com",
-            course: "BS Computer Science",
-            yearLevel: "2nd Year",
-            averageGrade: 89,
-            attendance: 94,
-            missingAssignments: 1,
-            status: "active",
-            lastActivity: "Today",
-            avatar: "JD"
-          },
-          {
-            id: 2,
-            name: "Maria Santos",
-            studentId: "2026-0002",
-            email: "maria@example.com",
-            course: "BS Information Technology",
-            yearLevel: "2nd Year",
-            averageGrade: 76,
-            attendance: 82,
-            missingAssignments: 3,
-            status: "active",
-            lastActivity: "Yesterday",
-            avatar: "MS"
-          },
-          {
-            id: 3,
-            name: "Pedro Reyes",
-            studentId: "2026-0003",
-            email: "pedro@example.com",
-            course: "BS Computer Science",
-            yearLevel: "1st Year",
-            averageGrade: 64,
-            attendance: 68,
-            missingAssignments: 5,
-            status: "at-risk",
-            lastActivity: "5 days ago",
-            avatar: "PR"
-          }
-        ];
+            const token =
+                localStorage.getItem(
+                    `${props.user.role}_token`
+                );
 
-        setStudents(demoStudents);
+            const response = await fetch(
+                `http://localhost:3000/api/auth/profesor/getStudents?academicTermId=${academicTermId}&profId=${userId}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
 
-      } catch (error) {
+            const data = await response.json();
 
-        console.error("Failed to load students:", error);
+            if (!response.ok) {
+                throw new Error(data.message);
+            }
 
-      } finally {
+            console.log("Students:", data);
 
-        setLoading(false);
+            setStudents(data.students || []);
 
-      }
+        } catch (error) {
 
+            console.error(
+                "Failed to load students:",
+                error
+            );
+
+        } finally {
+
+            setLoading(false);
+        }
     };
 
     loadStudents();
 
-  }, []);
+}, [
+    props.user?.profile?.id,
+    props.academicTerm?.id
+]);
 
-
+const getInitials = (firstname, lastname) => {
+    return `${firstname?.charAt(0) || ""}${lastname?.charAt(0) || ""}`
+        .toUpperCase();
+};
   /*
   |--------------------------------------------------------------------------
   | FILTERING
@@ -136,8 +115,8 @@ const ProfStudent = () => {
     return students.filter(student => {
 
       const matchesSearch =
-        student.name.toLowerCase().includes(search.toLowerCase()) ||
-        student.studentId.toLowerCase().includes(search.toLowerCase()) ||
+        student.firstname.toLowerCase().includes(search.toLowerCase()) ||
+        student.student_id.toLowerCase().includes(search.toLowerCase()) ||
         student.email.toLowerCase().includes(search.toLowerCase());
 
       const matchesCourse =
@@ -613,17 +592,17 @@ const ProfStudent = () => {
 
             {filteredStudents.map(student => (
 
-              <tr key={student.id}>
+              <tr key={student.student_id}>
 
                 <td>
 
                   <input
                     type="checkbox"
                     checked={
-                      selectedStudents.includes(student.id)
+                      selectedStudents.includes(student.student_id)
                     }
                     onChange={() =>
-                      toggleStudent(student.id)
+                      toggleStudent(student.student_id)
                     }
                   />
 
@@ -635,17 +614,17 @@ const ProfStudent = () => {
                   <div className="student-info">
 
                     <div className="student-avatar">
-                      {student.avatar}
+                      {getInitials(student.firstname, student.lastname)}
                     </div>
 
                     <div>
 
                       <strong>
-                        {student.name}
+                        {student.firstname}
                       </strong>
 
                       <small>
-                        {student.studentId}
+                        {student.student_id}
                       </small>
 
                     </div>
@@ -764,9 +743,9 @@ const ProfStudent = () => {
                       className="more-btn"
                       onClick={() =>
                         setShowMenu(
-                          showMenu === student.id
+                          showMenu === student.student_id
                             ? null
-                            : student.id
+                            : student.student_id
                         )
                       }
                     >
@@ -776,7 +755,7 @@ const ProfStudent = () => {
                     </button>
 
 
-                    {showMenu === student.id && (
+                    {showMenu === student.student_id && (
 
                       <div className="student-menu">
 
@@ -804,7 +783,7 @@ const ProfStudent = () => {
 
                         <button
                           onClick={() =>
-                            markAsAtRisk(student.id)
+                            markAsAtRisk(student.student_id)
                           }
                         >
 
@@ -827,7 +806,7 @@ const ProfStudent = () => {
                         <button
                           className="danger-action"
                           onClick={() =>
-                            removeStudent(student.id)
+                            removeStudent(student.student_id)
                           }
                         >
 
@@ -909,7 +888,7 @@ const ProfStudent = () => {
 
               <div className="large-avatar">
 
-                {selectedStudent.avatar}
+                {getInitials(selectedStudent.firstname, selectedStudent.lastname)}
 
               </div>
 

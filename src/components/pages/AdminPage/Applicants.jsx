@@ -12,7 +12,6 @@ export default function AdminApplicants() {
     const [showCapacityModal, setShowCapacityModal] =
     useState(false);
     const [capacities, setCapacities] = useState([]);
-    const [capacityLoading, setCapacityLoading] = useState(true);
     const [academicTerm, setAcademicTerm] = useState(null);
     
     const [professors, setProfessors] = useState([
@@ -78,67 +77,65 @@ export default function AdminApplicants() {
     }
 };
 
+const [capacityLoading, setCapacityLoading] =
+    useState(false);
+
+const [capacityData, setCapacityData] =
+    useState(null);
+
+
 const handleCheckCapacity = async () => {
 
-    if (!academicTerm?.id) {
-
-        alert(
-            "No active academic term found."
-        );
-
-        return;
-    }
-
+    console.log("checking capacity")
     try {
 
         setCapacityLoading(true);
 
-        setShowCapacityModal(true);
 
-        const token =
-            localStorage.getItem("admin_token");
+        const response =
+            await fetch(
+                `http://localhost:3000/api/auth/admin/checkUniversityCapacity?academicTermId=${academicTerm.id}`,
+                {
+                    method: "GET",
 
-        const response = await fetch(
-        `http://localhost:3000/api/auth/admin/checkEnrollmentCapacity?programId=${programId}&yearLevel=${yearLevel}&academicTermId=${academicTerm.id}&pendingApplicants=${pendingApplicants}`,
-            {
-                method: "GET",
-
-                headers: {
-                    Authorization:
-                        `Bearer ${token}`
+                    headers: {
+                        Authorization:
+                            `Bearer ${localStorage.getItem("admin_token")}`
+                    }
                 }
-            }
-        );
+            );
+
 
         const data =
             await response.json();
 
-        console.log(
-            "Enrollment capacities:",
-            data
-        );
-
+        console.log("simulated capacity: ",data);
         if (!response.ok) {
+
             throw new Error(
                 data.message ||
-                "Failed to fetch capacity."
+                "Failed to check capacity."
             );
         }
 
-        setCapacities(
-            data.capacities || []
+
+        setCapacityData(
+            data.data
         );
 
-    } catch (error) {
+    }
 
-        console.error(
-            "Capacity error:",
-            error
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            error.message
         );
 
-        setCapacities([]);
+    }
 
-    } finally {
+    finally {
 
         setCapacityLoading(false);
     }
@@ -193,7 +190,6 @@ const handleCheckCapacity = async () => {
 };
 
 const approveAllApplicants = async () => {
-
     try {
 
         const token =
@@ -314,9 +310,24 @@ const approveAllApplicants = async () => {
 };
     
     useEffect(() => {
-        fetchApplicants();
-        fetchAcademicTerm();
-    }, []);
+    fetchApplicants();
+    fetchAcademicTerm();
+}, []);
+
+useEffect(() => {
+
+    if (!academicTerm?.id) {
+        return;
+    }
+
+    console.log(
+        "term id:",
+        academicTerm.id
+    );
+
+    handleCheckCapacity();
+
+}, [academicTerm]);
     
 
     const approveStudent = (id) => {
@@ -383,9 +394,11 @@ const approveAllApplicants = async () => {
                         Review student and professor applications
                     </p>
                 </div>
-                <button onClick={approveAllApplicants}>Approve All</button>
                 
-                <div className="applicant-count">
+                <div className="applicants-header-right">
+                    <button onClick={approveAllApplicants} className="approveAll">Approve All</button>
+
+                    <div className="applicant-count">
                     
                     {activeTab === "students"
                         ? pendingStudents.length
@@ -394,6 +407,7 @@ const approveAllApplicants = async () => {
 
                     <span> Pending</span>
 
+                    </div>
                 </div>
 
             </div>
@@ -585,7 +599,7 @@ const approveAllApplicants = async () => {
 
                                 )}
 
-                                <button className="view-btn" onClick={
+                                <button className="a-view-btn" onClick={
                                     ()=>setSelectedStudent(student)
                                     }>View</button>
 
@@ -602,7 +616,7 @@ const approveAllApplicants = async () => {
             )}
 
             {selectedStudent && <ApplicantModal 
-            selectedStudent={selectedStudent} setSelectedStudent={setSelectedStudent} />}
+            selectedStudent={selectedStudent} setSelectedStudent={setSelectedStudent} approved={approvedApplicant}/>}
 
 
 

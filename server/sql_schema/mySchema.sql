@@ -406,8 +406,9 @@ where username = "princessThea";
 
 drop table courses;
 drop table enrollments;
-SET FOREIGN_KEY_CHECKS = 1; -- enable foreign key checks turn it to 0 to delete table with foreign key	
-delete from class_schedules
+SET FOREIGN_KEY_CHECKS = 1; -- enable foreign key checks turn it to 0 to delete table with foreign key
+	
+delete from sections
 where id > 0;
 
 select * from time_slots;
@@ -429,7 +430,6 @@ select * from student_enrollments;
 select * from class_schedules;
 
 
-
 SHOW CREATE TABLE class_schedules;
 SHOW CREATE TABLE time_slots;
 SHOW CREATE TABLE rooms;
@@ -438,8 +438,9 @@ SHOW CREATE TABLE professor_subjects;
 SHOW CREATE TABLE curriculum_subjects;
 SHOW CREATE TABLE subjects;
 SHOW CREATE TABLE academic_terms;
+show create table student_enrollments;
 
-describe class_schedules;
+show create table class_schedules;
 SHOW CREATE TABLE sections;
 describe student_applications;
 SELECT
@@ -489,6 +490,8 @@ delete from users
 where id > 2;
 SET SESSION cte_max_recursion_depth = 5000;
 
+delete from student_applications
+where status = "pending" and id > 0;
 INSERT INTO student_applications
 (
     email,
@@ -518,42 +521,67 @@ WITH RECURSIVE numbers AS
 SELECT
 
     CONCAT(
-        'stres_',
+        'stress_test_',
         UUID(),
         '@example.com'
     ),
 
     CONCAT(
-        'stres_',
+        'stress_test_',
         UUID()
     ),
 
-    'TesPassword123',
+    'TesPassword1234',
 
     CONCAT(
-        'Studet_',
+        'Student_',
         n
     ),
 
-    'LoadTes',
+    'LoadTests',
 
     CONCAT(
-        'Applican_',
+        'Applicant_',
         n
     ),
+
+    -- ==========================================
+    -- PROGRAM
+    -- ==========================================
 
     CASE
-        WHEN n <= 500 THEN 1
-        WHEN n <= 1000 THEN 2
-        WHEN n <= 1500 THEN 3
+
+        WHEN n <= 500
+            THEN 1
+
+        WHEN n <= 1000
+            THEN 2
+
+        WHEN n <= 1500
+            THEN 3
+
         ELSE 4
+
     END,
 
+    -- ==========================================
+    -- YEAR LEVEL
+    -- 125 students per year within each program
+    -- ==========================================
+
     CASE
-        WHEN MOD(n - 1, 500) < 125 THEN 1
-        WHEN MOD(n - 1, 500) < 250 THEN 2
-        WHEN MOD(n - 1, 500) < 375 THEN 3
+
+        WHEN MOD(n - 1, 500) < 125
+            THEN 1
+
+        WHEN MOD(n - 1, 500) < 250
+            THEN 2
+
+        WHEN MOD(n - 1, 500) < 375
+            THEN 3
+
         ELSE 4
+
     END,
 
     NULL,
@@ -576,3 +604,6 @@ SELECT
     'pending'
 
 FROM numbers;
+
+
+

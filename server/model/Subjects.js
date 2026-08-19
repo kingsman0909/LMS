@@ -415,6 +415,60 @@ const deleteSubject = async (id) => {
     return result;
 };
 
+// =====================================================
+// GET SUBJECTS BY STUDENT
+// For student-specific subjects / irregular students
+// =====================================================
+
+const getSubjectsByStudent = async (
+    studentId,
+    academicTermId
+) => {
+
+    const [rows] = await db.query(`
+        SELECT DISTINCT
+            se.student_id,
+
+            se.id AS enrollment_id,
+
+            sec.id AS section_id,
+            sec.section_name,
+
+            s.id AS subject_id,
+            s.subject_code,
+            s.subject_name,
+            s.description,
+            s.units,
+            s.lecture_units,
+            s.lab_units
+
+        FROM student_enrollments se
+
+        INNER JOIN sections sec
+            ON se.section_id = sec.id
+
+        INNER JOIN class_schedules cs
+            ON cs.section_id = sec.id
+
+        INNER JOIN subjects s
+            ON cs.subject_id = s.id
+
+        WHERE se.student_id = ?
+          AND se.status = 'approved'
+          AND sec.academic_term_id = ?
+
+        ORDER BY
+            sec.id,
+            s.subject_code
+
+    `, [
+        studentId,
+        academicTermId
+    ]);
+
+    return rows;
+};
+
 
 module.exports = {
     getSubjects,
@@ -423,5 +477,6 @@ module.exports = {
     updateSubject,
     deleteSubject,
     getSubjectsAdmin,
-    findByCode
+    findByCode,
+    getSubjectsByStudent
 };

@@ -18,6 +18,7 @@ const AdminSchedule = () => {
     const [schedules, setSchedules] = useState([]);
     const [sections, setSections] = useState([]);
     const [students, setStudents] = useState([]);
+    const [totalStudents, setTotalStudents] = useState(0);
     // =========================
     // GENERATE MODAL
     // =========================
@@ -79,6 +80,36 @@ const AdminSchedule = () => {
         }
     };
 
+    const fetchTotalStudents = async () => {
+    try {
+        const token =
+                localStorage.getItem("admin_token");
+
+        const response = await fetch(
+            "http://localhost:3000/api/auth/admin/getTotalStudents",
+            {
+                method: "GET",
+                credentials: "include",
+                headers: {
+                        Authorization:
+                            `Bearer ${token}`
+                    }
+                
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch total students");
+        }
+
+        const data = await response.json();
+        console.log("total student: ", data);
+        setTotalStudents(data.totalStudents);
+    } catch (error) {
+        console.error("Error fetching total students:", error);
+        return 0;
+    }
+};
 
     // =========================
     // GET PROGRAMS WITH SECTIONS
@@ -280,9 +311,9 @@ const AdminSchedule = () => {
 
         fetchTerm();
         fetchStudents();
+        fetchTotalStudents();
 
     }, []);
-
 
     // =========================
     // FETCH AFTER TERM IS READY
@@ -348,8 +379,6 @@ const AdminSchedule = () => {
                 "Pending"
         ).length;
 
-
-    const totalStudents = students.length || 0;
 
 
     // =========================
@@ -642,7 +671,7 @@ const closeScheduleModal = () => {
 
             <div className="section-container">
 
-                <div className="section-header">
+                <div className="a-section-header">
 
                     <div>
 

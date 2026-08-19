@@ -138,7 +138,7 @@ Manage your classes, grades, attendance and announcements.
 {
 stats.map((item,index)=>
 
-<div className="stat-card" key={index}>
+<div className="p-stat-card" key={index}>
 
 <div className="p-icon">
 {item.icon}

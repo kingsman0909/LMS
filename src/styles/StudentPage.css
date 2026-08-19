@@ -653,78 +653,322 @@
     color: #1d4ed8;
 }
 
+/* =========================
+   SCHEDULE PAGE
+========================= */
+
 .schedule-page {
     width: 100%;
-    padding: 30px;
+    padding: 28px;
+    box-sizing: border-box;
 }
 
-.schedule-date {
+
+/* =========================
+   HEADER
+========================= */
+
+.schedule-page .page-header {
     display: flex;
-    flex-direction: column;
-    text-align: right;
-    color: white;
-    background-color: var(--primary);
-    padding: 10px;
-    border-radius: 10px;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 24px;
 }
 
-.schedule-date span {
-    color: white;
-    margin-top: 5px;
+.schedule-page .page-header h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 700;
 }
 
-.schedule-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    border-radius: 20px;
-}
-
-.schedule-card {
-    display: flex;
-    align-items: center;
-    gap: 25px;
-    cursor: pointer;
-    padding: 22px;
-    background-color: var(--bg);
-    border-radius: 16px;
-    border-left: 5px solid var(--primary);
-    transition: 0.3s ease;
-}
-
-.schedule-card:hover {
-    transform: translateX(5px);
-}
-
-.schedule-time {
-    width: 180px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--primary-dark);
-    font-weight: bold;
-}
-
-.schedule-content {
-    flex: 1;
-}
-
-.schedule-content h3 {
+.schedule-page .page-header p {
     margin: 0;
-    color: var(--text);
+    color: #777;
+    font-size: 14px;
 }
 
-.schedule-content p {
-    margin: 6px 0;
-    color: white;
+.term-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
 }
 
-.schedule-location {
+.term-info strong {
+    font-size: 14px;
+}
+
+.term-info span {
+    color: #777;
+    font-size: 13px;
+}
+
+
+/* =========================
+   TABLE CONTAINER
+========================= */
+
+.schedule-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #e8e8e8;
+    border-radius: 14px;
+}
+
+
+/* =========================
+   TABLE
+========================= */
+
+.schedule-table {
+    display: grid;
+
+    /*
+       1 time column
+       + 6 day columns
+    */
+    grid-template-columns:
+        90px
+        repeat(6, minmax(150px, 1fr));
+    min-width: 1000px;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.s-schedule-header {
+    min-height: 52px;
+
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: white;
-    font-size: 14px;
+    justify-content: center;
+    
+    padding: 0 12px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    background: #fafafa;
+
+    border-bottom: 1px solid black;
+    border-left: 1px solid black;
+    color: black;
+    box-sizing: border-box;
+
+}
+
+.s-schedule-header.time-column {
+    border-left: none;
+    color: black;
+}
+
+
+/* =========================
+   TIME COLUMN
+========================= */
+
+.schedule-time-cell {
+    height: 200px;
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+
+    padding-top: 12px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    color: black;
+
+    background: #fafafa;
+
+    border-bottom: 1px solid black;
+
+    box-sizing: border-box;
+}
+
+
+/* =========================
+   EMPTY SCHEDULE CELL
+========================= */
+
+.schedule-cell {
+    height: 200px;
+
+    position: relative;
+
+    border-left: 1px solid black;
+    border-bottom: 1px solid black;
+
+    background: #ffffff;
+
+    box-sizing: border-box;
+    
+}
+
+
+/* subtle hover */
+
+.schedule-cell:hover {
+    background: #fafafa;
+}
+
+
+/* =========================
+   CLASS BLOCK
+========================= */
+
+.class-block {
+    position: absolute;
+
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+
+    padding: 10px;
+
+    border-radius: 9px;
+    
+    background: #f0fff0;
+
+    border-left: 4px solid rgb(50, 231, 50);
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    box-sizing: border-box;
+}
+
+
+/* =========================
+   CLASS TYPE
+========================= */
+
+.class-block .class-type {
+    align-self: flex-start;
+
+    margin-bottom: 4px;
+
+    padding: 3px 7px;
+
+    border-radius: 5px;
+
+    font-size: 9px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    background: #e6ffe6;
+    color: #168b16;
+}
+
+
+/* =========================
+   SUBJECT CODE
+========================= */
+
+.class-block > strong {
+    font-size: 11px;
+
+    color: black;
+
+    margin-bottom: 2px;
+}
+
+
+/* =========================
+   SUBJECT NAME
+========================= */
+
+.class-block h3 {
+    margin: 0 0 7px;
+
+    font-size: 13px;
+    line-height: 1.25;
+
+    font-weight: 700;
+
+    color: #111;
+}
+
+
+/* =========================
+   PROFESSOR / ROOM
+========================= */
+
+.class-block div {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    margin-top: 3px;
+
+    font-size: 10px;
+
+    color: black;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.class-block svg {
+    flex-shrink: 0;
+
+    font-size: 11px;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 900px) {
+
+    .schedule-page {
+        padding: 20px;
+    }
+
+    .schedule-page .page-header {
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .schedule-page .page-header h1 {
+        font-size: 24px;
+    }
+
+    .term-info {
+        align-items: flex-start;
+    }
+}
+
+
+@media (max-width: 600px) {
+
+    .schedule-page {
+        padding: 14px;
+    }
+
+    .schedule-page .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .term-info {
+        align-items: flex-start;
+    }
+
+    .schedule-table-wrapper {
+        border-radius: 10px;
+    }
 }
 
 .class-type {

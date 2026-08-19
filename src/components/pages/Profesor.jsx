@@ -7,7 +7,6 @@ import {
 } from "react-icons/fa";
 import Home from './ProfesorPage/ProfHome';
 import StudentDemo from './ProfesorPage/ProfStudent-demo'
-import Student from './ProfesorPage/ProfStudent'
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { Navigate, useLocation } from 'react-router-dom';
 import LineSidebar from './animatedComponents/Sidebar';
@@ -19,6 +18,7 @@ const[nav, setNav] = useState(false);
 const navigate = useNavigate();
 const[user, setUser] = useState(null);
 const[loading, setLoading] = useState(false);
+const[academicTerm, setAcademicTerm] = useState([]);
 useEffect(() => {
             console.log("start");
 
@@ -38,7 +38,35 @@ useEffect(() => {
       };
 
       getMe();
+      fetchTerm();
   }, []);
+
+  const fetchTerm = async () => {
+        try {
+        const token = localStorage.getItem(`${role}_token`);
+
+        const response = await fetch(
+            'http://localhost:3000/api/auth/getAcademicTerm',
+            {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        console.log(data);
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
+        console.log(data.term.id);
+        setAcademicTerm(data.term);
+    } catch (error) {
+        alert(error.message);
+    }
+    };
 
 const logout = () => {
   localStorage.removeItem(`${role}_token`);
@@ -155,8 +183,7 @@ return (
     <div className="prof-content">
         <Routes>
             <Route path="/" element={<Home user={user}/>} />
-            <Route path='/students-demo' element={<StudentDemo />} />
-            <Route path='/students' element={<Student />} />
+            <Route path='/students-demo' element={<StudentDemo user={user} academicTerm={academicTerm}/>} />
         </Routes>
     </div>
 </div>

@@ -1,0 +1,845 @@
+import React, { useEffect, useState } from "react";
+import {
+    FiUsers,
+    FiUserCheck,
+    FiBookOpen,
+    FiLayers,
+    FiCalendar,
+    FiAlertTriangle,
+    FiCheckCircle,
+    FiClock,
+    FiHome,
+    FiArrowRight,
+    FiRefreshCw,
+} from "react-icons/fi";
+
+import "./styles/AdminDashboard.css";
+
+const AdminDashboard = () => {
+
+    const [dashboard, setDashboard] = useState({
+        totalStudents: 0,
+        totalProfessors: 0,
+        totalPrograms: 0,
+        totalSections: 0,
+
+        pendingApplications: 0,
+        approvedApplications: 0,
+        rejectedApplications: 0,
+
+        totalSubjects: 0,
+        totalClasses: 0,
+
+        roomsUsed: 0,
+        totalRooms: 0,
+
+        professorsUsed: 0,
+
+        scheduleGenerated: false,
+        scheduleConflicts: 0,
+
+        recentApplications: [],
+        alerts: [],
+    });
+
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchDashboard();
+    }, []);
+
+    const fetchDashboard = async () => {
+
+        try {
+
+            setLoading(true);
+
+            const response = await fetch(
+                "http://localhost:3000/api/auth/admin/dashboard",
+                {
+                    method: "GET",
+                    credentials: "include",
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to fetch dashboard");
+            }
+
+            const data = await response.json();
+
+            setDashboard(data);
+
+        } catch (error) {
+
+            console.error(
+                "Error fetching admin dashboard:",
+                error
+            );
+
+        } finally {
+
+            setLoading(false);
+
+        }
+    };
+
+    const {
+        totalStudents,
+        totalProfessors,
+        totalPrograms,
+        totalSections,
+
+        pendingApplications,
+        approvedApplications,
+        rejectedApplications,
+
+        totalSubjects,
+        totalClasses,
+
+        roomsUsed,
+        totalRooms,
+
+        professorsUsed,
+
+        scheduleGenerated,
+        scheduleConflicts,
+
+        recentApplications,
+        alerts,
+    } = dashboard;
+
+
+    const roomUtilization =
+        totalRooms > 0
+            ? Math.round((roomsUsed / totalRooms) * 100)
+            : 0;
+
+    const professorUtilization =
+        totalProfessors > 0
+            ? Math.round(
+                (professorsUsed / totalProfessors) * 100
+            )
+            : 0;
+
+
+    if (loading) {
+        return (
+            <div className="admin-dashboard-loading">
+
+                <FiRefreshCw className="loading-icon" />
+
+                <p>Loading dashboard...</p>
+
+            </div>
+        );
+    }
+
+
+    return (
+
+        <div className="d-admin-dashboard">
+
+            {/* =========================================
+                HEADER
+            ========================================= */}
+
+            <div className="d-admin-dashboard-header">
+
+                <div>
+
+                    <p className="dashboard-eyebrow">
+                        ADMINISTRATOR
+                    </p>
+
+                    <h1>
+                        Good morning, Admin 👋
+                    </h1>
+
+                    <p className="dashboard-subtitle">
+                        Here's what's happening in your LMS today.
+                    </p>
+
+                </div>
+
+
+                <button
+                    className="dashboard-refresh-btn"
+                    onClick={fetchDashboard}
+                >
+                    <FiRefreshCw />
+
+                    Refresh
+                </button>
+
+            </div>
+
+
+            {/* =========================================
+                ACADEMIC TERM
+            ========================================= */}
+
+            <div className="academic-term-card">
+
+                <div className="academic-term-icon">
+                    <FiCalendar />
+                </div>
+
+                <div className="academic-term-info">
+
+                    <span>
+                        CURRENT ACADEMIC TERM
+                    </span>
+
+                    <h2>
+                        1st Semester
+                    </h2>
+
+                    <p>
+                        Academic Year 2026–2027
+                    </p>
+
+                </div>
+
+
+                <div className="academic-term-date">
+
+                    <span>
+                        June 22, 2026
+                    </span>
+
+                    <FiArrowRight />
+
+                    <span>
+                        October 2, 2026
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            {/* =========================================
+                STAT CARDS
+            ========================================= */}
+
+            <div className="dashboard-stats">
+
+                <div className="stat-card">
+
+                    <div className="stat-card-top">
+
+                        <div className="stat-icon">
+                            <FiUsers />
+                        </div>
+
+                    </div>
+
+                    <div className="stat-value">
+                        {totalStudents.toLocaleString()}
+                    </div>
+
+                    <div className="stat-label">
+                        Total Students
+                    </div>
+
+                </div>
+
+
+                <div className="stat-card">
+
+                    <div className="stat-card-top">
+
+                        <div className="stat-icon">
+                            <FiUserCheck />
+                        </div>
+
+                    </div>
+
+                    <div className="stat-value">
+                        {totalProfessors.toLocaleString()}
+                    </div>
+
+                    <div className="stat-label">
+                        Professors
+                    </div>
+
+                </div>
+
+
+                <div className="stat-card">
+
+                    <div className="stat-card-top">
+
+                        <div className="stat-icon">
+                            <FiBookOpen />
+                        </div>
+
+                    </div>
+
+                    <div className="stat-value">
+                        {totalPrograms}
+                    </div>
+
+                    <div className="stat-label">
+                        Programs
+                    </div>
+
+                </div>
+
+
+                <div className="stat-card">
+
+                    <div className="stat-card-top">
+
+                        <div className="stat-icon">
+                            <FiLayers />
+                        </div>
+
+                    </div>
+
+                    <div className="stat-value">
+                        {totalSections}
+                    </div>
+
+                    <div className="stat-label">
+                        Active Sections
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            {/* =========================================
+                MAIN GRID
+            ========================================= */}
+
+            <div className="dashboard-main-grid">
+
+
+                {/* =====================================
+                    ENROLLMENT
+                ===================================== */}
+
+                <div className="dashboard-card enrollment-card">
+
+                    <div className="dashboard-card-header">
+
+                        <div>
+
+                            <h2>
+                                Enrollment Overview
+                            </h2>
+
+                            <p>
+                                Current student application status
+                            </p>
+
+                        </div>
+
+                        <FiUsers />
+
+                    </div>
+
+
+                    <div className="enrollment-content">
+
+                        <div className="enrollment-stat">
+
+                            <span className="enrollment-number">
+                                {approvedApplications}
+                            </span>
+
+                            <span>
+                                Approved
+                            </span>
+
+                        </div>
+
+
+                        <div className="enrollment-stat">
+
+                            <span className="enrollment-number">
+                                {pendingApplications}
+                            </span>
+
+                            <span>
+                                Pending
+                            </span>
+
+                        </div>
+
+
+                        <div className="enrollment-stat">
+
+                            <span className="enrollment-number">
+                                {rejectedApplications}
+                            </span>
+
+                            <span>
+                                Rejected
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div className="enrollment-bar">
+
+                        <div
+                            className="enrollment-approved"
+                            style={{
+                                width:
+                                    approvedApplications > 0
+                                        ? "70%"
+                                        : "0%",
+                            }}
+                        />
+
+                    </div>
+
+
+                    <button className="dashboard-link-btn">
+                        View Applications
+
+                        <FiArrowRight />
+
+                    </button>
+
+                </div>
+
+
+                {/* =====================================
+                    SCHEDULE STATUS
+                ===================================== */}
+
+                <div className="dashboard-card schedule-card">
+
+                    <div className="dashboard-card-header">
+
+                        <div>
+
+                            <h2>
+                                Schedule Status
+                            </h2>
+
+                            <p>
+                                Current scheduling overview
+                            </p>
+
+                        </div>
+
+                        <FiCalendar />
+
+                    </div>
+
+
+                    <div className="schedule-status">
+
+                        <div
+                            className={
+                                scheduleGenerated
+                                    ? "status-icon success"
+                                    : "status-icon warning"
+                            }
+                        >
+
+                            {scheduleGenerated
+                                ? <FiCheckCircle />
+                                : <FiClock />
+                            }
+
+                        </div>
+
+
+                        <div>
+
+                            <h3>
+
+                                {scheduleGenerated
+                                    ? "Schedule Generated"
+                                    : "Schedule Not Generated"
+                                }
+
+                            </h3>
+
+                            <p>
+
+                                {scheduleGenerated
+                                    ? "The current academic term has an active schedule."
+                                    : "Sections are waiting for schedule generation."
+                                }
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div className="schedule-details">
+
+                        <div>
+
+                            <span>
+                                Sections
+                            </span>
+
+                            <strong>
+                                {totalSections}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>
+                                Subjects
+                            </span>
+
+                            <strong>
+                                {totalSubjects}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>
+                                Classes
+                            </span>
+
+                            <strong>
+                                {totalClasses}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>
+                                Conflicts
+                            </span>
+
+                            <strong
+                                className={
+                                    scheduleConflicts > 0
+                                        ? "danger-text"
+                                        : "success-text"
+                                }
+                            >
+                                {scheduleConflicts}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <button className="dashboard-primary-btn">
+
+                        {scheduleGenerated
+                            ? "View Schedule"
+                            : "Generate Schedule"
+                        }
+
+                    </button>
+
+                </div>
+
+
+                {/* =====================================
+                    RESOURCE UTILIZATION
+                ===================================== */}
+
+                <div className="dashboard-card resource-card">
+
+                    <div className="dashboard-card-header">
+
+                        <div>
+
+                            <h2>
+                                Resource Utilization
+                            </h2>
+
+                            <p>
+                                Current scheduling resources
+                            </p>
+
+                        </div>
+
+                        <FiHome />
+
+                    </div>
+
+
+                    <div className="resource-item">
+
+                        <div className="resource-label">
+
+                            <span>
+                                Rooms
+                            </span>
+
+                            <strong>
+                                {roomUtilization}%
+                            </strong>
+
+                        </div>
+
+                        <div className="resource-progress">
+
+                            <div
+                                style={{
+                                    width: `${roomUtilization}%`,
+                                }}
+                            />
+
+                        </div>
+
+                    </div>
+
+
+                    <div className="resource-item">
+
+                        <div className="resource-label">
+
+                            <span>
+                                Professors
+                            </span>
+
+                            <strong>
+                                {professorUtilization}%
+                            </strong>
+
+                        </div>
+
+                        <div className="resource-progress">
+
+                            <div
+                                style={{
+                                    width: `${professorUtilization}%`,
+                                }}
+                            />
+
+                        </div>
+
+                    </div>
+
+
+                    <div className="resource-item">
+
+                        <div className="resource-label">
+
+                            <span>
+                                Time Slots
+                            </span>
+
+                            <strong>
+                                89%
+                            </strong>
+
+                        </div>
+
+                        <div className="resource-progress">
+
+                            <div
+                                style={{
+                                    width: "89%",
+                                }}
+                            />
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                {/* =====================================
+                    ALERTS
+                ===================================== */}
+
+                <div className="dashboard-card alerts-card">
+
+                    <div className="dashboard-card-header">
+
+                        <div>
+
+                            <h2>
+                                System Alerts
+                            </h2>
+
+                            <p>
+                                Items that may need your attention
+                            </p>
+
+                        </div>
+
+                        <FiAlertTriangle />
+
+                    </div>
+
+
+                    <div className="alerts-list">
+
+                        {alerts?.length > 0 ? (
+
+                            alerts.map((alert, index) => (
+
+                                <div
+                                    className="alert-item"
+                                    key={index}
+                                >
+
+                                    <div className="alert-icon">
+                                        <FiAlertTriangle />
+                                    </div>
+
+                                    <span>
+                                        {alert.message}
+                                    </span>
+
+                                </div>
+
+                            ))
+
+                        ) : (
+
+                            <div className="no-alerts">
+
+                                <FiCheckCircle />
+
+                                <span>
+                                    No alerts. Everything looks good!
+                                </span>
+
+                            </div>
+
+                        )}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            {/* =========================================
+                RECENT APPLICATIONS
+            ========================================= */}
+
+            <div className="dashboard-card recent-applications">
+
+                <div className="dashboard-card-header">
+
+                    <div>
+
+                        <h2>
+                            Recent Applications
+                        </h2>
+
+                        <p>
+                            Latest student applications
+                        </p>
+
+                    </div>
+
+
+                    <button className="dashboard-link-btn">
+
+                        View All
+
+                        <FiArrowRight />
+
+                    </button>
+
+                </div>
+
+
+                <div className="applications-table">
+
+                    <div className="table-header">
+
+                        <span>
+                            Student
+                        </span>
+
+                        <span>
+                            Program
+                        </span>
+
+                        <span>
+                            Status
+                        </span>
+
+                        <span>
+                            Date
+                        </span>
+
+                    </div>
+
+
+                    {recentApplications?.length > 0 ? (
+
+                        recentApplications.map(
+                            (application, index) => (
+
+                                <div
+                                    className="table-row"
+                                    key={index}
+                                >
+
+                                    <span className="student-name">
+                                        {application.name}
+                                    </span>
+
+                                    <span>
+                                        {application.program}
+                                    </span>
+
+                                    <span>
+
+                                        <span
+                                            className={`application-status ${application.status?.toLowerCase()}`}
+                                        >
+                                            {application.status}
+                                        </span>
+
+                                    </span>
+
+                                    <span>
+                                        {application.date}
+                                    </span>
+
+                                </div>
+
+                            )
+
+                        )
+
+                    ) : (
+
+                        <div className="empty-table">
+
+                            No recent applications.
+
+                        </div>
+
+                    )}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    );
+};
+
+export default AdminDashboard;

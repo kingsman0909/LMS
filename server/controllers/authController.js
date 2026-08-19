@@ -6,6 +6,7 @@ const allCourses = require('../model/Courses');
 const allPrograms = require('../model/Programs');
 const academic = require("../model/AcademicTerm");
 const checker = require("../services/capacityCheckerService");
+const Student = require("../model/Student");
 
 const login = async (req, res) => {
    
@@ -270,18 +271,7 @@ const getSubjects = async (req, res) => {
         const term = await academic.getActiveAcademicTerm();
         const semester = term.semester;
 
-        const schedules =
-            await scheduler.autoGenerateSchedule(
-                1, // section ID
-                1  // academic term ID
-            );
-
-        console.log(
-            "GENERATED SCHEDULE:",
-            JSON.stringify(schedules, null, 2)
-        );
-
-        console.log("controller:", schedules);
+        
         let subjects = null;
         if(userRole === "admin"){
             subjects = await Subjects.getSubjectsAdmin();
@@ -300,13 +290,66 @@ const getSubjects = async (req, res) => {
     }
 }
 
+const getStudentSubjects = async (req, res) => {
+    
+    try{
+
+        const {academicTermId, studentId} = req.query;
+        const subjects = await Subjects.getSubjectsByStudent(studentId, academicTermId);
+        
+        res.status(200).json({
+            subjects
+        });
+    }
+    catch(error){
+        res.status(500).json({
+            message: "Failed to fetch subjects"
+        });
+    }
+}
 
 const getStudents = async (req, res) => {
 
     try {
 
+        const page =
+            parseInt(req.query.page) || 1;
+
+        const limit =
+            parseInt(req.query.limit) || 50;
+
+        const search =
+            req.query.search || "";
+
+
+        const result =
+            await authService.getStudents(
+                page,
+                limit,
+                search
+            );
+
+
+        res.json(result);
+
+    } catch (error) {
+
+        console.error(error);
+
+        res.status(500).json({
+            message: error.message
+        });
+
+    }
+};
+
+const getProfStudent = async (req, res) => {
+
+    try {
+
+        const {academicTermId, profId} = req.query;
         const students =
-            await authService.getStudents();
+            await authService.getProfStudent(academicTermId, profId);
 
         res.json({
             students
@@ -361,6 +404,52 @@ const getProfessor = async(req, res) => {
 
     }
 }
+
+const getSchedulesBySection = async (req, res) => {
+
+    try {
+
+        const { academicTermId, sectionId } = req.query;
+
+        console.log(academicTermId, sectionId);
+        
+        if (!academicTermId) {
+
+            return res.status(400).json({
+                message: "academicTermId is required."
+            });
+
+        }
+
+        if(!sectionId){
+            return res.status(400).json({
+                message: "Section ID is required."
+            });
+        }
+
+        const schedules =
+            await authService.getSchedulesBySection(
+                academicTermId, sectionId
+            );
+
+        return res.status(200).json({
+            message: "Schedules fetched successfully.",
+            academicTermId,
+            schedules
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Get schedules error:",
+            error
+        );
+
+        return res.status(500).json({
+            message: error.message
+        });
+    }
+};
 
 const getSchedules = async (req, res) => {
 
@@ -598,7 +687,14 @@ const getEnrollmentCapacities = async (
     }
 };
 
-const checkEnrollmentCapacity = async (
+
+
+
+// ============================================================
+// CHECK UNIVERSITY CAPACITY
+// ============================================================
+
+const checkUniversityCapacity = async (
     req,
     res
 ) => {
@@ -606,63 +702,88 @@ const checkEnrollmentCapacity = async (
     try {
 
         const {
-            programId,
-            yearLevel,
-            academicTermId,
-            pendingApplicants
+            academicTermId
         } = req.query;
 
 
-        if (
-            !programId ||
-            !yearLevel ||
-            !academicTermId ||
-            pendingApplicants === undefined
-        ) {
+        // ==============================================
+        // VALIDATION
+        // ==============================================
+
+        if (!academicTermId) {
 
             return res.status(400).json({
+
+                success: false,
+
                 message:
-                    "programId, yearLevel, academicTermId, and pendingApplicants are required."
+                    "Academic term ID is required."
             });
         }
 
 
+        // ==============================================
+        // SERVICE
+        // ==============================================
+
         const result =
-            await checker
-                .checkEnrollmentFeasibility({
-
-                    programId:
-                        Number(programId),
-
-                    yearLevel:
-                        Number(yearLevel),
-
-                    academicTermId:
-                        Number(academicTermId),
-
-                    pendingApplicants:
-                        Number(pendingApplicants)
-                });
+            await authService.checkUniversityCapacity(
+                academicTermId
+            );
 
 
-        return res.status(200).json(
-            result
-        );
+        // ==============================================
+        // RESPONSE
+        // ==============================================
 
-    } catch (error) {
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                "University capacity successfully simulated.",
+
+            data: result
+        });
+
+    }
+
+    catch (error) {
 
         console.error(
-            "Capacity checker error:",
+            "Check University Capacity Error:",
             error
         );
 
+
         return res.status(500).json({
+
+            success: false,
+
             message:
-                error.message
+                error.message ||
+                "Failed to check university capacity."
         });
     }
 };
 
+
+const getTotalStudents = async (req, res) => {
+    try {
+        const totalStudents = await Student.getTotalStudents();
+
+        res.status(200).json({
+            totalStudents
+        });
+
+    } catch (error) {
+        console.error("Error getting total students:", error);
+
+        res.status(500).json({
+            message: "Failed to get total students"
+        });
+    }
+};
 
 
 module.exports = {
@@ -685,6 +806,7 @@ module.exports = {
     createSections,
     getProfessor,
     getSection,
+    getTotalStudents,
     getSectionById,
     getAcademicTerm,
     createSubject,
@@ -693,6 +815,9 @@ module.exports = {
     generateSchedule,
     getSchedules,
     getScheduleSections,
-    checkEnrollmentCapacity
+    checkUniversityCapacity,
+    getSchedulesBySection,
+    getStudentSubjects,
+    getProfStudent
 };
 

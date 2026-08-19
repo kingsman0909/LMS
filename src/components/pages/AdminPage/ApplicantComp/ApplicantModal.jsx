@@ -1,7 +1,11 @@
 import React from 'react'
 import './Modal.css';
-const ApplicantModal = ({selectedStudent, setSelectedStudent}) => {
+const ApplicantModal = ({selectedStudent, setSelectedStudent, approved}) => {
     
+    const approve = (student) => {
+        setSelectedStudent(null);
+        approved(student);
+    }
   return (
     <div>
       
@@ -181,7 +185,7 @@ const ApplicantModal = ({selectedStudent, setSelectedStudent}) => {
                     Reject
                 </button>
 
-                <button className="m-approve-btn">
+                <button className="m-approve-btn" onClick={()=>{approve(selectedStudent)}}>
                     Approve
                 </button>
 

@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from "react-router-dom";
+
 import '../../styles/Admin.css';
 import LineSidebar from './animatedComponents/Sidebar';
 import Applicant from './AdminPage/Applicants';
 import AllStudents from './AdminPage/AllStudents';
 import AllSubjects from './AdminPage/AllSubjects';
-import Sections from './AdminPage/Sections';
 import AllPrograms from './AdminPage/AllPrograms';
 import AllProfessor from './AdminPage/AllProfessor';
 import Announcements from './AdminPage/Announcements';
 import Schedule from './AdminPage/Schedule';
+import Dashboard from './AdminPage/Dashboard';
 
 import {
     HiMenu,
@@ -25,6 +27,7 @@ import {
     Routes,
     Route
 } from 'react-router-dom';
+
 
 const fetchAnnouncements = async () => {
     try {
@@ -61,6 +64,7 @@ const Admin = ({role}) => {
     const [programs, setPrograms] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
 
+
     const navigate = useNavigate();
 
     const fetchTerm = async () => {
@@ -86,7 +90,7 @@ const Admin = ({role}) => {
         console.log(data.term.id);
         setAcademicTerm(data.term);
     } catch (error) {
-        console.error("hello");
+        alert(error.message);
     }
     };
 
@@ -141,6 +145,22 @@ const Admin = ({role}) => {
         navigate('/');
 
     };
+
+    const location = useLocation();
+
+
+    const pathMap = {
+    "/admin": 0,
+    "/admin/applicants": 1,
+    "/admin/programs": 2,
+    "/admin/allStudents": 3,
+    "/admin/professors": 4,
+    "/admin/allSubjects": 5,
+    "/admin/schedules": 6
+  };
+
+      const ind = pathMap[location.pathname] ?? 0;
+
       const handlePage = (index, label) =>{
     switch(index){
       case 0:
@@ -165,9 +185,6 @@ const Admin = ({role}) => {
         navigate('/admin/schedules');
         break;
     case 7:
-        navigate('/admin/sections');
-        break;
-    case 8:
         navigate('/admin/announcements');
         break;
       default:
@@ -338,7 +355,7 @@ const Admin = ({role}) => {
                 <LineSidebar 
                     items={['Dashboard','Applicants', 'Programs', 'Students', 
                             'Professors', 'subjects', 'schedules', 
-                             'sections', 'Announcements ', 'Enrollments']}
+                             'Announcements ', 'Enrollments']}
                     accentColor="rgb(50, 231, 50)"
                     textColor="#c4c4c4"
                     markerColor="#6c6c6c"
@@ -354,7 +371,7 @@ const Admin = ({role}) => {
                     itemGap={20}
                     fontSize={1.1}
                     smoothing={100}
-                    defaultActive={1}
+                    defaultActive={ind}
                     onItemClick={(index, label) => handlePage(index, label)}
                         />
                 </div>
@@ -364,11 +381,11 @@ const Admin = ({role}) => {
                 <Route path='/applicants' element={<Applicant />}></Route>
                 <Route path='/allStudents' element={<AllStudents />} />
                 <Route path='/allSubjects' element={<AllSubjects programs={programs}/>} />
-                <Route path='/sections' element={<Sections term={academicTerm}/>} />
                 <Route path='/programs' element={<AllPrograms />} />
                 <Route path='/schedules' element={<Schedule />} />
                 <Route path='/professors' element={<AllProfessor />} />
                 <Route path='/announcements' element={<Announcements />} />
+                <Route path='/' element={<Dashboard />} />
             </Routes>
         </div>
 
