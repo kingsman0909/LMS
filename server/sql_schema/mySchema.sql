@@ -408,7 +408,7 @@ drop table courses;
 drop table enrollments;
 SET FOREIGN_KEY_CHECKS = 1; -- enable foreign key checks turn it to 0 to delete table with foreign key
 	
-delete from student_applications
+delete from sections
 where id > 0;
 
 select * from time_slots;
@@ -489,123 +489,6 @@ delete from users
 where id > 2;
 SET SESSION cte_max_recursion_depth = 5000;
 
-delete from student_applications
-where status = "pending" and id > 0;
-
-
-INSERT INTO student_applications
-(
-    email,
-    username,
-    password,
-    firstname,
-    middlename,
-    lastname,
-    course_id,
-    year_level,
-    section,
-    phone,
-    gender,
-    status
-)
-WITH RECURSIVE numbers AS
-(
-    SELECT 1 AS n
-
-    UNION ALL
-
-    SELECT n + 1
-    FROM numbers
-    WHERE n < 2000
-)
-
-SELECT
-
-    CONCAT(
-        'stress_test_',
-        UUID(),
-        '@example.com'
-    ),
-
-    CONCAT(
-        'stress_test_',
-        UUID()
-    ),
-
-    'TesPassword1234',
-
-    CONCAT(
-        'Student_',
-        n
-    ),
-
-    'LoadTests',
-
-    CONCAT(
-        'Applicant_',
-        n
-    ),
-
-    -- ==========================================
-    -- PROGRAM
-    -- ==========================================
-
-    CASE
-
-        WHEN n <= 500
-            THEN 1
-
-        WHEN n <= 1000
-            THEN 2
-
-        WHEN n <= 1500
-            THEN 3
-
-        ELSE 4
-
-    END,
-
-    -- ==========================================
-    -- YEAR LEVEL
-    -- 125 students per year within each program
-    -- ==========================================
-
-    CASE
-
-        WHEN MOD(n - 1, 500) < 125
-            THEN 1
-
-        WHEN MOD(n - 1, 500) < 250
-            THEN 2
-
-        WHEN MOD(n - 1, 500) < 375
-            THEN 3
-
-        ELSE 4
-
-    END,
-
-    NULL,
-
-    CONCAT(
-        '09',
-        LPAD(
-            n,
-            9,
-            '0'
-        )
-    ),
-
-    CASE
-        WHEN MOD(n, 2) = 0
-            THEN 'Male'
-        ELSE 'Female'
-    END,
-
-    'pending'
-
-FROM numbers;
-
 
 INSERT INTO student_applications
 (
@@ -625,41 +508,180 @@ INSERT INTO student_applications
     status
 )
 SELECT
-    CONCAT('bscs_test_', n, '@example.com') AS email,
-    CONCAT('bscs_test_', n) AS username,
-    '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890' AS password,
-    CONCAT('BSCSFirst', n) AS firstname,
+    CONCAT(
+        CASE course_id
+            WHEN 1 THEN 'bscs'
+            WHEN 2 THEN 'bsit'
+            WHEN 3 THEN 'bsie'
+            WHEN 4 THEN 'bsn'
+        END,
+        '_test_',
+        n,
+        '@example.com'
+    ) AS email,
+
+    CONCAT(
+        CASE course_id
+            WHEN 1 THEN 'bscs'
+            WHEN 2 THEN 'bsit'
+            WHEN 3 THEN 'bsie'
+            WHEN 4 THEN 'bsn'
+        END,
+        '_test_',
+        n
+    ) AS username,
+
+    '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+        AS password,
+
+    CONCAT(
+        CASE course_id
+            WHEN 1 THEN 'BSCSFirst'
+            WHEN 2 THEN 'BSITFirst'
+            WHEN 3 THEN 'BSIEFirst'
+            WHEN 4 THEN 'BSNFirst'
+        END,
+        n
+    ) AS firstname,
+
     'Test' AS middlename,
-    CONCAT('BSCSStudent', n) AS lastname,
-    1 AS course_id,
+
+    CONCAT(
+        CASE course_id
+            WHEN 1 THEN 'BSCSStudent'
+            WHEN 2 THEN 'BSITStudent'
+            WHEN 3 THEN 'BSIEStudent'
+            WHEN 4 THEN 'BSNStudent'
+        END,
+        n
+    ) AS lastname,
+
+    course_id,
+
     CASE
-        WHEN n <= 125 THEN 1
-        WHEN n <= 250 THEN 2
-        WHEN n <= 375 THEN 3
+        WHEN n <= 750 THEN 1
+        WHEN n <= 1000 THEN 2
+        WHEN n <= 1250 THEN 3
         ELSE 4
     END AS year_level,
+
     NULL AS section,
-    CONCAT('09', LPAD(n, 9, '0')) AS phone,
+
+    CONCAT(
+        '09',
+        LPAD(
+            ((course_id - 1) * 2000) + n,
+            9,
+            '0'
+        )
+    ) AS phone,
+
     CASE
         WHEN MOD(n, 2) = 0 THEN 'Male'
         ELSE 'Female'
     END AS gender,
-    DATE_ADD('2000-01-01', INTERVAL MOD(n, 3000) DAY) AS birthdate,
-    CONCAT('Test Address ', n) AS address,
+
+    DATE_ADD(
+        '2000-01-01',
+        INTERVAL MOD(
+            ((course_id - 1) * 2000) + n,
+            3000
+        ) DAY
+    ) AS birthdate,
+
+    CONCAT(
+        'Test Address ',
+        CASE course_id
+            WHEN 1 THEN 'BSCS'
+            WHEN 2 THEN 'BSIT'
+            WHEN 3 THEN 'BSIE'
+            WHEN 4 THEN 'BSN'
+        END,
+        ' ',
+        n
+    ) AS address,
+
     'pending' AS status
-FROM (
+
+FROM
+(
     SELECT
-        ones.n
+        500
+        + ones.n
         + tens.n * 10
         + hundreds.n * 100
-        + 1 AS n
+        + thousands.n * 1000
+        + 1 AS n,
+
+        programs.course_id
+
     FROM
-        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
-         UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones
+    (
+        SELECT 1 AS course_id
+        UNION ALL SELECT 2
+        UNION ALL SELECT 3
+        UNION ALL SELECT 4
+    ) programs
+
     CROSS JOIN
-        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
-         UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) tens
+    (
+        SELECT 0 AS n
+        UNION ALL SELECT 1
+        UNION ALL SELECT 2
+        UNION ALL SELECT 3
+        UNION ALL SELECT 4
+        UNION ALL SELECT 5
+        UNION ALL SELECT 6
+        UNION ALL SELECT 7
+        UNION ALL SELECT 8
+        UNION ALL SELECT 9
+    ) ones
+
     CROSS JOIN
-        (SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4) hundreds
+    (
+        SELECT 0 AS n
+        UNION ALL SELECT 1
+        UNION ALL SELECT 2
+        UNION ALL SELECT 3
+        UNION ALL SELECT 4
+        UNION ALL SELECT 5
+        UNION ALL SELECT 6
+        UNION ALL SELECT 7
+        UNION ALL SELECT 8
+        UNION ALL SELECT 9
+    ) tens
+
+    CROSS JOIN
+    (
+        SELECT 0 AS n
+        UNION ALL SELECT 1
+        UNION ALL SELECT 2
+        UNION ALL SELECT 3
+        UNION ALL SELECT 4
+        UNION ALL SELECT 5
+        UNION ALL SELECT 6
+        UNION ALL SELECT 7
+        UNION ALL SELECT 8
+        UNION ALL SELECT 9
+    ) hundreds
+
+    CROSS JOIN
+    (
+        SELECT 0 AS n
+        UNION ALL SELECT 1
+        UNION ALL SELECT 2
+        UNION ALL SELECT 3
+        UNION ALL SELECT 4
+        UNION ALL SELECT 5
+        UNION ALL SELECT 6
+        UNION ALL SELECT 7
+        UNION ALL SELECT 8
+        UNION ALL SELECT 9
+    ) thousands
+
 ) numbers
-WHERE n <= 500;
+
+WHERE n BETWEEN 501 AND 1500;
+
+
+

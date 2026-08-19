@@ -478,7 +478,7 @@ async function assignSection(
                 year_level,
                 sectionLetter,
                 academicTermId,
-                30
+                50
             );
 
 
