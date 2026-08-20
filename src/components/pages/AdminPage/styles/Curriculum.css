@@ -1,0 +1,808 @@
+.curriculum-page {
+    min-height: 100%;
+    padding: 28px;
+    color: black;
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    margin-inline: 30px;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.curriculum-header {
+    margin-bottom: 24px;
+}
+
+.curriculum-header h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 750;
+    letter-spacing: -0.5px;
+    color: var(--primary-dark);
+}
+
+.curriculum-header p {
+    margin: 6px 0 0;
+    color: #718078;
+    font-size: 14px;
+}
+
+/* =========================================================
+   PROGRAM PANEL
+========================================================= */
+
+.program-panel {
+    background: #ffffff;
+    border: 1px solid #e6ebe8;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.program-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.section-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    color: #829089;
+    margin-bottom: 5px;
+}
+
+.program-panel-header h2 {
+    margin: 0;
+    font-size: 17px;
+}
+
+.program-count {
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #f1f5f2;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.program-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.program-card {
+    position: relative;
+    text-align: left;
+    border: 1px solid #e5ebe7;
+    background: #fafcfb;
+    border-radius: 12px;
+    padding: 14px;
+    cursor: pointer;
+    transition: 0.18s ease;
+}
+
+.program-card:hover {
+    border-color: #b9c9c0;
+    background: #ffffff;
+}
+
+.program-card.active {
+    border-color: #39b875;
+    background: #f0fbf5;
+}
+
+.program-code {
+    font-size: 15px;
+    font-weight: 800;
+    color: #1d2923;
+}
+
+.program-name {
+    margin-top: 4px;
+    color: #78847e;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.program-active-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #25b568;
+}
+
+/* =========================================================
+   WORKSPACE
+========================================================= */
+
+.curriculum-workspace {
+    background: #ffffff;
+    border: 1px solid #e6ebe8;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.workspace-header {
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.breadcrumb {
+    color: #87938c;
+    font-size: 12px;
+    margin-bottom: 7px;
+}
+
+.breadcrumb span {
+    margin: 0 7px;
+}
+
+.workspace-header h2 {
+    margin: 0;
+    font-size: 21px;
+}
+
+.workspace-header p {
+    margin: 5px 0 0;
+    color: #7b8781;
+    font-size: 12px;
+}
+
+.add-subject-button {
+    border: 0;
+    background: #1e2a24;
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 11px 15px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.add-subject-button:hover {
+    background: #2e3d35;
+}
+
+.add-subject-button span {
+    font-size: 18px;
+    line-height: 10px;
+}
+
+/* =========================================================
+   YEAR TABS
+========================================================= */
+
+.year-tabs {
+    padding: 0 24px;
+    border-bottom: 1px solid #e8ecea;
+    display: flex;
+    gap: 5px;
+}
+
+.year-tabs button {
+    position: relative;
+    border: 0;
+    background: transparent;
+    padding: 13px 15px;
+    color: #7a8780;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.year-tabs button.active {
+    color: #1e9c59;
+}
+
+.year-tabs button.active::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -1px;
+    height: 2px;
+    background: #25b568;
+}
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+.filters-row {
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.semester-tabs {
+    display: flex;
+    background: #f2f5f3;
+    padding: 3px;
+    border-radius: 9px;
+}
+
+.semester-tabs button {
+    border: 0;
+    background: transparent;
+    border-radius: 7px;
+    padding: 8px 12px;
+    color: #7a8580;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.semester-tabs button.active {
+    background: #ffffff;
+    color: #1c9c59;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+
+.subject-search,
+.modal-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #e2e8e4;
+    border-radius: 9px;
+    padding: 0 11px;
+    background: #ffffff;
+}
+
+.subject-search {
+    width: 280px;
+}
+
+.subject-search span,
+.modal-search span {
+    color: #9aa59f;
+    font-size: 18px;
+}
+
+.subject-search input,
+.modal-search input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    padding: 9px 0;
+    font-size: 12px;
+    color: #27332d;
+}
+
+.subject-search input::placeholder,
+.modal-search input::placeholder {
+    color: #a1aaa5;
+}
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+.curriculum-summary {
+    margin: 0 24px 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid #e6ebe8;
+    border-radius: 11px;
+    overflow: hidden;
+}
+
+.curriculum-summary div {
+    padding: 12px 15px;
+    border-right: 1px solid #e6ebe8;
+}
+
+.curriculum-summary div:last-child {
+    border-right: 0;
+}
+
+.curriculum-summary span {
+    display: block;
+    color: #87938c;
+    font-size: 10px;
+    margin-bottom: 4px;
+}
+
+.curriculum-summary strong {
+    font-size: 14px;
+}
+
+/* =========================================================
+   SUBJECT CARD
+========================================================= */
+
+.subjects-card {
+    border-top: 1px solid #e8ecea;
+}
+
+.subjects-card-header {
+    padding: 18px 24px;
+}
+
+.subjects-card-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.subjects-card-header h3 span {
+    color: #89948e;
+    font-weight: 500;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.subject-table {
+    border-top: 1px solid #edf0ee;
+}
+
+.table-header,
+.subject-row {
+    display: grid;
+    grid-template-columns: 45px 1.2fr 1.1fr 1fr 70px 35px;
+    align-items: center;
+    padding: 0 24px;
+    gap: 15px;
+}
+
+.table-header {
+    min-height: 38px;
+    background: #fafbfa;
+    color: #929c97;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+}
+
+.subject-row {
+    min-height: 70px;
+    border-top: 1px solid #edf0ee;
+}
+
+.subject-number {
+    color: #a0aaa5;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.subject-info strong {
+    display: block;
+    color: #202d26;
+    font-size: 13px;
+}
+
+.subject-info span {
+    display: block;
+    color: #7c8781;
+    font-size: 11px;
+    margin-top: 3px;
+}
+
+.subject-description {
+    color: #69756f;
+    font-size: 11px;
+}
+
+.professor {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #3f4b45;
+}
+
+.professor-avatar {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #eaf7ef;
+    color: #239c5a;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.units {
+    font-weight: 750;
+    font-size: 12px;
+}
+
+.remove-button {
+    border: 0;
+    background: transparent;
+    color: #b0bab5;
+    font-size: 19px;
+    cursor: pointer;
+}
+
+.remove-button:hover {
+    color: #dc5555;
+}
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.empty-state {
+    padding: 55px 20px;
+    text-align: center;
+    border-top: 1px solid #edf0ee;
+}
+
+.empty-icon {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #eef7f1;
+    color: #25a963;
+    font-size: 22px;
+}
+
+.empty-state h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.empty-state p {
+    margin: 6px auto 15px;
+    max-width: 360px;
+    color: #8a958f;
+    font-size: 11px;
+}
+
+.empty-state button {
+    border: 0;
+    background: #1f2b25;
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 9px 13px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(17, 24, 20, 0.48);
+}
+
+.add-subject-modal {
+    width: min(850px, 100%);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 20px 22px;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid #e8ecea;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.modal-header p {
+    margin: 5px 0 0;
+    color: #7d8982;
+    font-size: 11px;
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 8px;
+    background: #f3f5f4;
+    color: #65716b;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.modal-toolbar {
+    padding: 13px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    background: #fafbfa;
+    border-bottom: 1px solid #e8ecea;
+}
+
+.modal-search {
+    flex: 1;
+    max-width: 500px;
+}
+
+.available-count {
+    color: #89948e;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.available-subjects {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 22px;
+}
+
+.available-subject {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 28px 1.3fr 1fr 70px;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    border: 1px solid transparent;
+    border-bottom-color: #edf0ee;
+    background: #ffffff;
+    padding: 12px 8px;
+    cursor: pointer;
+}
+
+.available-subject:hover {
+    background: #fafcfb;
+}
+
+.available-subject.selected {
+    border-color: #bce7cc;
+    background: #f1fbf5;
+    border-radius: 9px;
+    margin: 2px 0;
+}
+
+.subject-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #d5ddd8;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.subject-checkbox.checked {
+    background: #25b568;
+    border-color: #25b568;
+}
+
+.available-subject-info strong {
+    display: block;
+    font-size: 12px;
+}
+
+.available-subject-info span {
+    display: block;
+    color: #7d8983;
+    font-size: 10px;
+    margin-top: 3px;
+}
+
+.available-professor span {
+    display: block;
+    color: #9aa49f;
+    font-size: 9px;
+    margin-bottom: 3px;
+}
+
+.available-professor strong {
+    font-size: 11px;
+    color: #4b5751;
+}
+
+.available-units {
+    color: #67736d;
+    font-size: 10px;
+    text-align: right;
+}
+
+.modal-empty {
+    padding: 50px 20px;
+    text-align: center;
+    color: #7c8781;
+}
+
+.modal-empty strong,
+.modal-empty span {
+    display: block;
+}
+
+.modal-empty strong {
+    color: #303c35;
+    font-size: 13px;
+}
+
+.modal-empty span {
+    margin-top: 5px;
+    font-size: 11px;
+}
+
+.modal-footer {
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    border-top: 1px solid #e8ecea;
+}
+
+.modal-footer strong {
+    color: #269c5c;
+    font-size: 11px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.cancel-button,
+.save-button {
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cancel-button {
+    background: #f1f4f2;
+    color: #59655f;
+}
+
+.save-button {
+    background: #25a963;
+    color: #ffffff;
+}
+
+.save-button:disabled,
+.cancel-button:disabled,
+.modal-close:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.curriculum-loading {
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7e8983;
+    font-size: 13px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1000px) {
+    .program-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .table-header {
+        display: none;
+    }
+
+    .subject-row {
+        grid-template-columns: 35px 1fr 80px 30px;
+        gap: 10px;
+        padding: 12px 18px;
+    }
+
+    .subject-description {
+        display: none;
+    }
+
+    .professor {
+        justify-self: end;
+    }
+
+    .filters-row {
+        flex-direction: column;
+    }
+
+    .subject-search {
+        width: 100%;
+    }
+}
+
+@media (max-width: 650px) {
+    .curriculum-page {
+        padding: 15px;
+    }
+
+    .program-list {
+        grid-template-columns: 1fr;
+    }
+
+    .workspace-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .curriculum-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .curriculum-summary div:nth-child(2) {
+        border-right: 0;
+    }
+
+    .year-tabs {
+        overflow-x: auto;
+    }
+
+    .available-subject {
+        grid-template-columns: 28px 1fr 60px;
+    }
+
+    .available-professor {
+        display: none;
+    }
+
+    .modal-footer {
+        align-items: flex-end;
+        flex-direction: column;
+    }
+
+    .modal-actions {
+        width: 100%;
+    }
+
+    .modal-actions button {
+        flex: 1;
+    }
+}

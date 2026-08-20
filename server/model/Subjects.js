@@ -7,7 +7,6 @@ const db = require('../config/db');
 // =====================================================
 
 const getSubjects = async (sem) => {
-    console.log("model reached", sem);
 
     const [rows] = await db.query(`
         SELECT
@@ -126,7 +125,104 @@ const getSubjectsAdmin = async () => {
 
 
 // =====================================================
-// FIND SUBJECT BY ID
+// GET SUBJECTS WITH ASSIGNED PROFESSOR
+// For Curriculum Builder
+//
+// IMPORTANT:
+// curriculum_subjects is NOT involved here.
+// Curriculum may still be completely empty.
+//
+// Returns subjects belonging to each program
+// that already have an assigned professor.
+// =====================================================
+
+const getSubjectsWithProfessor = async () => {
+
+    const [rows] = await db.query(`
+        SELECT
+
+            s.id,
+            s.subject_code,
+            s.subject_name,
+            s.description,
+            s.units,
+            s.lecture_units,
+            s.lab_units,
+
+            s.program_id,
+
+            p.program_code,
+            p.program_name,
+
+            ps.id AS professor_subject_id,
+            ps.professor_id,
+
+            CONCAT(
+                pr.firstname,
+                ' ',
+                pr.lastname
+            ) AS professor_name
+
+        FROM subjects s
+
+        INNER JOIN programs p
+            ON p.id = s.program_id
+
+        INNER JOIN professor_subjects ps
+            ON ps.subject_id = s.id
+
+        INNER JOIN profesor pr
+            ON pr.id = ps.professor_id
+
+        ORDER BY
+            p.program_code,
+            s.subject_code
+    `);
+
+    return rows;
+};
+
+// =====================================================
+// GET SUBJECTS FOR CURRICULUM
+//
+// Returns subjects belonging to a specific program
+// that already have an assigned professor.
+//
+// YEAR LEVEL and SEMESTER are NOT used here.
+// Admin decides those when adding the subject
+// to the curriculum.
+// =====================================================
+const getSubjectsForCurriculum = async (programId) => {
+
+    const [rows] = await db.query(`
+        SELECT
+            s.id AS subject_id,
+            s.subject_code,
+            s.subject_name,
+            s.description,
+            s.units,
+            s.lecture_units,
+            s.lab_units
+
+        FROM subjects s
+
+        LEFT JOIN curriculum_subjects cs
+            ON cs.subject_id = s.id
+            AND cs.program_id = ?
+
+        WHERE s.program_id = ?
+          AND s.status = 'active'
+          AND cs.id IS NULL
+
+        ORDER BY
+            s.subject_code
+    `, [
+        programId,
+        programId
+    ]);
+
+    return rows;
+};// FIND SUBJECT BY ID
 // =====================================================
 
 const findById = async (id) => {
@@ -244,28 +340,32 @@ const findByCode = async (code) => {
 // =====================================================
 // CREATE SUBJECT
 // =====================================================
+//
+// IMPORTANT:
+// This ONLY creates the subject.
+//
+// It does NOT automatically add the subject
+// to curriculum_subjects anymore.
+//
+// Curriculum is managed separately.
+// =====================================================
 
 const createSubject = async (data) => {
 
     const {
+        program_id,
         subject_code,
         subject_name,
         description,
         units,
         lecture_units,
-        lab_units,
-        year_level,
-        semester,
-        programs
+        lab_units
     } = data;
 
 
-    // -----------------------------------------
-    // 1. Create the actual subject
-    // -----------------------------------------
-
     const [result] = await db.query(`
         INSERT INTO subjects (
+            program_id,
             subject_code,
             subject_name,
             description,
@@ -273,8 +373,9 @@ const createSubject = async (data) => {
             lecture_units,
             lab_units
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
+        program_id,
         subject_code,
         subject_name,
         description,
@@ -284,41 +385,17 @@ const createSubject = async (data) => {
     ]);
 
 
-    const subjectId = result.insertId;
-
-
-    // -----------------------------------------
-    // 2. Create curriculum relationships
-    // -----------------------------------------
-
-    if (programs && programs.length > 0) {
-
-        const values = programs.map(programId => [
-            programId,
-            subjectId,
-            year_level,
-            semester
-        ]);
-
-        await db.query(`
-            INSERT INTO curriculum_subjects (
-                program_id,
-                subject_id,
-                year_level,
-                semester
-            )
-            VALUES ?
-        `, [values]);
-
-    }
-
-
     return result;
 };
 
 
 // =====================================================
 // UPDATE SUBJECT
+// =====================================================
+//
+// IMPORTANT:
+// Does NOT modify curriculum anymore.
+// It only updates the subject itself.
 // =====================================================
 
 const updateSubject = async (id, data) => {
@@ -329,19 +406,13 @@ const updateSubject = async (id, data) => {
         description,
         units,
         lecture_units,
-        lab_units,
-        year_level,
-        semester,
-        programs
+        lab_units
     } = data;
 
 
-    // -----------------------------------------
-    // 1. Update subject information
-    // -----------------------------------------
-
     const [result] = await db.query(`
         UPDATE subjects
+
         SET
             subject_code = ?,
             subject_name = ?,
@@ -349,6 +420,7 @@ const updateSubject = async (id, data) => {
             units = ?,
             lecture_units = ?,
             lab_units = ?
+
         WHERE id = ?
     `, [
         subject_code,
@@ -359,42 +431,6 @@ const updateSubject = async (id, data) => {
         lab_units,
         id
     ]);
-
-
-    // -----------------------------------------
-    // 2. Remove old curriculum relationships
-    // -----------------------------------------
-
-    await db.query(`
-        DELETE FROM curriculum_subjects
-        WHERE subject_id = ?
-    `, [id]);
-
-
-    // -----------------------------------------
-    // 3. Insert new curriculum relationships
-    // -----------------------------------------
-
-    if (programs && programs.length > 0) {
-
-        const values = programs.map(programId => [
-            programId,
-            id,
-            year_level,
-            semester
-        ]);
-
-        await db.query(`
-            INSERT INTO curriculum_subjects (
-                program_id,
-                subject_id,
-                year_level,
-                semester
-            )
-            VALUES ?
-        `, [values]);
-
-    }
 
 
     return result;
@@ -415,6 +451,7 @@ const deleteSubject = async (id) => {
     return result;
 };
 
+
 // =====================================================
 // GET SUBJECTS BY STUDENT
 // For student-specific subjects / irregular students
@@ -427,6 +464,7 @@ const getSubjectsByStudent = async (
 
     const [rows] = await db.query(`
         SELECT DISTINCT
+
             se.student_id,
 
             se.id AS enrollment_id,
@@ -471,12 +509,24 @@ const getSubjectsByStudent = async (
 
 
 module.exports = {
+
     getSubjects,
-    findById,
-    createSubject,
-    updateSubject,
-    deleteSubject,
+
     getSubjectsAdmin,
+
+    getSubjectsWithProfessor,
+
+    getSubjectsForCurriculum,
+
+    findById,
+
     findByCode,
+
+    createSubject,
+
+    updateSubject,
+
+    deleteSubject,
+
     getSubjectsByStudent
 };

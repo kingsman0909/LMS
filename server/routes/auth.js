@@ -13,7 +13,8 @@ const {loginProf, login, me, enroll,//this enroll is just a mistake it should be
      getSchedules, getScheduleSections, getEnrollmentCapacity,
      getEnrollmentCapacities, checkUniversityCapacity,
      getSchedulesBySection, getStudentSubjects, getProfStudent,
-     getTotalStudents,
+     getTotalStudents, getCurriculum, addCurriculum,
+     getSubjectsForCurriculum,
      announcement, createAnnounce } = require("../controllers/authController");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/CheckRole");
@@ -30,11 +31,14 @@ router.post("/admin/createSections", verifyToken,  checkRole("admin"), createSec
 router.post("/admin/createSubject", verifyToken,  checkRole("admin"), createSubject); 
 router.post("/admin/createProgram", verifyToken, checkRole("admin"), createProgram);
 router.post("/admin/schedule/generate", verifyToken, checkRole("admin"), generateSchedule);
+router.post("/admin/addCurriculum", verifyToken, checkRole("admin"), addCurriculum);
 
 router.delete("/admin/:id/deleteSubject", verifyToken, checkRole("admin"), deleteSubject);
 
 router.get("/student/getSchedule", verifyToken, checkRole("student"), getSchedulesBySection);
 
+router.get("/admin/getSubjectsForCurriculum", verifyToken, checkRole("admin"), getSubjectsForCurriculum);
+router.get("/admin/getCurriculum", verifyToken, checkRole("admin"), getCurriculum);
 router.get("/admin/checkUniversityCapacity", verifyToken, checkRole("admin"), checkUniversityCapacity);
 router.get("/admin/getEnrollmentCapacities", verifyToken, checkRole("admin"), getEnrollmentCapacities);
 router.get("/admin/getEnrollmentCapacity", verifyToken, checkRole("admin"), getEnrollmentCapacity);

@@ -116,27 +116,51 @@ const StudentApplication = {
 
     getPendingApplications: async () => {
 
-        const [rows] = await db.execute(
+    console.log("🔥 GET PENDING APPLICATIONS CALLED");
 
-            `SELECT
-                sa.*,
-                p.program_code,
-                p.program_name
+    const [dbInfo] = await db.execute(`
+        SELECT
+            DATABASE() AS db_name,
+            @@hostname AS hostname,
+            @@port AS port
+    `);
 
-             FROM student_applications sa
+    console.log("🔥 DB INFO:", dbInfo);
 
-             JOIN programs p
-                ON sa.course_id = p.id
+    const [count] = await db.execute(`
+        SELECT COUNT(*) AS total
+        FROM student_applications
+    `);
 
-             WHERE sa.status = 'pending'
+    console.log("🔥 TOTAL APPLICATIONS:", count);
 
-             ORDER BY sa.created_at DESC`
+    const [info] = await db.execute(`
+    SELECT
+        DATABASE() AS db,
+        @@hostname AS host,
+        @@port AS port,
+        @@server_uuid AS uuid,
+        @@datadir AS datadir
+`);
 
-        );
+console.log(info);
 
-        return rows;
+    const [rows] = await db.execute(`
+        SELECT
+            sa.*,
+            p.program_code,
+            p.program_name
+        FROM student_applications sa
+        JOIN programs p
+            ON sa.course_id = p.id
+        WHERE sa.status = 'pending'
+        ORDER BY sa.created_at DESC
+    `);
 
-    },
+    console.log("🔥 PENDING:", rows);
+
+    return rows;
+},
 
 
     updateStatus: async (

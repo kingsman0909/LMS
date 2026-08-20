@@ -20,6 +20,52 @@
     background: var(--accent);
 }
 
+.capacityBtn{
+    height: 42px;
+    border: none;
+    border-radius: 6px;
+    padding-inline: 10px;
+    background: var(--primary-dark);
+    cursor: pointer;
+}
+
+
+.capacityModal{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    height: 200px;
+    width: 400px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-dark);
+    border-radius: 10px;
+
+    p{
+        cursor:progress;
+    }
+
+    h4{
+        position: absolute;
+        top: 0;
+        left: 0;
+        margin: 10px;
+        color: black;
+    }
+}
+
+.capacity-wrapper{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+}
+
 .approveAll:hover{
     opacity: 0.9;
 }
@@ -323,3 +369,6 @@
     }
 
 }
+
+
+

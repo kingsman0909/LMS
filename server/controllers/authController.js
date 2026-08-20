@@ -786,9 +786,234 @@ const getTotalStudents = async (req, res) => {
 };
 
 
+// =========================================================
+// GET CURRICULUM
+// =========================================================
+const getCurriculum = async (req, res) => {
+
+    try {
+
+        const {
+            programId,
+            yearLevel,
+            semester
+        } = req.query;
+
+        console.log("getCurriculum params:", {
+            programId,
+            yearLevel,
+            semester
+        });
+
+        if (!programId) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Program ID is required"
+            });
+
+        }
+
+        const curriculum =
+            await authService.getCurriculum({
+
+                programId,
+
+                yearLevel:
+                    yearLevel || null,
+
+                semester:
+                    semester || null
+
+            });
+
+        return res.status(200).json({
+
+            success: true,
+
+            curriculum
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Get curriculum error:",
+            error
+        );
+
+        return res.status(
+            error.statusCode || 500
+        ).json({
+
+            success: false,
+
+            message:
+                error.message ||
+                "Failed to get curriculum"
+
+        });
+
+    }
+
+};
+// =========================================================
+// POST CURRICULUM
+// =========================================================
+
+const addCurriculum = async (req, res) => {
+
+    try {
+
+        const {
+            programId,
+            subjectIds,
+            yearLevel,
+            semester
+        } = req.body;
+
+
+        // =====================================================
+        // VALIDATE
+        // =====================================================
+
+        if (!programId) {
+            return res.status(400).json({
+                success: false,
+                message: "Program ID is required."
+            });
+        }
+
+        if (
+            !Array.isArray(subjectIds) ||
+            subjectIds.length === 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "At least one subject is required."
+            });
+        }
+
+        if (!yearLevel) {
+            return res.status(400).json({
+                success: false,
+                message: "Year level is required."
+            });
+        }
+
+        if (!semester) {
+            return res.status(400).json({
+                success: false,
+                message: "Semester is required."
+            });
+        }
+
+
+        // =====================================================
+        // SERVICE
+        // =====================================================
+
+        const result =
+            await authService.addCurriculum({
+                programId,
+                subjectIds,
+                yearLevel,
+                semester
+            });
+
+
+        return res.status(201).json({
+
+            success: true,
+
+            message:
+                `${result.insertedCount} subject(s) successfully added to curriculum.`,
+
+            insertedCount:
+                result.insertedCount,
+
+            curriculumIds:
+                result.curriculumIds
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Add curriculum error:",
+            error
+        );
+
+        return res.status(
+            error.statusCode || 500
+        ).json({
+
+            success: false,
+
+            message:
+                error.message ||
+                "Failed to add subjects to curriculum."
+
+        });
+    }
+};
+
+
+// =====================================================
+// GET SUBJECTS FOR CURRICULUM BUILDER
+//
+// Returns all subjects that:
+// - belong to a program
+// - have an assigned professor
+//
+// Curriculum is NOT involved here.
+// =====================================================
+const getSubjectsForCurriculum = async (req, res) => {
+
+    try {
+
+        const { programId } = req.query;
+
+        if (!programId) {
+            return res.status(400).json({
+                success: false,
+                message: "programId is required"
+            });
+        }
+
+        const subjects =
+            await Subjects.getSubjectsForCurriculum(
+                programId
+            );
+
+        return res.status(200).json({
+            success: true,
+            subjects
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Get subjects for curriculum error:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to get subjects for curriculum"
+        });
+    }
+};
+
+
+
+
 module.exports = {
     login,
     me,
+    getSubjectsForCurriculum,
+    getCurriculum,
+    addCurriculum,
     deleteSubject,
     enroll,
     getEnrollmentCapacity,

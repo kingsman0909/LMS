@@ -730,7 +730,7 @@
     */
     grid-template-columns:
         90px
-        repeat(6, minmax(150px, 1fr));
+        repeat(7, minmax(150px, 1fr));
     min-width: 1000px;
 }
 
@@ -741,7 +741,6 @@
 
 .s-schedule-header {
     min-height: 52px;
-
     display: flex;
     align-items: center;
     justify-content: center;

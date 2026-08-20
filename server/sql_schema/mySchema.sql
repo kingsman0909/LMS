@@ -411,6 +411,8 @@ SET FOREIGN_KEY_CHECKS = 1; -- enable foreign key checks turn it to 0 to delete 
 delete from sections
 where id > 0;
 
+select * from users where id = 46583;
+
 select * from time_slots;
 select * from student_applications;
 select * from users;
@@ -428,6 +430,9 @@ select * from announcements;
 select * from academic_terms;
 select * from student_enrollments;
 select * from class_schedules;
+
+delete from class_schedules
+where id > 0;
 
 SHOW CREATE TABLE class_schedules;
 SHOW CREATE TABLE time_slots;
@@ -684,4 +689,43 @@ FROM
 WHERE n BETWEEN 501 AND 1500;
 
 
+
+SELECT
+    p.id,
+    p.employee_id,
+    CONCAT(p.firstname, ' ', p.lastname) AS professor,
+    COUNT(cs.id) AS current_workload
+FROM profesor p
+LEFT JOIN class_schedules cs
+    ON cs.professor_id = p.id
+WHERE p.employee_id IN (
+    'EMP-IT021',
+    'EMP-IT022',
+    'EMP-IT023',
+    'EMP-IT024',
+    'EMP-IT025',
+    'EMP-IT026',
+    'EMP-IT027',
+    'EMP-IT028',
+    'EMP-IT029',
+    'EMP-IT030'
+)
+GROUP BY
+    p.id,
+    p.employee_id,
+    p.firstname,
+    p.lastname
+ORDER BY p.id;
+
+
+START TRANSACTION;
+
+DELETE FROM sections where id > 0;
+DELETE FROM student where id > 0;
+DELETE FROM student_applications where id > 0;
+DELETE FROM users WHERE role = 'student' and id > 0;
+
+-- inspect everything
+
+COMMIT;
 

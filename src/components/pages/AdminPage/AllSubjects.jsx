@@ -12,8 +12,6 @@ const allSubjects = ({programs}) => {
         units: 3,
         lecture_units: 0,
         lab_units: 0,
-        year_level: "",
-        semester: "",
         programs: []
     });
 
@@ -213,29 +211,6 @@ const allSubjects = ({programs}) => {
                             value={subject.lecture_units}
                             onChange={handleChange}
                         />
-
-                        <select
-                            name="year_level"
-                            value={subject.year_level}
-                            onChange={handleChange}
-                        >
-                            <option value="">Select Year Level</option>
-                            <option value="1st Year">1st Year</option>
-                            <option value="2nd Year">2nd Year</option>
-                            <option value="3rd Year">3rd Year</option>
-                            <option value="4th Year">4th Year</option>
-                        </select>
-
-                        <select
-                            name="semester"
-                            value={subject.semester}
-                            onChange={handleChange}
-                        >
-                            <option value="">Select Semester</option>
-                            <option value="1st Semester">1st Semester</option>
-                            <option value="2nd Semester">2nd Semester</option>
-                            <option value="Summer">Summer</option>
-                        </select>
 
                         <label style={{color: 'black'}}>Programs</label>
                         <div className="program-checkboxes">

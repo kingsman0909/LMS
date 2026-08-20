@@ -12,6 +12,8 @@ const Subject = require('../model/Subjects');
 const { TbWashDryP } = require("react-icons/tb");
 const scheduleModel = require("../model/Schedule");
 const capacityChecker = require("../services/capacityCheckerService");
+const Curriculum = require("../model/Curriculum");
+
 
 
 const loginUser = async ({ username, password }, allowedRole) => {
@@ -780,6 +782,229 @@ const checkUniversityCapacity = async (
 
 
 
+// =========================================================
+// GET CURRICULUM
+// =========================================================
+
+const getCurriculum = async ({
+    programId,
+    yearLevel = null,
+    semester = null
+}) => {
+
+    if (!programId) {
+        throw new Error("Program ID is required");
+    }
+
+    return await Curriculum.getCurriculum({
+        programId,
+        yearLevel,
+        semester
+    });
+};
+
+
+// =========================================================
+// ADD SUBJECT TO CURRICULUM
+// =========================================================
+const addCurriculum = async ({
+    programId,
+    subjectIds,
+    yearLevel,
+    semester
+}) => {
+
+    // =====================================================
+    // VALIDATION
+    // =====================================================
+
+    if (!programId) {
+        throw new Error(
+            "Program ID is required"
+        );
+    }
+
+    if (
+        !Array.isArray(subjectIds) ||
+        subjectIds.length === 0
+    ) {
+        throw new Error(
+            "At least one subject is required"
+        );
+    }
+
+    if (!yearLevel) {
+        throw new Error(
+            "Year level is required"
+        );
+    }
+
+    if (!semester) {
+        throw new Error(
+            "Semester is required"
+        );
+    }
+
+
+    // =====================================================
+    // VALID YEAR LEVEL
+    // =====================================================
+
+    const validYearLevels = [
+        "1st Year",
+        "2nd Year",
+        "3rd Year",
+        "4th Year"
+    ];
+
+    const yearLevelMap = {
+        1: "1st Year",
+        2: "2nd Year",
+        3: "3rd Year",
+        4: "4th Year"
+    };
+
+    const normalizedYear =
+        yearLevelMap[Number(yearLevel)] ||
+        yearLevel;
+
+
+    if (
+        !validYearLevels.includes(
+            normalizedYear
+        )
+    ) {
+        throw new Error(
+            "Invalid year level"
+        );
+    }
+
+
+    // =====================================================
+    // VALID SEMESTER
+    // =====================================================
+
+    const validSemesters = [
+        "1st Semester",
+        "2nd Semester",
+        "Summer"
+    ];
+
+    const semesterMap = {
+        1: "1st Semester",
+        2: "2nd Semester",
+        3: "Summer"
+    };
+
+    const normalizedSemester =
+        semesterMap[Number(semester)] ||
+        semester;
+
+
+    if (
+        !validSemesters.includes(
+            normalizedSemester
+        )
+    ) {
+        throw new Error(
+            "Invalid semester"
+        );
+    }
+
+
+    // =====================================================
+    // REMOVE DUPLICATES
+    // =====================================================
+
+    const uniqueSubjectIds = [
+        ...new Set(
+            subjectIds
+                .map(id => Number(id))
+                .filter(id => id > 0)
+        )
+    ];
+
+
+    if (uniqueSubjectIds.length === 0) {
+        throw new Error(
+            "No valid subject IDs provided"
+        );
+    }
+
+
+    // =====================================================
+    // INSERT
+    // =====================================================
+
+    const curriculumIds = [];
+
+    try {
+
+        for (
+            const subjectId
+            of uniqueSubjectIds
+        ) {
+
+            const result =
+                await Curriculum.addToCurriculum({
+
+                    programId,
+
+                    subjectId,
+
+                    yearLevel:
+                        normalizedYear,
+
+                    semester:
+                        normalizedSemester
+
+                });
+
+
+            curriculumIds.push(
+                result.insertId
+            );
+        }
+
+
+        return {
+
+            insertedCount:
+                curriculumIds.length,
+
+            curriculumIds
+
+        };
+
+    } catch (error) {
+
+        // =================================================
+        // DUPLICATE CURRICULUM
+        // =================================================
+
+        if (
+            error.code ===
+            "ER_DUP_ENTRY"
+        ) {
+
+            const duplicateError =
+                new Error(
+                    "One or more selected subjects are already added to this curriculum."
+                );
+
+            duplicateError.statusCode =
+                409;
+
+            throw duplicateError;
+        }
+
+        throw error;
+    }
+};
+
+
+
+
 module.exports = {
     loginUser,
     createAnnounce,
@@ -789,6 +1014,8 @@ module.exports = {
     approveApplicant,
     getStudents,
     createSections,
+    getCurriculum,
+    addCurriculum,
     getProfessor,
     getSection,
     getSectionById,

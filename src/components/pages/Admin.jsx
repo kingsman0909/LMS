@@ -11,6 +11,7 @@ import AllProfessor from './AdminPage/AllProfessor';
 import Announcements from './AdminPage/Announcements';
 import Schedule from './AdminPage/Schedule';
 import Dashboard from './AdminPage/Dashboard';
+import Curriculum from './AdminPage/Curriculum';
 
 import {
     HiMenu,
@@ -185,6 +186,9 @@ const Admin = ({role}) => {
         navigate('/admin/schedules');
         break;
     case 7:
+        navigate('/admin/curriculum');
+        break;
+    case 8:
         navigate('/admin/announcements');
         break;
       default:
@@ -354,7 +358,7 @@ const Admin = ({role}) => {
                     <h2>A.Y {academicTerm.school_year}<br></br>{academicTerm.semester}</h2>
                 <LineSidebar 
                     items={['Dashboard','Applicants', 'Programs', 'Students', 
-                            'Professors', 'subjects', 'schedules', 
+                            'Professors', 'subjects', 'schedules', 'curriculum', 
                              'Announcements ', 'Enrollments']}
                     accentColor="rgb(50, 231, 50)"
                     textColor="#c4c4c4"
@@ -385,6 +389,7 @@ const Admin = ({role}) => {
                 <Route path='/schedules' element={<Schedule />} />
                 <Route path='/professors' element={<AllProfessor />} />
                 <Route path='/announcements' element={<Announcements />} />
+                <Route path='/curriculum' element={<Curriculum />} />
                 <Route path='/' element={<Dashboard />} />
             </Routes>
         </div>

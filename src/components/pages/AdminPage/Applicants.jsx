@@ -136,8 +136,9 @@ const handleCheckCapacity = async () => {
     }
 
     finally {
-
+        alert("Done checking!")
         setCapacityLoading(false);
+        
     }
 };
     const approvedApplicant = async (student) => {
@@ -325,7 +326,7 @@ useEffect(() => {
         academicTerm.id
     );
 
-    handleCheckCapacity();
+   //handleCheckCapacity();
 
 }, [academicTerm]);
     
@@ -382,9 +383,17 @@ useEffect(() => {
     );
 
     return (
-
-        <div className="applicants-page">
-
+<>
+        {capacityLoading && 
+                <div className="capacity-wrapper">
+                    <div className="capacityModal">
+                        <h4>Capacity Checker</h4>
+                        <p>Checking Capacity...</p>
+                    </div>
+                </div>
+            }
+        <div className="applicants-page" style={{filter: capacityLoading && 'blur(6px)'}}>
+            
             <div className="applicants-header">
 
                 <div>
@@ -397,7 +406,7 @@ useEffect(() => {
                 
                 <div className="applicants-header-right">
                     <button onClick={approveAllApplicants} className="approveAll">Approve All</button>
-
+                    <button onClick={handleCheckCapacity} className="capacityBtn">Check Capacity</button>
                     <div className="applicant-count">
                     
                     {activeTab === "students"
@@ -779,6 +788,7 @@ useEffect(() => {
 
             
         </div>
+    </>
 
     );
 
