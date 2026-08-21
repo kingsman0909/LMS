@@ -20,12 +20,22 @@ const DAY_INDEX = new Map(
     DAY_ORDER.map((day, index) => [day, index])
 );
 
-const yearLevelMap = {
-    1: "1st Year",
-    2: "2nd Year",
-    3: "3rd Year",
-    4: "4th Year"
-};
+/*
+ * The scheduler uses the actual rows inside time_slots.
+ *
+ * Expected availability:
+ *
+ * Monday    7:00 AM - 10:00 PM
+ * Tuesday   7:00 AM - 10:00 PM
+ * Wednesday 7:00 AM - 10:00 PM
+ * Thursday  7:00 AM - 10:00 PM
+ * Friday    7:00 AM - 10:00 PM
+ * Saturday  7:00 AM - 10:00 PM
+ * Sunday    7:00 AM - 10:00 PM
+ *
+ * There is NO artificial 6-hour daily limit.
+ */
+
 
 /*
 |--------------------------------------------------------------------------
@@ -33,51 +43,42 @@ const yearLevelMap = {
 |--------------------------------------------------------------------------
 */
 
-const MAX_BACKTRACK_NODES_PER_SECTION = 25000;
+const MAX_BACKTRACK_NODES_PER_SECTION = 30000;
 const MAX_TIME_MS_PER_SECTION = 5000;
 
 const GREEDY_MAX_CANDIDATES_PER_REQUIREMENT = 100;
-const BACKTRACK_MAX_CANDIDATES_PER_REQUIREMENT = 100;
+const BACKTRACK_MAX_CANDIDATES_PER_REQUIREMENT = 150;
 
-const MAX_MRV_CANDIDATE_SCAN = 250;
+const MAX_MRV_CANDIDATE_SCAN = 300;
 
-const MAX_FAILURE_ANALYSIS_SCAN = 1000;
-
-/*
-|--------------------------------------------------------------------------
-| SECTION DISTRIBUTION
-|--------------------------------------------------------------------------
-*/
-
-const SECTION_TARGET_DAILY_HOURS = 6;
-
-const NEW_DAY_BONUS = 25000;
-
-const SECTION_DAY_LOAD_WEIGHT = 5000;
-
-const SECTION_LONG_DAY_WEIGHT = 15000;
 
 /*
 |--------------------------------------------------------------------------
-| DEBUG
+| DAY DISTRIBUTION
 |--------------------------------------------------------------------------
 |
-| Keep false during real scheduling.
-| Set true only while debugging.
+| These are only scoring preferences.
+|
+| They are NOT hard constraints.
+|
+| A section can have:
+|
+| Monday = 8 hours
+|
+| if that is necessary.
+|
+| The scheduler simply prefers spreading classes across the week.
 |
 */
 
-const DEBUG_SCHEDULER = false;
+const NEW_DAY_BONUS = 12000;
+const SECTION_DAY_LOAD_WEIGHT = 1000;
+const SECTION_LONG_DAY_WEIGHT = 2500;
 
-const log = (...args) => {
-    if (DEBUG_SCHEDULER) {
-        console.log(...args);
-    }
-};
 
 /*
 |--------------------------------------------------------------------------
-| BASIC HELPERS
+| HELPERS
 |--------------------------------------------------------------------------
 */
 
@@ -93,15 +94,17 @@ const normalizeTime = value => {
         .trim();
 };
 
-const makeSubjectTypeKey = (
-    subjectId,
-    type
-) => `${num(subjectId)}:${type}`;
 
-const makeRoomCacheKey = (
-    sectionId,
-    type
-) => `${num(sectionId)}:${type}`;
+const uniqueNumbers = values => {
+    return [
+        ...new Set(
+            values
+                .map(num)
+                .filter(Number.isFinite)
+        )
+    ];
+};
+
 
 /*
 |--------------------------------------------------------------------------
@@ -113,36 +116,24 @@ const createOccupancy = () => ({
     sectionSlots: new Map(),
     professorSlots: new Map(),
     roomSlots: new Map(),
-
     sectionDayHours: new Map()
 });
 
-/*
-|--------------------------------------------------------------------------
-| SLOT OCCUPANCY
-|--------------------------------------------------------------------------
-*/
 
-const getOccupiedSet = (
-    map,
-    key
-) => {
+const getOccupiedSet = (map, key) => {
     return map.get(num(key)) || null;
 };
 
-const hasSlotConflict = (
-    map,
-    key,
-    slotIds
-) => {
-    const occupied = map.get(num(key));
+
+const hasSlotConflict = (map, key, slotIds) => {
+    const occupied = getOccupiedSet(map, key);
 
     if (!occupied) {
         return false;
     }
 
-    for (let i = 0; i < slotIds.length; i++) {
-        if (occupied.has(slotIds[i])) {
+    for (const slotId of slotIds) {
+        if (occupied.has(num(slotId))) {
             return true;
         }
     }
@@ -150,11 +141,8 @@ const hasSlotConflict = (
     return false;
 };
 
-const reserveSlotIds = (
-    map,
-    key,
-    slotIds
-) => {
+
+const reserveSlotIds = (map, key, slotIds) => {
     key = num(key);
 
     let occupied = map.get(key);
@@ -164,16 +152,13 @@ const reserveSlotIds = (
         map.set(key, occupied);
     }
 
-    for (let i = 0; i < slotIds.length; i++) {
-        occupied.add(slotIds[i]);
+    for (const slotId of slotIds) {
+        occupied.add(num(slotId));
     }
 };
 
-const releaseSlotIds = (
-    map,
-    key,
-    slotIds
-) => {
+
+const releaseSlotIds = (map, key, slotIds) => {
     key = num(key);
 
     const occupied = map.get(key);
@@ -182,14 +167,15 @@ const releaseSlotIds = (
         return;
     }
 
-    for (let i = 0; i < slotIds.length; i++) {
-        occupied.delete(slotIds[i]);
+    for (const slotId of slotIds) {
+        occupied.delete(num(slotId));
     }
 
     if (occupied.size === 0) {
         map.delete(key);
     }
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -203,9 +189,7 @@ const getSectionDayHours = (
     day
 ) => {
     const sectionMap =
-        occupancy.sectionDayHours.get(
-            num(sectionId)
-        );
+        occupancy.sectionDayHours.get(num(sectionId));
 
     if (!sectionMap) {
         return 0;
@@ -213,6 +197,7 @@ const getSectionDayHours = (
 
     return sectionMap.get(day) || 0;
 };
+
 
 const addSectionDayHours = (
     occupancy,
@@ -223,9 +208,7 @@ const addSectionDayHours = (
     sectionId = num(sectionId);
 
     let sectionMap =
-        occupancy.sectionDayHours.get(
-            sectionId
-        );
+        occupancy.sectionDayHours.get(sectionId);
 
     if (!sectionMap) {
         sectionMap = new Map();
@@ -238,9 +221,10 @@ const addSectionDayHours = (
 
     sectionMap.set(
         day,
-        (sectionMap.get(day) || 0) + hours
+        (sectionMap.get(day) || 0) + num(hours)
     );
 };
+
 
 const removeSectionDayHours = (
     occupancy,
@@ -251,9 +235,7 @@ const removeSectionDayHours = (
     sectionId = num(sectionId);
 
     const sectionMap =
-        occupancy.sectionDayHours.get(
-            sectionId
-        );
+        occupancy.sectionDayHours.get(sectionId);
 
     if (!sectionMap) {
         return;
@@ -263,7 +245,7 @@ const removeSectionDayHours = (
         sectionMap.get(day) || 0;
 
     const next =
-        current - hours;
+        current - num(hours);
 
     if (next <= 0) {
         sectionMap.delete(day);
@@ -272,20 +254,17 @@ const removeSectionDayHours = (
     }
 
     if (sectionMap.size === 0) {
-        occupancy.sectionDayHours.delete(
-            sectionId
-        );
+        occupancy.sectionDayHours.delete(sectionId);
     }
 };
+
 
 const getSectionTotalScheduledHours = (
     occupancy,
     sectionId
 ) => {
     const sectionMap =
-        occupancy.sectionDayHours.get(
-            num(sectionId)
-        );
+        occupancy.sectionDayHours.get(num(sectionId));
 
     if (!sectionMap) {
         return 0;
@@ -300,20 +279,110 @@ const getSectionTotalScheduledHours = (
     return total;
 };
 
+
 const getSectionUsedDayCount = (
     occupancy,
     sectionId
 ) => {
-    return (
-        occupancy.sectionDayHours.get(
-            num(sectionId)
-        )?.size || 0
-    );
+    const sectionMap =
+        occupancy.sectionDayHours.get(num(sectionId));
+
+    if (!sectionMap) {
+        return 0;
+    }
+
+    return sectionMap.size;
 };
+
 
 /*
 |--------------------------------------------------------------------------
-| ASSIGNMENT CONFLICT
+| RESERVATION
+|--------------------------------------------------------------------------
+*/
+
+const reserveAssignment = (
+    assignment,
+    occupancy
+) => {
+    reserveSlotIds(
+        occupancy.sectionSlots,
+        assignment.sectionId,
+        assignment.slotIds
+    );
+
+    reserveSlotIds(
+        occupancy.professorSlots,
+        assignment.professorId,
+        assignment.slotIds
+    );
+
+    reserveSlotIds(
+        occupancy.roomSlots,
+        assignment.roomId,
+        assignment.slotIds
+    );
+
+    addSectionDayHours(
+        occupancy,
+        assignment.sectionId,
+        assignment.day,
+        assignment.slotIds.length
+    );
+};
+
+
+const releaseAssignment = (
+    assignment,
+    occupancy
+) => {
+    releaseSlotIds(
+        occupancy.sectionSlots,
+        assignment.sectionId,
+        assignment.slotIds
+    );
+
+    releaseSlotIds(
+        occupancy.professorSlots,
+        assignment.professorId,
+        assignment.slotIds
+    );
+
+    releaseSlotIds(
+        occupancy.roomSlots,
+        assignment.roomId,
+        assignment.slotIds
+    );
+
+    removeSectionDayHours(
+        occupancy,
+        assignment.sectionId,
+        assignment.day,
+        assignment.slotIds.length
+    );
+};
+
+
+const releaseAssignments = (
+    assignments,
+    occupancy
+) => {
+    for (
+        let i = assignments.length - 1;
+        i >= 0;
+        i--
+    ) {
+        releaseAssignment(
+            assignments[i],
+            occupancy
+        );
+    }
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| CONFLICT
 |--------------------------------------------------------------------------
 */
 
@@ -356,6 +425,7 @@ const candidateConflictMask = (
     return mask;
 };
 
+
 const assignmentHasConflict = (
     assignment,
     occupancy
@@ -368,131 +438,61 @@ const assignmentHasConflict = (
     );
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| RESERVATION
+| DATABASE - SECTIONS
 |--------------------------------------------------------------------------
 */
-
-const reserveAssignment = (
-    assignment,
-    occupancy
-) => {
-    reserveSlotIds(
-        occupancy.sectionSlots,
-        assignment.sectionId,
-        assignment.slotIds
-    );
-
-    reserveSlotIds(
-        occupancy.professorSlots,
-        assignment.professorId,
-        assignment.slotIds
-    );
-
-    reserveSlotIds(
-        occupancy.roomSlots,
-        assignment.roomId,
-        assignment.slotIds
-    );
-
-    addSectionDayHours(
-        occupancy,
-        assignment.sectionId,
-        assignment.day,
-        assignment.slotIds.length
-    );
-};
-
-const releaseAssignment = (
-    assignment,
-    occupancy
-) => {
-    releaseSlotIds(
-        occupancy.sectionSlots,
-        assignment.sectionId,
-        assignment.slotIds
-    );
-
-    releaseSlotIds(
-        occupancy.professorSlots,
-        assignment.professorId,
-        assignment.slotIds
-    );
-
-    releaseSlotIds(
-        occupancy.roomSlots,
-        assignment.roomId,
-        assignment.slotIds
-    );
-
-    removeSectionDayHours(
-        occupancy,
-        assignment.sectionId,
-        assignment.day,
-        assignment.slotIds.length
-    );
-};
-
-const releaseAssignments = (
-    assignments,
-    occupancy
-) => {
-    for (
-        let i = assignments.length - 1;
-        i >= 0;
-        i--
-    ) {
-        releaseAssignment(
-            assignments[i],
-            occupancy
-        );
-    }
-};
-
-/*
-|--------------------------------------------------------------------------
-| DATABASE
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Bulk section loader.
- */
 
 const getSections = async (
     programId,
     academicTermId
 ) => {
-    const [rows] = await db.query(
-        `
-        SELECT
-            id,
-            program_id,
-            year_level,
-            section_name,
-            academic_term_id,
-            max_students
-        FROM sections
-        WHERE program_id = ?
-        AND academic_term_id = ?
-        ORDER BY
-            year_level ASC,
-            section_name ASC
-        `,
-        [
+    const [rows] =
+        await db.query(`
+            SELECT
+                id,
+                program_id,
+                year_level,
+                section_name,
+                academic_term_id,
+                max_students
+            FROM sections
+            WHERE program_id = ?
+            AND academic_term_id = ?
+            ORDER BY
+                year_level ASC,
+                section_name ASC
+        `, [
             programId,
             academicTermId
-        ]
-    );
+        ]);
 
-    return rows;
+    return rows.map(row => ({
+        ...row,
+        id: num(row.id),
+        program_id: num(row.program_id),
+        year_level: num(row.year_level),
+        academic_term_id: num(row.academic_term_id),
+        max_students: num(row.max_students)
+    }));
 };
+
 
 /*
 |--------------------------------------------------------------------------
 | BULK STUDENT COUNTS
 |--------------------------------------------------------------------------
+|
+| Instead of:
+|
+| SELECT COUNT(*) ... section 1
+| SELECT COUNT(*) ... section 2
+| SELECT COUNT(*) ... section 3
+|
+| we do ONE query.
+|
 */
 
 const getSectionStudentCounts = async (
@@ -508,21 +508,19 @@ const getSectionStudentCounts = async (
     const placeholders =
         sectionIds.map(() => "?").join(",");
 
-    const [rows] = await db.query(
-        `
-        SELECT
-            section_id,
-            COUNT(*) AS student_count
-        FROM student_sections
-        WHERE academic_term_id = ?
-        AND section_id IN (${placeholders})
-        GROUP BY section_id
-        `,
-        [
+    const [rows] =
+        await db.query(`
+            SELECT
+                section_id,
+                COUNT(*) AS student_count
+            FROM student_sections
+            WHERE academic_term_id = ?
+            AND section_id IN (${placeholders})
+            GROUP BY section_id
+        `, [
             academicTermId,
             ...sectionIds
-        ]
-    );
+        ]);
 
     for (const row of rows) {
         map.set(
@@ -534,75 +532,84 @@ const getSectionStudentCounts = async (
     return map;
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| BULK SECTION SUBJECTS
+| DATABASE - SUBJECTS
 |--------------------------------------------------------------------------
+|
+| Bulk load all section subjects.
+|
 */
 
 const getAllSectionSubjects = async (
-    sectionIds,
+    sections,
     academicTermId
 ) => {
     const map = new Map();
 
-    if (sectionIds.length === 0) {
+    if (sections.length === 0) {
         return map;
     }
+
+    const sectionIds =
+        sections.map(section => num(section.id));
 
     const placeholders =
         sectionIds.map(() => "?").join(",");
 
-    const [rows] = await db.query(
-        `
-        SELECT
-            s.id AS section_id,
-            s.section_name,
-            s.program_id,
-            s.year_level,
+    const [rows] =
+        await db.query(`
+            SELECT
+                s.id AS section_id,
+                s.section_name,
+                s.program_id,
+                s.year_level,
 
-            cs.subject_id,
+                cs.subject_id,
 
-            sub.subject_code,
-            sub.subject_name,
+                sub.subject_code,
+                sub.subject_name,
 
-            sub.units,
-            sub.lecture_units,
-            sub.lab_units,
+                sub.units,
+                sub.lecture_units,
+                sub.lab_units,
 
-            at.semester
+                at.semester
 
-        FROM sections s
+            FROM sections s
 
-        JOIN academic_terms at
-            ON at.id = s.academic_term_id
+            JOIN academic_terms at
+                ON at.id = s.academic_term_id
 
-        JOIN curriculum_subjects cs
-            ON cs.program_id = s.program_id
-            AND cs.year_level =
-                CASE
-                    WHEN s.year_level = 1 THEN '1st Year'
-                    WHEN s.year_level = 2 THEN '2nd Year'
-                    WHEN s.year_level = 3 THEN '3rd Year'
-                    WHEN s.year_level = 4 THEN '4th Year'
-                END
-            AND cs.semester = at.semester
+            JOIN curriculum_subjects cs
+                ON cs.program_id = s.program_id
+                AND cs.year_level =
+                    CASE
+                        WHEN s.year_level = 1
+                            THEN '1st Year'
+                        WHEN s.year_level = 2
+                            THEN '2nd Year'
+                        WHEN s.year_level = 3
+                            THEN '3rd Year'
+                        WHEN s.year_level = 4
+                            THEN '4th Year'
+                    END
+                AND cs.semester = at.semester
 
-        JOIN subjects sub
-            ON sub.id = cs.subject_id
+            JOIN subjects sub
+                ON sub.id = cs.subject_id
 
-        WHERE s.id IN (${placeholders})
-        AND s.academic_term_id = ?
+            WHERE s.id IN (${placeholders})
+            AND s.academic_term_id = ?
 
-        ORDER BY
-            s.id ASC,
-            sub.subject_code ASC
-        `,
-        [
+            ORDER BY
+                s.id,
+                sub.subject_code ASC
+        `, [
             ...sectionIds,
             academicTermId
-        ]
-    );
+        ]);
 
     for (const row of rows) {
         const sectionId =
@@ -618,9 +625,10 @@ const getAllSectionSubjects = async (
     return map;
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| SINGLE SECTION SUBJECTS
+| SECTION SUBJECTS COMPATIBILITY METHOD
 |--------------------------------------------------------------------------
 */
 
@@ -628,16 +636,57 @@ const getSectionSubjects = async (
     sectionId,
     academicTermId
 ) => {
-    const map =
-        await getAllSectionSubjects(
-            [sectionId],
-            academicTermId
-        );
+    const [rows] =
+        await db.query(`
+            SELECT
+                s.id AS section_id,
+                s.section_name,
+                s.program_id,
+                s.year_level,
 
-    return map.get(
-        num(sectionId)
-    ) || [];
+                cs.subject_id,
+
+                sub.subject_code,
+                sub.subject_name,
+
+                sub.units,
+                sub.lecture_units,
+                sub.lab_units,
+
+                at.semester
+
+            FROM sections s
+
+            JOIN academic_terms at
+                ON at.id = s.academic_term_id
+
+            JOIN curriculum_subjects cs
+                ON cs.program_id = s.program_id
+                AND cs.year_level =
+                    CASE
+                        WHEN s.year_level = 1 THEN '1st Year'
+                        WHEN s.year_level = 2 THEN '2nd Year'
+                        WHEN s.year_level = 3 THEN '3rd Year'
+                        WHEN s.year_level = 4 THEN '4th Year'
+                    END
+                AND cs.semester = at.semester
+
+            JOIN subjects sub
+                ON sub.id = cs.subject_id
+
+            WHERE s.id = ?
+            AND s.academic_term_id = ?
+
+            ORDER BY
+                sub.subject_code ASC
+        `, [
+            sectionId,
+            academicTermId
+        ]);
+
+    return rows;
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -645,9 +694,7 @@ const getSectionSubjects = async (
 |--------------------------------------------------------------------------
 */
 
-const buildRequirements = (
-    subjects
-) => {
+const buildRequirements = subjects => {
     const requirements = [];
 
     let requirementId = 0;
@@ -685,6 +732,7 @@ const buildRequirements = (
     return requirements;
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | TIME SLOTS
@@ -692,29 +740,28 @@ const buildRequirements = (
 */
 
 const getTimeSlots = async () => {
-    const [rows] = await db.query(
-        `
-        SELECT
-            id,
-            day,
-            start_time,
-            end_time
-        FROM time_slots
-        WHERE status = 'available'
-        ORDER BY
-            FIELD(
+    const [rows] =
+        await db.query(`
+            SELECT
+                id,
                 day,
-                'Monday',
-                'Tuesday',
-                'Wednesday',
-                'Thursday',
-                'Friday',
-                'Saturday',
-                'Sunday'
-            ),
-            start_time
-        `
-    );
+                start_time,
+                end_time
+            FROM time_slots
+            WHERE status = 'available'
+            ORDER BY
+                FIELD(
+                    day,
+                    'Monday',
+                    'Tuesday',
+                    'Wednesday',
+                    'Thursday',
+                    'Friday',
+                    'Saturday',
+                    'Sunday'
+                ),
+                start_time
+        `);
 
     return rows.map(row => ({
         id: num(row.id),
@@ -724,9 +771,8 @@ const getTimeSlots = async () => {
     }));
 };
 
-const groupSlotsByDay = (
-    slots
-) => {
+
+const groupSlotsByDay = slots => {
     const map = new Map();
 
     for (const day of DAY_ORDER) {
@@ -744,12 +790,10 @@ const groupSlotsByDay = (
     return map;
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| BUILD WINDOWS
-|--------------------------------------------------------------------------
-|
-| Precomputed ONCE per unique hour count.
+| WINDOWS
 |--------------------------------------------------------------------------
 */
 
@@ -759,11 +803,11 @@ const buildWindows = (
 ) => {
     hours = num(hours);
 
-    const windows = [];
-
     if (hours <= 0) {
-        return windows;
+        return [];
     }
+
+    const windows = [];
 
     for (const day of DAY_ORDER) {
         const daySlots =
@@ -778,19 +822,23 @@ const buildWindows = (
             i <= daySlots.length - hours;
             i++
         ) {
-            const first =
-                daySlots[i];
+            const candidate =
+                daySlots.slice(i, i + hours);
 
             let consecutive = true;
 
             for (
                 let j = 1;
-                j < hours;
+                j < candidate.length;
                 j++
             ) {
                 if (
-                    daySlots[i + j - 1].end_time !==
-                    daySlots[i + j].start_time
+                    normalizeTime(
+                        candidate[j - 1].end_time
+                    ) !==
+                    normalizeTime(
+                        candidate[j].start_time
+                    )
                 ) {
                     consecutive = false;
                     break;
@@ -801,26 +849,24 @@ const buildWindows = (
                 continue;
             }
 
-            const selected =
-                daySlots.slice(
-                    i,
-                    i + hours
-                );
-
             windows.push({
                 day,
                 dayIndex:
-                    DAY_INDEX.get(day),
-                slots: selected,
+                    DAY_INDEX.get(day) ?? 99,
+
+                slots: candidate,
+
                 slotIds:
-                    selected.map(
+                    candidate.map(
                         slot => num(slot.id)
                     ),
+
                 start_time:
-                    selected[0].start_time,
+                    candidate[0].start_time,
+
                 end_time:
-                    selected[
-                        selected.length - 1
+                    candidate[
+                        candidate.length - 1
                     ].end_time
             });
         }
@@ -829,15 +875,14 @@ const buildWindows = (
     return windows;
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | PROFESSORS
 |--------------------------------------------------------------------------
 */
 
-const getProfessorMap = async (
-    subjectIds
-) => {
+const getProfessorMap = async subjectIds => {
     const map = new Map();
 
     if (subjectIds.length === 0) {
@@ -847,30 +892,28 @@ const getProfessorMap = async (
     const placeholders =
         subjectIds.map(() => "?").join(",");
 
-    const [rows] = await db.query(
-        `
-        SELECT
-            ps.subject_id,
+    const [rows] =
+        await db.query(`
+            SELECT
+                ps.subject_id,
 
-            p.id,
-            p.employee_id,
-            p.firstname,
-            p.lastname,
-            p.department
+                p.id,
+                p.employee_id,
+                p.firstname,
+                p.lastname,
+                p.department
 
-        FROM professor_subjects ps
+            FROM professor_subjects ps
 
-        JOIN profesor p
-            ON p.id = ps.professor_id
+            JOIN profesor p
+                ON p.id = ps.professor_id
 
-        WHERE ps.subject_id IN (${placeholders})
+            WHERE ps.subject_id IN (${placeholders})
 
-        ORDER BY
-            ps.subject_id,
-            p.id
-        `,
-        subjectIds
-    );
+            ORDER BY
+                ps.subject_id,
+                p.id
+        `, subjectIds);
 
     for (const row of rows) {
         const subjectId =
@@ -892,6 +935,7 @@ const getProfessorMap = async (
     return map;
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | ROOMS
@@ -899,20 +943,19 @@ const getProfessorMap = async (
 */
 
 const getRooms = async () => {
-    const [rows] = await db.query(
-        `
-        SELECT
-            id,
-            room_name,
-            room_type,
-            capacity
-        FROM rooms
-        WHERE status = 'available'
-        ORDER BY
-            capacity ASC,
-            id ASC
-        `
-    );
+    const [rows] =
+        await db.query(`
+            SELECT
+                id,
+                room_name,
+                room_type,
+                capacity
+            FROM rooms
+            WHERE status = 'available'
+            ORDER BY
+                capacity ASC,
+                id ASC
+        `);
 
     return rows.map(room => ({
         id: num(room.id),
@@ -922,47 +965,45 @@ const getRooms = async () => {
     }));
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | EXISTING SCHEDULES
 |--------------------------------------------------------------------------
 */
 
-const loadExistingSchedules = async (
-    academicTermId
-) => {
-    const [rows] = await db.query(
-        `
-        SELECT
-            cs.id,
-            cs.section_id,
-            cs.subject_id,
-            cs.professor_id,
-            cs.room_id,
-            cs.time_slot_id,
-            cs.academic_term_id,
+const loadExistingSchedules = async academicTermId => {
+    const [rows] =
+        await db.query(`
+            SELECT
+                cs.id,
+                cs.section_id,
+                cs.subject_id,
+                cs.professor_id,
+                cs.room_id,
+                cs.time_slot_id,
+                cs.academic_term_id,
 
-            ts.day,
+                ts.day,
 
-            r.room_type
+                r.room_type
 
-        FROM class_schedules cs
+            FROM class_schedules cs
 
-        JOIN rooms r
-            ON r.id = cs.room_id
+            JOIN rooms r
+                ON r.id = cs.room_id
 
-        JOIN time_slots ts
-            ON ts.id = cs.time_slot_id
+            JOIN time_slots ts
+                ON ts.id = cs.time_slot_id
 
-        WHERE cs.academic_term_id = ?
-        `,
-        [
+            WHERE cs.academic_term_id = ?
+        `, [
             academicTermId
-        ]
-    );
+        ]);
 
     return rows.map(row => ({
         ...row,
+        id: num(row.id),
         section_id: num(row.section_id),
         subject_id: num(row.subject_id),
         professor_id: num(row.professor_id),
@@ -971,9 +1012,10 @@ const loadExistingSchedules = async (
     }));
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| RESERVE EXISTING
+| EXISTING OCCUPANCY
 |--------------------------------------------------------------------------
 */
 
@@ -1012,38 +1054,37 @@ const reserveExistingSchedules = (
     }
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | EXISTING REQUIREMENT COUNTS
 |--------------------------------------------------------------------------
 */
 
-const getExistingRequirementCounts = (
-    existingRows
-) => {
+const getExistingRequirementCounts = rows => {
     const map = new Map();
 
-    for (const row of existingRows) {
+    for (const row of rows) {
         const sectionId =
             num(row.section_id);
 
-        const key =
-            makeSubjectTypeKey(
-                row.subject_id,
-                row.room_type === "laboratory"
-                    ? "laboratory"
-                    : "lecture"
-            );
+        const subjectId =
+            num(row.subject_id);
 
         if (!map.has(sectionId)) {
-            map.set(
-                sectionId,
-                new Map()
-            );
+            map.set(sectionId, new Map());
         }
 
         const sectionMap =
             map.get(sectionId);
+
+        const type =
+            row.room_type === "laboratory"
+                ? "laboratory"
+                : "lecture";
+
+        const key =
+            `${subjectId}:${type}`;
 
         sectionMap.set(
             key,
@@ -1053,6 +1094,7 @@ const getExistingRequirementCounts = (
 
     return map;
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1073,10 +1115,7 @@ const getMissingRequirements = (
 
     for (const requirement of section.requirements) {
         const key =
-            makeSubjectTypeKey(
-                requirement.subject_id,
-                requirement.type
-            );
+            `${requirement.subject_id}:${requirement.type}`;
 
         const existingCount =
             sectionCounts.get(key) || 0;
@@ -1090,6 +1129,7 @@ const getMissingRequirements = (
 
         missing.push({
             ...requirement,
+
             remainingHours:
                 requirement.hours -
                 existingCount
@@ -1098,6 +1138,7 @@ const getMissingRequirements = (
 
     return missing;
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1118,17 +1159,12 @@ const getSectionStatus = (
 
     for (const requirement of section.requirements) {
         const key =
-            makeSubjectTypeKey(
-                requirement.subject_id,
-                requirement.type
-            );
+            `${requirement.subject_id}:${requirement.type}`;
 
         const count =
             sectionCounts.get(key) || 0;
 
-        if (
-            count >= requirement.hours
-        ) {
+        if (count >= requirement.hours) {
             completed++;
         }
     }
@@ -1146,9 +1182,44 @@ const getSectionStatus = (
     };
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| RESOURCE LOAD
+| VALID ROOMS CACHE
+|--------------------------------------------------------------------------
+*/
+
+const createRoomCache = rooms => {
+    return new Map(
+        rooms.map(room => [
+            room.id,
+            room
+        ])
+    );
+};
+
+
+const getValidRooms = (
+    requirement,
+    section,
+    rooms
+) => {
+    const requiredType =
+        requirement.type === "laboratory"
+            ? "laboratory"
+            : "lecture";
+
+    return rooms.filter(room => (
+        room.room_type === requiredType &&
+        room.capacity >=
+            num(section.student_count)
+    ));
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| CANDIDATE SCORING
 |--------------------------------------------------------------------------
 */
 
@@ -1159,59 +1230,6 @@ const getResourceLoad = (
     return map.get(num(id))?.size || 0;
 };
 
-/*
-|--------------------------------------------------------------------------
-| ROOM CACHE
-|--------------------------------------------------------------------------
-*/
-
-const createRoomCache = (
-    rooms
-) => {
-    const cache = new Map();
-
-    return (
-        section,
-        requirement
-    ) => {
-        const key =
-            makeRoomCacheKey(
-                section.id,
-                requirement.type
-            );
-
-        if (cache.has(key)) {
-            return cache.get(key);
-        }
-
-        const requiredType =
-            requirement.type === "laboratory"
-                ? "laboratory"
-                : "lecture";
-
-        const studentCount =
-            num(section.student_count);
-
-        const valid =
-            rooms.filter(room =>
-                room.room_type === requiredType &&
-                room.capacity >= studentCount
-            );
-
-        cache.set(
-            key,
-            valid
-        );
-
-        return valid;
-    };
-};
-
-/*
-|--------------------------------------------------------------------------
-| CANDIDATE SCORE
-|--------------------------------------------------------------------------
-*/
 
 const scoreCandidate = (
     candidate,
@@ -1232,22 +1250,24 @@ const scoreCandidate = (
         );
 
     const professorCount =
-        professorMap.get(
-            num(requirement.subject_id)
-        )?.length || 0;
+        (
+            professorMap.get(
+                num(requirement.subject_id)
+            ) || []
+        ).length;
 
     const scarcityPenalty =
         professorCount <= 1
             ? 100000
-            : professorCount <= 2
+            : professorCount === 2
                 ? 30000
-                : professorCount <= 3
+                : professorCount === 3
                     ? 10000
                     : 0;
 
     const roomWaste =
         candidate.room.capacity -
-        candidate.studentCount;
+        num(candidate.studentCount);
 
     const existingDayHours =
         getSectionDayHours(
@@ -1269,36 +1289,45 @@ const scoreCandidate = (
             candidate.sectionId
         );
 
-    const newDayBonus =
+    /*
+     * Prefer unused days.
+     */
+    const newDayPenalty =
         existingDayHours === 0
             ? -NEW_DAY_BONUS
             : 0;
 
-    const sectionDayLoadPenalty =
-        existingDayHours *
-        existingDayHours *
+    /*
+     * This is a SOFT penalty only.
+     *
+     * There is no 6-hour cap.
+     */
+    const dayLoadPenalty =
+        Math.pow(
+            existingDayHours,
+            2
+        ) *
         SECTION_DAY_LOAD_WEIGHT;
 
-    const excessDailyHours =
-        Math.max(
-            0,
-            projectedDayHours -
-            SECTION_TARGET_DAILY_HOURS
-        );
-
+    /*
+     * Long day preference only.
+     *
+     * It doesn't prohibit long days.
+     */
     const longDayPenalty =
-        excessDailyHours > 0
-            ? excessDailyHours *
-              excessDailyHours *
-              SECTION_LONG_DAY_WEIGHT
+        projectedDayHours > 6
+            ? Math.pow(
+                projectedDayHours - 6,
+                2
+            ) *
+            SECTION_LONG_DAY_WEIGHT
             : 0;
 
     const spreadBonus =
-        usedDayCount < DAY_ORDER.length &&
         existingDayHours === 0
             ? -Math.min(
-                10000,
-                usedDayCount * 1000
+                5000,
+                usedDayCount * 500
             )
             : 0;
 
@@ -1307,18 +1336,19 @@ const scoreCandidate = (
         roomLoad * 1000 +
         scarcityPenalty +
         roomWaste * 5 +
-        sectionDayLoadPenalty +
+        dayLoadPenalty +
         longDayPenalty +
-        newDayBonus +
+        newDayPenalty +
         spreadBonus +
         candidate.dayIndex * 2 +
         candidate.roomId
     );
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| CANDIDATE
+| MAKE CANDIDATE
 |--------------------------------------------------------------------------
 */
 
@@ -1364,162 +1394,25 @@ const makeCandidate = (
         window.end_time,
 
     studentCount:
+        num(section.student_count),
+
+    roomWaste:
+        room.capacity -
         num(section.student_count)
 });
 
-/*
-|--------------------------------------------------------------------------
-| TOP-K CANDIDATE HEAP
-|--------------------------------------------------------------------------
-|
-| Instead of:
-|
-|   every new candidate
-|       ↓
-|   scan 100 candidates
-|       ↓
-|   find worst
-|
-| We maintain a max heap.
-|
-| Root = WORST candidate.
-|--------------------------------------------------------------------------
-*/
-
-class MaxHeap {
-    constructor(limit) {
-        this.items = [];
-        this.limit = limit;
-    }
-
-    get size() {
-        return this.items.length;
-    }
-
-    peek() {
-        return this.items[0] || null;
-    }
-
-    swap(i, j) {
-        const temp =
-            this.items[i];
-
-        this.items[i] =
-            this.items[j];
-
-        this.items[j] =
-            temp;
-    }
-
-    push(item) {
-        this.items.push(item);
-
-        let index =
-            this.items.length - 1;
-
-        while (index > 0) {
-            const parent =
-                Math.floor(
-                    (index - 1) / 2
-                );
-
-            if (
-                this.items[parent].score >=
-                this.items[index].score
-            ) {
-                break;
-            }
-
-            this.swap(
-                parent,
-                index
-            );
-
-            index = parent;
-        }
-    }
-
-    replaceRoot(item) {
-        this.items[0] = item;
-
-        let index = 0;
-
-        while (true) {
-            const left =
-                index * 2 + 1;
-
-            const right =
-                left + 1;
-
-            let largest = index;
-
-            if (
-                left < this.items.length &&
-                this.items[left].score >
-                this.items[largest].score
-            ) {
-                largest = left;
-            }
-
-            if (
-                right < this.items.length &&
-                this.items[right].score >
-                this.items[largest].score
-            ) {
-                largest = right;
-            }
-
-            if (
-                largest === index
-            ) {
-                break;
-            }
-
-            this.swap(
-                index,
-                largest
-            );
-
-            index = largest;
-        }
-    }
-
-    add(item) {
-        if (
-            this.items.length <
-            this.limit
-        ) {
-            this.push(item);
-            return;
-        }
-
-        if (
-            item.score <
-            this.items[0].score
-        ) {
-            this.replaceRoot(item);
-        }
-    }
-
-    toSortedArray() {
-        return this.items
-            .slice()
-            .sort(
-                (a, b) =>
-                    a.score -
-                    b.score
-            )
-            .map(
-                item =>
-                    item.candidate
-            );
-    }
-}
 
 /*
 |--------------------------------------------------------------------------
 | CANDIDATE POOL
 |--------------------------------------------------------------------------
+|
+| Optimization:
+|
+| Instead of repeatedly finding the worst candidate by scanning
+| the entire current pool for every new candidate, we score candidates
+| once and keep the best candidates.
+|
 */
 
 const getCandidatePool = ({
@@ -1527,15 +1420,16 @@ const getCandidatePool = ({
     requirement,
     windows,
     professors,
-    getValidRooms,
+    rooms,
     occupancy,
     professorMap,
     limit
 }) => {
     const validRooms =
         getValidRooms(
+            requirement,
             section,
-            requirement
+            rooms
         );
 
     if (
@@ -1549,38 +1443,22 @@ const getCandidatePool = ({
         };
     }
 
-    const heap =
-        new MaxHeap(limit);
+    const candidates = [];
 
     let totalValid = 0;
 
-    for (
-        let w = 0;
-        w < windows.length;
-        w++
-    ) {
-        const window =
-            windows[w];
-
-        const sectionConflict =
+    for (const window of windows) {
+        if (
             hasSlotConflict(
                 occupancy.sectionSlots,
                 section.id,
                 window.slotIds
-            );
-
-        if (sectionConflict) {
+            )
+        ) {
             continue;
         }
 
-        for (
-            let p = 0;
-            p < professors.length;
-            p++
-        ) {
-            const professor =
-                professors[p];
-
+        for (const professor of professors) {
             if (
                 hasSlotConflict(
                     occupancy.professorSlots,
@@ -1591,14 +1469,7 @@ const getCandidatePool = ({
                 continue;
             }
 
-            for (
-                let r = 0;
-                r < validRooms.length;
-                r++
-            ) {
-                const room =
-                    validRooms[r];
-
+            for (const room of validRooms) {
                 if (
                     hasSlotConflict(
                         occupancy.roomSlots,
@@ -1620,11 +1491,7 @@ const getCandidatePool = ({
                         window
                     );
 
-                /*
-                 * IMPORTANT:
-                 * Score exactly ONCE.
-                 */
-                const score =
+                candidate.score =
                     scoreCandidate(
                         candidate,
                         occupancy,
@@ -1632,25 +1499,39 @@ const getCandidatePool = ({
                         professorMap
                     );
 
-                heap.add({
-                    candidate,
-                    score
-                });
+                candidates.push(candidate);
             }
         }
     }
 
-    return {
-        candidates:
-            heap.toSortedArray(),
+    /*
+     * Sort only once.
+     */
+    candidates.sort(
+        (a, b) =>
+            a.score - b.score
+    );
 
+    /*
+     * Keep only best candidates.
+     */
+    if (
+        candidates.length >
+        limit
+    ) {
+        candidates.length = limit;
+    }
+
+    return {
+        candidates,
         totalValid
     };
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| REQUIREMENT WINDOWS
+| WINDOWS BY HOURS
 |--------------------------------------------------------------------------
 */
 
@@ -1670,9 +1551,39 @@ const getRequirementWindows = (
     );
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| FLEXIBILITY
+| FLEXIBILITY CACHE
+|--------------------------------------------------------------------------
+*/
+
+const createFlexibilityCache = () => {
+    return new Map();
+};
+
+
+const makeFlexibilityKey = (
+    section,
+    requirement,
+    occupancy
+) => {
+    /*
+     * Occupancy changes after every reservation.
+     *
+     * We therefore use a lightweight version key.
+     */
+    return (
+        `${section.id}:` +
+        `${requirement.id}:` +
+        `${occupancy._version || 0}`
+    );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| REQUIREMENT FLEXIBILITY
 |--------------------------------------------------------------------------
 */
 
@@ -1681,10 +1592,24 @@ const estimateRequirementFlexibility = ({
     requirement,
     windowsByHours,
     professorMap,
-    getValidRooms,
+    rooms,
     occupancy,
-    maxScan = MAX_MRV_CANDIDATE_SCAN
+    flexibilityCache
 }) => {
+    const cacheKey =
+        makeFlexibilityKey(
+            section,
+            requirement,
+            occupancy
+        );
+
+    if (
+        flexibilityCache &&
+        flexibilityCache.has(cacheKey)
+    ) {
+        return flexibilityCache.get(cacheKey);
+    }
+
     const windows =
         getRequirementWindows(
             requirement,
@@ -1696,31 +1621,43 @@ const estimateRequirementFlexibility = ({
             num(requirement.subject_id)
         ) || [];
 
-    const validRooms =
-        getValidRooms(
-            section,
-            requirement
-        );
-
     if (
         windows.length === 0 ||
-        professors.length === 0 ||
-        validRooms.length === 0
+        professors.length === 0
     ) {
+        if (flexibilityCache) {
+            flexibilityCache.set(
+                cacheKey,
+                0
+            );
+        }
+
+        return 0;
+    }
+
+    const validRooms =
+        getValidRooms(
+            requirement,
+            section,
+            rooms
+        );
+
+    if (validRooms.length === 0) {
+        if (flexibilityCache) {
+            flexibilityCache.set(
+                cacheKey,
+                0
+            );
+        }
+
         return 0;
     }
 
     let valid = 0;
     let scanned = 0;
 
-    for (
-        let w = 0;
-        w < windows.length;
-        w++
-    ) {
-        const window =
-            windows[w];
-
+    outer:
+    for (const window of windows) {
         if (
             hasSlotConflict(
                 occupancy.sectionSlots,
@@ -1731,14 +1668,7 @@ const estimateRequirementFlexibility = ({
             continue;
         }
 
-        for (
-            let p = 0;
-            p < professors.length;
-            p++
-        ) {
-            const professor =
-                professors[p];
-
+        for (const professor of professors) {
             if (
                 hasSlotConflict(
                     occupancy.professorSlots,
@@ -1749,14 +1679,7 @@ const estimateRequirementFlexibility = ({
                 continue;
             }
 
-            for (
-                let r = 0;
-                r < validRooms.length;
-                r++
-            ) {
-                const room =
-                    validRooms[r];
-
+            for (const room of validRooms) {
                 scanned++;
 
                 if (
@@ -1770,20 +1693,29 @@ const estimateRequirementFlexibility = ({
                 }
 
                 if (
-                    scanned >= maxScan
+                    scanned >=
+                    MAX_MRV_CANDIDATE_SCAN
                 ) {
-                    return valid;
+                    break outer;
                 }
             }
         }
     }
 
+    if (flexibilityCache) {
+        flexibilityCache.set(
+            cacheKey,
+            valid
+        );
+    }
+
     return valid;
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| MRV
+| SELECT MRV
 |--------------------------------------------------------------------------
 */
 
@@ -1793,22 +1725,16 @@ const selectMRVRequirement = ({
     assignedIds,
     windowsByHours,
     professorMap,
-    getValidRooms,
-    occupancy
+    rooms,
+    occupancy,
+    flexibilityCache
 }) => {
     let selected = null;
 
     let selectedFlexibility =
         Infinity;
 
-    for (
-        let i = 0;
-        i < requirements.length;
-        i++
-    ) {
-        const requirement =
-            requirements[i];
-
+    for (const requirement of requirements) {
         if (
             assignedIds.has(
                 requirement.id
@@ -1823,13 +1749,12 @@ const selectMRVRequirement = ({
                 requirement,
                 windowsByHours,
                 professorMap,
-                getValidRooms,
-                occupancy
+                rooms,
+                occupancy,
+                flexibilityCache
             });
 
-        if (
-            flexibility === 0
-        ) {
+        if (flexibility === 0) {
             return {
                 requirement,
                 flexibility: 0
@@ -1845,15 +1770,6 @@ const selectMRVRequirement = ({
 
             selectedFlexibility =
                 flexibility;
-
-            /*
-             * Can't get better than one.
-             */
-            if (
-                flexibility === 1
-            ) {
-                break;
-            }
         }
     }
 
@@ -1863,6 +1779,7 @@ const selectMRVRequirement = ({
             selectedFlexibility
     };
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1876,17 +1793,11 @@ const forwardCheck = ({
     assignedIds,
     windowsByHours,
     professorMap,
-    getValidRooms,
-    occupancy
+    rooms,
+    occupancy,
+    flexibilityCache
 }) => {
-    for (
-        let i = 0;
-        i < requirements.length;
-        i++
-    ) {
-        const requirement =
-            requirements[i];
-
+    for (const requirement of requirements) {
         if (
             assignedIds.has(
                 requirement.id
@@ -1901,14 +1812,12 @@ const forwardCheck = ({
                 requirement,
                 windowsByHours,
                 professorMap,
-                getValidRooms,
+                rooms,
                 occupancy,
-                maxScan: 1
+                flexibilityCache
             });
 
-        if (
-            flexibility === 0
-        ) {
+        if (flexibility === 0) {
             return false;
         }
     }
@@ -1916,9 +1825,22 @@ const forwardCheck = ({
     return true;
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| GREEDY
+| OCCUPANCY VERSION
+|--------------------------------------------------------------------------
+*/
+
+const bumpOccupancyVersion = occupancy => {
+    occupancy._version =
+        (occupancy._version || 0) + 1;
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| GREEDY SOLVER
 |--------------------------------------------------------------------------
 */
 
@@ -1927,13 +1849,20 @@ const solveGreedy = ({
     requirements,
     windowsByHours,
     professorMap,
-    getValidRooms,
+    rooms,
     occupancy
 }) => {
+    console.log(
+        `[GREEDY] Starting ${section.section_name}`
+    );
+
     const assignments = [];
 
     const assignedIds =
         new Set();
+
+    const flexibilityCache =
+        createFlexibilityCache();
 
     while (
         assignedIds.size <
@@ -1946,14 +1875,20 @@ const solveGreedy = ({
                 assignedIds,
                 windowsByHours,
                 professorMap,
-                getValidRooms,
-                occupancy
+                rooms,
+                occupancy,
+                flexibilityCache
             });
 
         if (
             !selected.requirement ||
             selected.flexibility === 0
         ) {
+            console.log(
+                `[GREEDY] No candidate for ` +
+                `${selected.requirement?.subject_code || "unknown"}`
+            );
+
             releaseAssignments(
                 assignments,
                 occupancy
@@ -1963,8 +1898,7 @@ const solveGreedy = ({
                 success: false,
                 assignments: [],
                 failedRequirement:
-                    selected.requirement ||
-                    null
+                    selected.requirement || null
             };
         }
 
@@ -1988,7 +1922,7 @@ const solveGreedy = ({
                 requirement,
                 windows,
                 professors,
-                getValidRooms,
+                rooms,
                 occupancy,
                 professorMap,
                 limit:
@@ -1998,6 +1932,12 @@ const solveGreedy = ({
         if (
             pool.candidates.length === 0
         ) {
+            console.log(
+                `[GREEDY] No candidate for ` +
+                `${requirement.subject_code} ` +
+                `${requirement.type}`
+            );
+
             releaseAssignments(
                 assignments,
                 occupancy
@@ -2038,21 +1978,26 @@ const solveGreedy = ({
             occupancy
         );
 
-        assignments.push(
-            candidate
+        bumpOccupancyVersion(
+            occupancy
         );
+
+        assignments.push(candidate);
 
         assignedIds.add(
             requirement.id
         );
 
-        log(
+        console.log(
             `[GREEDY] ${section.section_name} | ` +
             `${requirement.subject_code} ` +
             `${requirement.type} | ` +
             `${candidate.day} ` +
             `${candidate.start_time}-` +
-            `${candidate.end_time}`
+            `${candidate.end_time} | ` +
+            `${candidate.room.room_name} | ` +
+            `${candidate.professor.firstname} ` +
+            `${candidate.professor.lastname}`
         );
     }
 
@@ -2062,9 +2007,10 @@ const solveGreedy = ({
     };
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| BACKTRACKING
+| BACKTRACK SOLVER
 |--------------------------------------------------------------------------
 */
 
@@ -2073,9 +2019,13 @@ const solveBacktracking = ({
     requirements,
     windowsByHours,
     professorMap,
-    getValidRooms,
+    rooms,
     occupancy
 }) => {
+    console.log(
+        `[BACKTRACK] Starting ${section.section_name}`
+    );
+
     const start =
         Date.now();
 
@@ -2087,6 +2037,10 @@ const solveBacktracking = ({
 
     const assignedIds =
         new Set();
+
+    const flexibilityCache =
+        createFlexibilityCache();
+
 
     const backtrack = () => {
         nodes++;
@@ -2121,8 +2075,9 @@ const solveBacktracking = ({
                 assignedIds,
                 windowsByHours,
                 professorMap,
-                getValidRooms,
-                occupancy
+                rooms,
+                occupancy,
+                flexibilityCache
             });
 
         if (
@@ -2152,7 +2107,7 @@ const solveBacktracking = ({
                 requirement,
                 windows,
                 professors,
-                getValidRooms,
+                rooms,
                 occupancy,
                 professorMap,
                 limit:
@@ -2166,13 +2121,9 @@ const solveBacktracking = ({
         }
 
         for (
-            let i = 0;
-            i < pool.candidates.length;
-            i++
+            const candidate
+            of pool.candidates
         ) {
-            const candidate =
-                pool.candidates[i];
-
             if (
                 timeout ||
                 nodeLimit
@@ -2194,17 +2145,28 @@ const solveBacktracking = ({
                 occupancy
             );
 
-            assignments.push(
-                candidate
+            bumpOccupancyVersion(
+                occupancy
             );
+
+            assignments.push(candidate);
 
             assignedIds.add(
                 requirement.id
             );
 
-            /*
-             * Cheap forward check.
-             */
+            console.log(
+                `[BACKTRACK] ${section.section_name} | ` +
+                `${requirement.subject_code} ` +
+                `${requirement.type} | ` +
+                `${candidate.day} ` +
+                `${candidate.start_time}-` +
+                `${candidate.end_time} | ` +
+                `${candidate.room.room_name} | ` +
+                `${candidate.professor.firstname} ` +
+                `${candidate.professor.lastname}`
+            );
+
             const possible =
                 forwardCheck({
                     section,
@@ -2212,8 +2174,9 @@ const solveBacktracking = ({
                     assignedIds,
                     windowsByHours,
                     professorMap,
-                    getValidRooms,
-                    occupancy
+                    rooms,
+                    occupancy,
+                    flexibilityCache
                 });
 
             if (
@@ -2233,10 +2196,15 @@ const solveBacktracking = ({
                 candidate,
                 occupancy
             );
+
+            bumpOccupancyVersion(
+                occupancy
+            );
         }
 
         return false;
     };
+
 
     const success =
         backtrack();
@@ -2276,33 +2244,42 @@ const solveBacktracking = ({
     };
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| HYBRID
+| HYBRID SOLVER
 |--------------------------------------------------------------------------
 */
 
-const solveHybrid = ({
+const solveHybrid = async ({
     section,
     requirements,
     windowsByHours,
     professorMap,
-    getValidRooms,
+    rooms,
     occupancy
 }) => {
+    console.log(
+        `\n[HYBRID] Solving ` +
+        `${section.section_name}`
+    );
+
     const greedy =
         solveGreedy({
             section,
             requirements,
             windowsByHours,
             professorMap,
-            getValidRooms,
+            rooms,
             occupancy
         });
 
-    if (
-        greedy.success
-    ) {
+    if (greedy.success) {
+        console.log(
+            `[HYBRID] Greedy succeeded for ` +
+            `${section.section_name}`
+        );
+
         return {
             success: true,
             method: "GREEDY",
@@ -2313,15 +2290,27 @@ const solveHybrid = ({
         };
     }
 
+    console.log(
+        `[HYBRID] Greedy failed for ` +
+        `${section.section_name}`
+    );
+
     const backtrack =
         solveBacktracking({
             section,
             requirements,
             windowsByHours,
             professorMap,
-            getValidRooms,
+            rooms,
             occupancy
         });
+
+    console.log(
+        `[BACKTRACK] ${section.section_name} | ` +
+        `success=${backtrack.success} | ` +
+        `nodes=${backtrack.nodes} | ` +
+        `time=${backtrack.elapsed}ms`
+    );
 
     return {
         success:
@@ -2353,9 +2342,10 @@ const solveHybrid = ({
     };
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| FAILURE ANALYSIS
+| BOTTLENECK ANALYSIS
 |--------------------------------------------------------------------------
 */
 
@@ -2364,7 +2354,7 @@ const analyzeRequirement = ({
     requirement,
     windowsByHours,
     professorMap,
-    getValidRooms,
+    rooms,
     occupancy
 }) => {
     const windows =
@@ -2380,8 +2370,9 @@ const analyzeRequirement = ({
 
     const validRooms =
         getValidRooms(
+            requirement,
             section,
-            requirement
+            rooms
         );
 
     let available = 0;
@@ -2389,17 +2380,7 @@ const analyzeRequirement = ({
     let roomBlocked = 0;
     let sectionBlocked = 0;
 
-    let scanned = 0;
-
-    outer:
-    for (
-        let w = 0;
-        w < windows.length;
-        w++
-    ) {
-        const window =
-            windows[w];
-
+    for (const window of windows) {
         const sectionConflict =
             hasSlotConflict(
                 occupancy.sectionSlots,
@@ -2407,14 +2388,7 @@ const analyzeRequirement = ({
                 window.slotIds
             );
 
-        for (
-            let p = 0;
-            p < professors.length;
-            p++
-        ) {
-            const professor =
-                professors[p];
-
+        for (const professor of professors) {
             const profConflict =
                 hasSlotConflict(
                     occupancy.professorSlots,
@@ -2422,16 +2396,7 @@ const analyzeRequirement = ({
                     window.slotIds
                 );
 
-            for (
-                let r = 0;
-                r < validRooms.length;
-                r++
-            ) {
-                const room =
-                    validRooms[r];
-
-                scanned++;
-
+            for (const room of validRooms) {
                 const roomConflict =
                     hasSlotConflict(
                         occupancy.roomSlots,
@@ -2445,25 +2410,19 @@ const analyzeRequirement = ({
                     !roomConflict
                 ) {
                     available++;
-                } else {
-                    if (sectionConflict) {
-                        sectionBlocked++;
-                    }
-
-                    if (profConflict) {
-                        professorBlocked++;
-                    }
-
-                    if (roomConflict) {
-                        roomBlocked++;
-                    }
+                    continue;
                 }
 
-                if (
-                    scanned >=
-                    MAX_FAILURE_ANALYSIS_SCAN
-                ) {
-                    break outer;
+                if (sectionConflict) {
+                    sectionBlocked++;
+                }
+
+                if (profConflict) {
+                    professorBlocked++;
+                }
+
+                if (roomConflict) {
+                    roomBlocked++;
                 }
             }
         }
@@ -2477,25 +2436,25 @@ const analyzeRequirement = ({
             "COMBINATION / BACKTRACKING CONSTRAINT";
     } else if (
         professorBlocked >
-        roomBlocked &&
+            roomBlocked &&
         professorBlocked >
-        sectionBlocked
+            sectionBlocked
     ) {
         bottleneck =
             "PROFESSOR";
     } else if (
         roomBlocked >
-        professorBlocked &&
+            professorBlocked &&
         roomBlocked >
-        sectionBlocked
+            sectionBlocked
     ) {
         bottleneck =
             "ROOM";
     } else if (
         sectionBlocked >
-        professorBlocked &&
+            professorBlocked &&
         sectionBlocked >
-        roomBlocked
+            roomBlocked
     ) {
         bottleneck =
             "SECTION/TIMESLOT";
@@ -2537,13 +2496,26 @@ const analyzeRequirement = ({
     };
 };
 
+
 /*
 |--------------------------------------------------------------------------
-| SAVE SECTION SCHEDULES
+| SAVE SECTION
 |--------------------------------------------------------------------------
 |
-| Bulk INSERT instead of one INSERT per slot.
-|--------------------------------------------------------------------------
+| OPTIMIZED:
+|
+| Old:
+|
+| INSERT
+| INSERT
+| INSERT
+| INSERT
+| ...
+|
+| New:
+|
+| ONE multi-row INSERT per section.
+|
 */
 
 const saveSectionSchedules = async (
@@ -2558,22 +2530,8 @@ const saveSectionSchedules = async (
 
     const values = [];
 
-    for (
-        let i = 0;
-        i < assignments.length;
-        i++
-    ) {
-        const assignment =
-            assignments[i];
-
-        for (
-            let j = 0;
-            j < assignment.window.slots.length;
-            j++
-        ) {
-            const slot =
-                assignment.window.slots[j];
-
+    for (const assignment of assignments) {
+        for (const slot of assignment.window.slots) {
             values.push([
                 assignment.sectionId,
                 assignment.requirement.subject_id,
@@ -2594,11 +2552,10 @@ const saveSectionSchedules = async (
             .map(() => "(?, ?, ?, ?, ?, ?)")
             .join(",");
 
-    const flatValues =
+    const flattened =
         values.flat();
 
-    await db.query(
-        `
+    await db.query(`
         INSERT INTO class_schedules
         (
             section_id,
@@ -2609,10 +2566,9 @@ const saveSectionSchedules = async (
             academic_term_id
         )
         VALUES ${placeholders}
-        `,
-        flatValues
-    );
+    `, flattened);
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -2620,9 +2576,7 @@ const saveSectionSchedules = async (
 |--------------------------------------------------------------------------
 */
 
-const generateSchedules = async (
-    req
-) => {
+const generateSchedules = async req => {
     const {
         programId,
         academicTermId
@@ -2638,15 +2592,43 @@ const generateSchedules = async (
     }
 
     console.log(
-        `\n[SCHEDULER] Program=${programId} ` +
-        `Term=${academicTermId}`
+        "\n========================================"
     );
 
+    console.log(
+        "HYBRID GLOBAL RESOURCE-AWARE SCHEDULER"
+    );
+
+    console.log(
+        "========================================"
+    );
+
+    console.log(
+        `Program: ${programId}`
+    );
+
+    console.log(
+        `Academic Term: ${academicTermId}`
+    );
+
+    console.log(
+        "Scheduling range: Monday-Sunday"
+    );
+
+    console.log(
+        "Daily availability: 7:00 AM - 10:00 PM"
+    );
+
+    console.log(
+        "Daily workload cap: NONE"
+    );
+
+
     /*
-     * --------------------------------------------------------------
-     * LOAD SECTIONS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | LOAD SECTIONS
+    |--------------------------------------------------------------------------
+    */
 
     const sections =
         await getSections(
@@ -2662,11 +2644,16 @@ const generateSchedules = async (
         );
     }
 
+    console.log(
+        `Total sections: ${sections.length}`
+    );
+
+
     /*
-     * --------------------------------------------------------------
-     * TIME SLOTS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | TIME SLOTS
+    |--------------------------------------------------------------------------
+    */
 
     const timeSlots =
         await getTimeSlots();
@@ -2684,11 +2671,34 @@ const generateSchedules = async (
             timeSlots
         );
 
+    for (const day of DAY_ORDER) {
+        const daySlots =
+            slotsByDay.get(day) || [];
+
+        if (
+            daySlots.length === 0
+        ) {
+            console.log(
+                `[TIME] ${day}: NO AVAILABLE SLOTS`
+            );
+
+            continue;
+        }
+
+        console.log(
+            `[TIME] ${day}: ` +
+            `${daySlots[0].start_time} - ` +
+            `${daySlots[daySlots.length - 1].end_time} | ` +
+            `${daySlots.length} slots`
+        );
+    }
+
+
     /*
-     * --------------------------------------------------------------
-     * ROOMS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | ROOMS
+    |--------------------------------------------------------------------------
+    */
 
     const rooms =
         await getRooms();
@@ -2701,16 +2711,37 @@ const generateSchedules = async (
         );
     }
 
+    console.log(
+        `Available time slots: ${timeSlots.length}`
+    );
+
+    console.log(
+        `Available rooms: ${rooms.length}`
+    );
+
+
     /*
-     * --------------------------------------------------------------
-     * EXISTING SCHEDULES
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | EXISTING SCHEDULES
+    |--------------------------------------------------------------------------
+    */
 
     const existingSchedules =
         await loadExistingSchedules(
             academicTermId
         );
+
+    console.log(
+        `Existing schedule rows: ` +
+        `${existingSchedules.length}`
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | OCCUPANCY
+    |--------------------------------------------------------------------------
+    */
 
     const occupancy =
         createOccupancy();
@@ -2720,71 +2751,78 @@ const generateSchedules = async (
         occupancy
     );
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | EXISTING REQUIREMENTS
+    |--------------------------------------------------------------------------
+    */
+
     const existingRequirementCounts =
         getExistingRequirementCounts(
             existingSchedules
         );
 
+
     /*
-     * --------------------------------------------------------------
-     * BULK LOAD SECTION DATA
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | BULK STUDENT COUNTS
+    |--------------------------------------------------------------------------
+    */
 
     const sectionIds =
         sections.map(
             section => num(section.id)
         );
 
-    const [
-        studentCounts,
-        sectionSubjectsMap
-    ] = await Promise.all([
-        getSectionStudentCounts(
+    const studentCounts =
+        await getSectionStudentCounts(
             sectionIds,
             academicTermId
-        ),
+        );
 
-        getAllSectionSubjects(
-            sectionIds,
-            academicTermId
-        )
-    ]);
 
     /*
-     * --------------------------------------------------------------
-     * PREPARE SECTIONS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | BULK SUBJECT LOAD
+    |--------------------------------------------------------------------------
+    */
+
+    const subjectsBySection =
+        await getAllSectionSubjects(
+            sections,
+            academicTermId
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PREPARE SECTIONS
+    |--------------------------------------------------------------------------
+    */
 
     const preparedSections = [];
 
     const allSubjectIds =
         new Set();
 
-    for (
-        let i = 0;
-        i < sections.length;
-        i++
-    ) {
-        const section =
-            sections[i];
-
+    for (const section of sections) {
         section.student_count =
             studentCounts.get(
                 num(section.id)
             ) || 0;
 
         section.subjects =
-            sectionSubjectsMap.get(
+            subjectsBySection.get(
                 num(section.id)
             ) || [];
 
         if (
             section.subjects.length === 0
         ) {
-            log(
-                `[SKIP] ${section.section_name} no subjects`
+            console.log(
+                `[SKIP] ${section.section_name} ` +
+                `has no subjects`
             );
 
             continue;
@@ -2813,32 +2851,32 @@ const generateSchedules = async (
         if (
             section.isComplete
         ) {
-            log(
-                `[LOCKED] ${section.section_name}`
+            console.log(
+                `[LOCKED] ${section.section_name} ` +
+                `already complete`
             );
 
             continue;
         }
 
         for (
-            let r = 0;
-            r <
-            section.missingRequirements.length;
-            r++
+            const requirement
+            of section.missingRequirements
         ) {
             allSubjectIds.add(
-                num(
-                    section
-                        .missingRequirements[r]
-                        .subject_id
-                )
+                num(requirement.subject_id)
             );
         }
 
-        preparedSections.push(
-            section
-        );
+        preparedSections.push(section);
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NOTHING TO DO
+    |--------------------------------------------------------------------------
+    */
 
     if (
         preparedSections.length === 0
@@ -2846,6 +2884,7 @@ const generateSchedules = async (
         return {
             success: true,
             partial: false,
+
             programId,
             academicTermId,
 
@@ -2865,33 +2904,24 @@ const generateSchedules = async (
         };
     }
 
+
     /*
-     * --------------------------------------------------------------
-     * PROFESSORS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | PROFESSORS
+    |--------------------------------------------------------------------------
+    */
 
     const professorMap =
         await getProfessorMap(
             [...allSubjectIds]
         );
 
-    /*
-     * --------------------------------------------------------------
-     * ROOM CACHE
-     * --------------------------------------------------------------
-     */
-
-    const getValidRooms =
-        createRoomCache(
-            rooms
-        );
 
     /*
-     * --------------------------------------------------------------
-     * WINDOWS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | WINDOWS
+    |--------------------------------------------------------------------------
+    */
 
     const uniqueHours =
         [
@@ -2907,62 +2937,84 @@ const generateSchedules = async (
                         )
                 )
             )
-        ];
+        ]
+        .sort((a, b) => a - b);
+
 
     const windowsByHours =
         new Map();
 
-    for (
-        let i = 0;
-        i < uniqueHours.length;
-        i++
-    ) {
-        const hours =
-            uniqueHours[i];
-
-        windowsByHours.set(
-            hours,
+    for (const hours of uniqueHours) {
+        const windows =
             buildWindows(
                 slotsByDay,
                 hours
-            )
+            );
+
+        windowsByHours.set(
+            hours,
+            windows
+        );
+
+        const windowsByDay =
+            new Map();
+
+        for (const day of DAY_ORDER) {
+            windowsByDay.set(day, 0);
+        }
+
+        for (const window of windows) {
+            windowsByDay.set(
+                window.day,
+                (
+                    windowsByDay.get(
+                        window.day
+                    ) || 0
+                ) + 1
+            );
+        }
+
+        console.log(
+            `[WINDOWS] ${hours}-hour: ` +
+            `${windows.length}`
+        );
+
+        console.log(
+            `[WINDOWS] ${hours}-hour distribution: ` +
+            DAY_ORDER.map(
+                day =>
+                    `${day}=${windowsByDay.get(day) || 0}`
+            ).join(" | ")
         );
     }
 
+
     /*
-     * --------------------------------------------------------------
-     * SECTION ORDERING
-     * --------------------------------------------------------------
-     *
-     * Hardest sections first.
-     *
-     * This calculation is intentionally limited.
-     */
+    |--------------------------------------------------------------------------
+    | SECTION ORDERING
+    |--------------------------------------------------------------------------
+    */
 
     const sectionJobs =
         preparedSections.map(
             section => {
                 let difficulty = 0;
 
+                /*
+                 * We only estimate once here.
+                 */
                 for (
-                    let i = 0;
-                    i <
-                    section.missingRequirements.length;
-                    i++
+                    const requirement
+                    of section.missingRequirements
                 ) {
-                    const requirement =
-                        section
-                            .missingRequirements[i];
-
                     const flexibility =
                         estimateRequirementFlexibility({
                             section,
                             requirement,
                             windowsByHours,
                             professorMap,
-                            getValidRooms,
-                            occupancy,
-                            maxScan: 50
+                            rooms,
+                            occupancy
                         });
 
                     difficulty +=
@@ -2982,40 +3034,90 @@ const generateSchedules = async (
             b.difficulty
     );
 
+
+    console.log(
+        "\n========================================"
+    );
+
+    console.log(
+        "SECTION SOLVING ORDER"
+    );
+
+    console.log(
+        "========================================"
+    );
+
+    sectionJobs.forEach(
+        (job, index) => {
+            console.log(
+                `${index + 1}. ` +
+                `${job.section.section_name} ` +
+                `difficulty=${job.difficulty}`
+            );
+        }
+    );
+
+
     /*
-     * --------------------------------------------------------------
-     * RESULTS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | RESULTS
+    |--------------------------------------------------------------------------
+    */
 
     const scheduledSections = [];
-
     const failedSections = [];
-
     const generatedSchedules = [];
 
+
     /*
-     * --------------------------------------------------------------
-     * SOLVE
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | SOLVE
+    |--------------------------------------------------------------------------
+    */
 
     for (
         let index = 0;
         index < sectionJobs.length;
         index++
     ) {
+        const job =
+            sectionJobs[index];
+
         const section =
-            sectionJobs[index].section;
+            job.section;
 
         console.log(
-            `[SCHEDULER] ` +
-            `${index + 1}/${sectionJobs.length} ` +
+            "\n========================================"
+        );
+
+        console.log(
+            `[SECTION ${index + 1}/` +
+            `${sectionJobs.length}] ` +
             `${section.section_name}`
         );
 
+        console.log(
+            `Students: ${section.student_count}`
+        );
+
+        console.log(
+            `Requirements: ` +
+            `${section.missingRequirements.length}`
+        );
+
+        console.log(
+            "========================================"
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SOLVE SECTION
+        |--------------------------------------------------------------------------
+        */
+
         const result =
-            solveHybrid({
+            await solveHybrid({
                 section,
 
                 requirements:
@@ -3025,10 +3127,17 @@ const generateSchedules = async (
 
                 professorMap,
 
-                getValidRooms,
+                rooms,
 
                 occupancy
             });
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUCCESS
+        |--------------------------------------------------------------------------
+        */
 
         if (
             result.success
@@ -3043,75 +3152,117 @@ const generateSchedules = async (
                     section.section_name
                 );
 
-                for (
-                    let i = 0;
-                    i < result.assignments.length;
-                    i++
-                ) {
-                    const assignment =
-                        result.assignments[i];
-
-                    generatedSchedules.push({
-                        section:
-                            section.section_name,
-
-                        sectionId:
-                            section.id,
-
-                        yearLevel:
-                            section.year_level,
-
-                        subject:
-                            assignment
-                                .requirement
-                                .subject_code,
-
-                        subjectId:
-                            assignment
-                                .requirement
-                                .subject_id,
-
-                        type:
-                            assignment
-                                .requirement
-                                .type,
-
-                        professor:
-                            `${assignment.professor.firstname} ${assignment.professor.lastname}`,
-
-                        professorId:
-                            assignment.professorId,
-
-                        room:
-                            assignment.room.room_name,
-
-                        roomId:
-                            assignment.roomId,
-
-                        roomType:
-                            assignment.room.room_type,
-
-                        day:
-                            assignment.day,
-
-                        start:
-                            assignment.start_time,
-
-                        end:
-                            assignment.end_time
-                    });
-                }
 
                 /*
-                 * Keep successful reservations.
+                 * Keep global reservations.
                  */
+                for (
+                    const assignment
+                    of result.assignments
+                ) {
+                    for (
+                        const slot
+                        of assignment.window.slots
+                    ) {
+                        generatedSchedules.push({
+                            section:
+                                section.section_name,
+
+                            sectionId:
+                                section.id,
+
+                            yearLevel:
+                                section.year_level,
+
+                            subject:
+                                assignment.requirement
+                                    .subject_code,
+
+                            subjectId:
+                                assignment.requirement
+                                    .subject_id,
+
+                            type:
+                                assignment.requirement
+                                    .type,
+
+                            professor:
+                                `${assignment.professor.firstname} ${assignment.professor.lastname}`,
+
+                            professorId:
+                                assignment.professorId,
+
+                            room:
+                                assignment.room.room_name,
+
+                            roomId:
+                                assignment.roomId,
+
+                            roomType:
+                                assignment.room.room_type,
+
+                            day:
+                                assignment.day,
+
+                            start:
+                                assignment.start_time,
+
+                            end:
+                                assignment.end_time
+                        });
+                    }
+                }
+
+
+                /*
+                 * Weekly load.
+                 */
+                const weeklyLoad = {};
+
+                for (
+                    const day
+                    of DAY_ORDER
+                ) {
+                    weeklyLoad[day] =
+                        getSectionDayHours(
+                            occupancy,
+                            section.id,
+                            day
+                        );
+                }
 
                 console.log(
-                    `[SAVED] ` +
-                    `${section.section_name} ` +
-                    `(${result.method})`
+                    `[RESULT] ${section.section_name} | ` +
+                    `success=true | ` +
+                    `method=${result.method}`
                 );
+
+                console.log(
+                    `[WEEKLY LOAD] ${section.section_name} | ` +
+                    DAY_ORDER.map(
+                        day =>
+                            `${day}=${weeklyLoad[day]}h`
+                    ).join(" | ")
+                );
+
+                console.log(
+                    `[WEEKLY TOTAL] ` +
+                    `${getSectionTotalScheduledHours(
+                        occupancy,
+                        section.id
+                    )} hours`
+                );
+
+                console.log(
+                    `[SAVED] ${section.section_name} ✅`
+                );
+
             } catch (saveError) {
+                /*
+                 * Save failed.
+                 *
+                 * Remove reservations because DB did not save.
+                 */
                 releaseAssignments(
                     result.assignments,
                     occupancy
@@ -3141,34 +3292,26 @@ const generateSchedules = async (
             continue;
         }
 
+
         /*
-         * ----------------------------------------------------------
-         * FAILURE ANALYSIS
-         * ----------------------------------------------------------
-         */
+        |--------------------------------------------------------------------------
+        | FAILURE ANALYSIS
+        |--------------------------------------------------------------------------
+        */
 
         const analyses = [];
 
         for (
-            let i = 0;
-            i <
-            section.missingRequirements.length;
-            i++
+            const requirement
+            of section.missingRequirements
         ) {
             analyses.push(
                 analyzeRequirement({
                     section,
-
-                    requirement:
-                        section
-                            .missingRequirements[i],
-
+                    requirement,
                     windowsByHours,
-
                     professorMap,
-
-                    getValidRooms,
-
+                    rooms,
                     occupancy
                 })
             );
@@ -3178,13 +3321,9 @@ const generateSchedules = async (
         let worstScore = -Infinity;
 
         for (
-            let i = 0;
-            i < analyses.length;
-            i++
+            const analysis
+            of analyses
         ) {
-            const analysis =
-                analyses[i];
-
             let score = 0;
 
             if (
@@ -3206,13 +3345,11 @@ const generateSchedules = async (
                 score >
                 worstScore
             ) {
-                worstScore =
-                    score;
-
-                worst =
-                    analysis;
+                worstScore = score;
+                worst = analysis;
             }
         }
+
 
         const reason =
             worst
@@ -3221,15 +3358,54 @@ const generateSchedules = async (
                   `${worst.type}. ` +
                   `Likely bottleneck: ` +
                   `${worst.bottleneck}.`
+
                 : `Unable to find a valid ` +
                   `schedule for section ` +
                   `${section.section_name}.`;
 
+
         console.log(
-            `[FAILED] ` +
-            `${section.section_name} | ` +
-            `${result.failureType || "CONSTRAINT_FAILURE"}`
+            `[FAILED] ${section.section_name} ❌`
         );
+
+        console.log(
+            `[FAILED] ${reason}`
+        );
+
+        if (worst) {
+            console.log(
+                `[ANALYSIS] ${worst.subjectCode} ` +
+                `${worst.type}`
+            );
+
+            console.log(
+                `  windows=${worst.windows}`
+            );
+
+            console.log(
+                `  professors=${worst.professors}`
+            );
+
+            console.log(
+                `  validRooms=${worst.validRooms}`
+            );
+
+            console.log(
+                `  available=${worst.availableCandidates}`
+            );
+
+            console.log(
+                `  professorBlocked=${worst.professorBlocked}`
+            );
+
+            console.log(
+                `  roomBlocked=${worst.roomBlocked}`
+            );
+
+            console.log(
+                `  sectionBlocked=${worst.sectionBlocked}`
+            );
+        }
 
         failedSections.push({
             sectionId:
@@ -3253,11 +3429,12 @@ const generateSchedules = async (
         });
     }
 
+
     /*
-     * --------------------------------------------------------------
-     * FINAL STATUS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | FINAL STATUS
+    |--------------------------------------------------------------------------
+    */
 
     const completeSuccess =
         failedSections.length === 0;
@@ -3266,11 +3443,12 @@ const generateSchedules = async (
         scheduledSections.length > 0 &&
         failedSections.length > 0;
 
+
     /*
-     * --------------------------------------------------------------
-     * BOTTLENECK SUMMARY
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | BOTTLENECK SUMMARY
+    |--------------------------------------------------------------------------
+    */
 
     const bottleneckSummary = {
         professor: 0,
@@ -3284,57 +3462,141 @@ const generateSchedules = async (
     };
 
     for (
-        let i = 0;
-        i < failedSections.length;
-        i++
+        const failed
+        of failedSections
     ) {
-        const failed =
-            failedSections[i];
-
         const bottleneck =
             failed.bottleneck;
 
         if (
-            bottleneck === "PROFESSOR"
+            bottleneck ===
+            "PROFESSOR"
         ) {
             bottleneckSummary.professor++;
+
         } else if (
-            bottleneck === "ROOM"
+            bottleneck ===
+            "ROOM"
         ) {
             bottleneckSummary.room++;
+
         } else if (
-            bottleneck === "SECTION/TIMESLOT"
+            bottleneck ===
+            "SECTION/TIMESLOT"
         ) {
             bottleneckSummary.sectionTimeslot++;
+
         } else if (
-            bottleneck === "MULTIPLE RESOURCES"
+            bottleneck ===
+            "MULTIPLE RESOURCES"
         ) {
             bottleneckSummary.multipleResources++;
+
         } else if (
             bottleneck ===
             "COMBINATION / BACKTRACKING CONSTRAINT"
         ) {
             bottleneckSummary.combination++;
+
         } else if (
             failed.failureType ===
             "SEARCH_TIMEOUT"
         ) {
             bottleneckSummary.searchTimeout++;
+
         } else if (
             failed.failureType ===
             "NODE_LIMIT"
         ) {
             bottleneckSummary.nodeLimit++;
+
         } else {
             bottleneckSummary.unknown++;
         }
     }
 
+
     /*
-     * --------------------------------------------------------------
-     * RESULT
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | FINAL LOG
+    |--------------------------------------------------------------------------
+    */
+
+    console.log(
+        "\n========================================"
+    );
+
+    console.log(
+        "SCHEDULER FINISHED"
+    );
+
+    console.log(
+        "========================================"
+    );
+
+    console.log(
+        `Success: ${completeSuccess}`
+    );
+
+    console.log(
+        `Partial: ${partial}`
+    );
+
+    console.log(
+        `Total sections: ${sections.length}`
+    );
+
+    console.log(
+        `Scheduled: ${scheduledSections.length}`
+    );
+
+    console.log(
+        `Failed: ${failedSections.length}`
+    );
+
+    console.log(
+        "\nBOTTLENECK SUMMARY"
+    );
+
+    console.log(
+        `Professor: ${bottleneckSummary.professor}`
+    );
+
+    console.log(
+        `Room: ${bottleneckSummary.room}`
+    );
+
+    console.log(
+        `Section/Timeslot: ` +
+        `${bottleneckSummary.sectionTimeslot}`
+    );
+
+    console.log(
+        `Multiple resources: ` +
+        `${bottleneckSummary.multipleResources}`
+    );
+
+    console.log(
+        `Combination: ` +
+        `${bottleneckSummary.combination}`
+    );
+
+    console.log(
+        `Search timeout: ` +
+        `${bottleneckSummary.searchTimeout}`
+    );
+
+    console.log(
+        `Node limit: ` +
+        `${bottleneckSummary.nodeLimit}`
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESPONSE
+    |--------------------------------------------------------------------------
+    */
 
     return {
         success:
@@ -3371,13 +3633,16 @@ const generateSchedules = async (
 
         simulation: {
             algorithm:
-                "OPTIMIZED_HYBRID_MRV_LAZY_TOPK_BACKTRACK_WEEKLY",
+                "HYBRID_OPTIMIZED_MRV_GREEDY_BACKTRACK_WEEKLY_DISTRIBUTION",
 
             schedulingDays:
                 [...DAY_ORDER],
 
-            targetDailyHours:
-                SECTION_TARGET_DAILY_HOURS,
+            dailyAvailability:
+                "07:00-22:00",
+
+            dailyWorkloadLimit:
+                null,
 
             weeklyDistribution:
                 true,
@@ -3388,10 +3653,10 @@ const generateSchedules = async (
             maxTimeMsPerSection:
                 MAX_TIME_MS_PER_SECTION,
 
-            greedyCandidates:
+            greedyCandidatesPerRequirement:
                 GREEDY_MAX_CANDIDATES_PER_REQUIREMENT,
 
-            backtrackCandidates:
+            backtrackCandidatesPerRequirement:
                 BACKTRACK_MAX_CANDIDATES_PER_REQUIREMENT,
 
             totalRooms:
@@ -3399,15 +3664,15 @@ const generateSchedules = async (
 
             lectureRooms:
                 rooms.filter(
-                    room =>
-                        room.room_type ===
+                    r =>
+                        r.room_type ===
                         "lecture"
                 ).length,
 
             laboratoryRooms:
                 rooms.filter(
-                    room =>
-                        room.room_type ===
+                    r =>
+                        r.room_type ===
                         "laboratory"
                 ).length,
 
@@ -3422,6 +3687,7 @@ const generateSchedules = async (
             completeSuccess
                 ? `All incomplete sections were ` +
                   `scheduled successfully.`
+
                 : partial
                     ? `Schedule generation partially ` +
                       `completed. ` +
@@ -3429,10 +3695,12 @@ const generateSchedules = async (
                       `section(s) scheduled and ` +
                       `${failedSections.length} ` +
                       `section(s) failed.`
+
                     : `No incomplete sections could ` +
                       `be scheduled.`
     };
 };
+
 
 /*
 |--------------------------------------------------------------------------
