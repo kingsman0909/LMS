@@ -438,6 +438,7 @@ SHOW CREATE TABLE class_schedules;
 SHOW CREATE TABLE time_slots;
 SHOW CREATE TABLE rooms;
 SHOW CREATE TABLE profesor;
+SHOW CREATE TABLE users;
 SHOW CREATE TABLE professor_subjects;
 SHOW CREATE TABLE curriculum_subjects;
 SHOW CREATE TABLE subjects;
@@ -729,4 +730,6 @@ DELETE FROM users WHERE role = 'student' and id > 0;
 
 COMMIT;
 
+delete from curriculum_subjects
+where id > 0
 
