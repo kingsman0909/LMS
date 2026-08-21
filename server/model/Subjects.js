@@ -350,10 +350,8 @@ const findByCode = async (code) => {
 // Curriculum is managed separately.
 // =====================================================
 
-const createSubject = async (data) => {
-
+const createSubject = async (data, id) => {
     const {
-        program_id,
         subject_code,
         subject_name,
         description,
@@ -375,7 +373,7 @@ const createSubject = async (data) => {
         )
         VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
-        program_id,
+        id,
         subject_code,
         subject_name,
         description,

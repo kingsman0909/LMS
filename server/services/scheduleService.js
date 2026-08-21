@@ -17,26 +17,36 @@ const DAY_ORDER = [
 ];
 
 /*
- * Scheduler philosophy:
+ * HARD WEEKLY RANGE
  *
- * 1. Existing schedules become global reservations.
- * 2. Sections are solved one at a time.
- * 3. Greedy tries the best scarce-resource candidates first.
- * 4. If greedy fails, all temporary reservations are rolled back.
- * 5. Bounded backtracking starts from a clean state.
- * 6. Candidates are generated lazily.
+ * Monday 07:00 AM
+ *        ↓
+ * Sunday 10:00 PM
  *
- * IMPORTANT:
- * We intentionally DO NOT build huge candidate arrays.
+ * The scheduler can use ANY day inside this range.
  */
+
+const SCHEDULE_START = "07:00:00";
+const SCHEDULE_END = "22:00:00";
+
+
+/*
+|--------------------------------------------------------------------------
+| SOLVER CONFIG
+|--------------------------------------------------------------------------
+|
+| Keep these bounded so a difficult section cannot freeze
+| the whole API.
+|
+*/
 
 const MAX_BACKTRACK_NODES_PER_SECTION = 50000;
 const MAX_TIME_MS_PER_SECTION = 8000;
 
-const GREEDY_MAX_ATTEMPTS_PER_REQUIREMENT = 250;
-const BACKTRACK_MAX_CANDIDATES_PER_REQUIREMENT = 250;
+const GREEDY_MAX_ATTEMPTS_PER_REQUIREMENT = 120;
+const BACKTRACK_MAX_CANDIDATES_PER_REQUIREMENT = 120;
 
-const MAX_MRV_CANDIDATE_SCAN = 500;
+const MAX_MRV_CANDIDATE_SCAN = 250;
 
 
 /*
@@ -61,8 +71,11 @@ const yearLevelMap = {
 
 const num = value => Number(value);
 
+
 const normalizeTime = value => {
-    if (value == null) return "";
+    if (value == null) {
+        return "";
+    }
 
     return String(value)
         .split(".")[0]
@@ -70,11 +83,26 @@ const normalizeTime = value => {
 };
 
 
+const timeToMinutes = value => {
+    const normalized = normalizeTime(value);
+
+    if (!normalized) {
+        return 0;
+    }
+
+    const parts = normalized.split(":");
+
+    return (
+        Number(parts[0] || 0) * 60 +
+        Number(parts[1] || 0)
+    );
+};
+
+
 const getOccupiedSet = (
     map,
     key
 ) => {
-
     return map.get(num(key)) || null;
 };
 
@@ -84,7 +112,6 @@ const hasSlotConflict = (
     key,
     slotIds
 ) => {
-
     const occupied =
         getOccupiedSet(
             map,
@@ -96,7 +123,6 @@ const hasSlotConflict = (
     }
 
     for (const slotId of slotIds) {
-
         if (
             occupied.has(
                 num(slotId)
@@ -115,14 +141,12 @@ const reserveSlotIds = (
     key,
     slotIds
 ) => {
-
     key = num(key);
 
     let occupied =
         map.get(key);
 
     if (!occupied) {
-
         occupied = new Set();
 
         map.set(
@@ -132,7 +156,6 @@ const reserveSlotIds = (
     }
 
     for (const slotId of slotIds) {
-
         occupied.add(
             num(slotId)
         );
@@ -145,7 +168,6 @@ const releaseSlotIds = (
     key,
     slotIds
 ) => {
-
     key = num(key);
 
     const occupied =
@@ -156,16 +178,12 @@ const releaseSlotIds = (
     }
 
     for (const slotId of slotIds) {
-
         occupied.delete(
             num(slotId)
         );
     }
 
-    if (
-        occupied.size === 0
-    ) {
-
+    if (occupied.size === 0) {
         map.delete(key);
     }
 };
@@ -178,15 +196,103 @@ const releaseSlotIds = (
 */
 
 const createOccupancy = () => {
-
     return {
 
-        sectionSlots: new Map(),
+        sectionSlots:
+            new Map(),
 
-        professorSlots: new Map(),
+        professorSlots:
+            new Map(),
 
-        roomSlots: new Map()
+        roomSlots:
+            new Map(),
+
+        /*
+         * sectionId -> Map(day -> occupied hourly slots)
+         *
+         * This prevents repeatedly scanning all section slots
+         * when scoring candidates.
+         */
+
+        sectionDayLoad:
+            new Map(),
+
+        /*
+         * sectionId -> total occupied slots
+         */
+
+        sectionTotalLoad:
+            new Map()
     };
+};
+
+
+const updateSectionDayLoad = (
+    occupancy,
+    sectionId,
+    day,
+    amount
+) => {
+    sectionId = num(sectionId);
+
+    let dayMap =
+        occupancy.sectionDayLoad.get(
+            sectionId
+        );
+
+    if (!dayMap) {
+        dayMap = new Map();
+
+        occupancy.sectionDayLoad.set(
+            sectionId,
+            dayMap
+        );
+    }
+
+    const current =
+        dayMap.get(day) || 0;
+
+    const next =
+        current + amount;
+
+    if (next <= 0) {
+        dayMap.delete(day);
+    } else {
+        dayMap.set(
+            day,
+            next
+        );
+    }
+
+    if (dayMap.size === 0) {
+        occupancy.sectionDayLoad.delete(
+            sectionId
+        );
+    }
+};
+
+
+const getSectionDayLoad = (
+    occupancy,
+    sectionId,
+    day
+) => {
+    return (
+        occupancy.sectionDayLoad
+            .get(num(sectionId))
+            ?.get(day) || 0
+    );
+};
+
+
+const getSectionTotalLoad = (
+    occupancy,
+    sectionId
+) => {
+    return (
+        occupancy.sectionTotalLoad
+            .get(num(sectionId)) || 0
+    );
 };
 
 
@@ -194,7 +300,6 @@ const candidateConflictMask = (
     candidate,
     occupancy
 ) => {
-
     let mask = 0;
 
     /*
@@ -210,10 +315,8 @@ const candidateConflictMask = (
             candidate.slotIds
         )
     ) {
-
         mask |= 1;
     }
-
 
     if (
         hasSlotConflict(
@@ -222,10 +325,8 @@ const candidateConflictMask = (
             candidate.slotIds
         )
     ) {
-
         mask |= 2;
     }
-
 
     if (
         hasSlotConflict(
@@ -234,10 +335,8 @@ const candidateConflictMask = (
             candidate.slotIds
         )
     ) {
-
         mask |= 4;
     }
-
 
     return mask;
 };
@@ -247,7 +346,6 @@ const assignmentHasConflict = (
     assignment,
     occupancy
 ) => {
-
     return (
         candidateConflictMask(
             assignment,
@@ -261,7 +359,6 @@ const reserveAssignment = (
     assignment,
     occupancy
 ) => {
-
     reserveSlotIds(
         occupancy.sectionSlots,
         assignment.sectionId,
@@ -278,6 +375,27 @@ const reserveAssignment = (
         occupancy.roomSlots,
         assignment.roomId,
         assignment.slotIds
+    );
+
+    const hours =
+        assignment.slotIds.length;
+
+    updateSectionDayLoad(
+        occupancy,
+        assignment.sectionId,
+        assignment.day,
+        hours
+    );
+
+    const sectionId =
+        num(assignment.sectionId);
+
+    occupancy.sectionTotalLoad.set(
+        sectionId,
+        getSectionTotalLoad(
+            occupancy,
+            sectionId
+        ) + hours
     );
 };
 
@@ -286,7 +404,6 @@ const releaseAssignment = (
     assignment,
     occupancy
 ) => {
-
     releaseSlotIds(
         occupancy.sectionSlots,
         assignment.sectionId,
@@ -304,6 +421,39 @@ const releaseAssignment = (
         assignment.roomId,
         assignment.slotIds
     );
+
+    const hours =
+        assignment.slotIds.length;
+
+    updateSectionDayLoad(
+        occupancy,
+        assignment.sectionId,
+        assignment.day,
+        -hours
+    );
+
+    const sectionId =
+        num(assignment.sectionId);
+
+    const current =
+        getSectionTotalLoad(
+            occupancy,
+            sectionId
+        );
+
+    const next =
+        current - hours;
+
+    if (next <= 0) {
+        occupancy.sectionTotalLoad.delete(
+            sectionId
+        );
+    } else {
+        occupancy.sectionTotalLoad.set(
+            sectionId,
+            next
+        );
+    }
 };
 
 
@@ -311,13 +461,11 @@ const releaseAssignments = (
     assignments,
     occupancy
 ) => {
-
     for (
         let i = assignments.length - 1;
         i >= 0;
         i--
     ) {
-
         releaseAssignment(
             assignments[i],
             occupancy
@@ -336,7 +484,6 @@ const getSections = async (
     programId,
     academicTermId
 ) => {
-
     const [rows] = await db.query(`
         SELECT
             id,
@@ -370,7 +517,6 @@ const getSectionStudentCount = async (
     sectionId,
     academicTermId
 ) => {
-
     const [rows] = await db.query(`
         SELECT
             COUNT(*) AS student_count
@@ -398,7 +544,6 @@ const getSectionSubjects = async (
     sectionId,
     academicTermId
 ) => {
-
     const [rows] = await db.query(`
         SELECT
             s.id AS section_id,
@@ -459,15 +604,11 @@ const getSectionSubjects = async (
 const buildRequirements = (
     subjects
 ) => {
-
     const requirements = [];
 
     let requirementId = 0;
 
-    for (
-        const subject
-        of subjects
-    ) {
+    for (const subject of subjects) {
 
         const lectureUnits =
             num(
@@ -479,14 +620,11 @@ const buildRequirements = (
                 subject.lab_units || 0
             );
 
-
         /*
          * 1 lecture unit = 1 hour
          */
 
-        if (
-            lectureUnits > 0
-        ) {
+        if (lectureUnits > 0) {
 
             requirements.push({
 
@@ -510,14 +648,11 @@ const buildRequirements = (
             });
         }
 
-
         /*
          * 1 laboratory unit = 3 hours
          */
 
-        if (
-            labUnits > 0
-        ) {
+        if (labUnits > 0) {
 
             requirements.push({
 
@@ -595,36 +730,27 @@ const getTimeSlots = async () => {
 
 /*
 |--------------------------------------------------------------------------
-| GROUP TIME SLOTS
+| GROUP SLOTS BY DAY
 |--------------------------------------------------------------------------
 */
 
 const groupSlotsByDay = (
     slots
 ) => {
-
     const map = new Map();
 
-    for (
-        const day
-        of DAY_ORDER
-    ) {
-
+    for (const day of DAY_ORDER) {
         map.set(
             day,
             []
         );
     }
 
-    for (
-        const slot
-        of slots
-    ) {
+    for (const slot of slots) {
 
         if (
             !map.has(slot.day)
         ) {
-
             map.set(
                 slot.day,
                 []
@@ -636,6 +762,14 @@ const groupSlotsByDay = (
         ).push(slot);
     }
 
+    for (const day of map.keys()) {
+        map.get(day).sort(
+            (a, b) =>
+                timeToMinutes(a.start_time) -
+                timeToMinutes(b.start_time)
+        );
+    }
+
     return map;
 };
 
@@ -645,14 +779,28 @@ const groupSlotsByDay = (
 | BUILD WINDOWS
 |--------------------------------------------------------------------------
 |
-| A 3-hour class becomes 3 consecutive hourly slots.
+| A 3-hour requirement:
 |
-| A 6-hour laboratory becomes 6 consecutive hourly slots.
+| 07-08
+| 08-09
+| 09-10
 |
-| This remains ONE atomic assignment during solving.
+| becomes:
 |
-| Saving later creates one class_schedules row per slot.
+| 07-10
 |
+| IMPORTANT:
+| Windows are generated for EVERY DAY.
+|
+| Monday
+| Tuesday
+| Wednesday
+| Thursday
+| Friday
+| Saturday
+| Sunday
+|
+| within 07:00-22:00.
 |--------------------------------------------------------------------------
 */
 
@@ -663,32 +811,22 @@ const buildWindows = (
 
     hours = num(hours);
 
-    const windows = [];
-
-    if (
-        hours <= 0
-    ) {
-
-        return windows;
+    if (hours <= 0) {
+        return [];
     }
 
+    const windows = [];
 
-    for (
-        const day
-        of DAY_ORDER
-    ) {
+    for (const day of DAY_ORDER) {
 
         const daySlots =
             slotsByDay.get(day) || [];
 
-
         if (
             daySlots.length < hours
         ) {
-
             continue;
         }
-
 
         for (
             let i = 0;
@@ -702,10 +840,7 @@ const buildWindows = (
                     i + hours
                 );
 
-
-            let consecutive =
-                true;
-
+            let consecutive = true;
 
             for (
                 let j = 1;
@@ -713,29 +848,54 @@ const buildWindows = (
                 j++
             ) {
 
-                if (
+                const previousEnd =
                     normalizeTime(
                         candidate[j - 1].end_time
-                    ) !==
+                    );
+
+                const currentStart =
                     normalizeTime(
                         candidate[j].start_time
-                    )
+                    );
+
+                if (
+                    previousEnd !==
+                    currentStart
                 ) {
-
                     consecutive = false;
-
                     break;
                 }
             }
 
-
-            if (
-                !consecutive
-            ) {
-
+            if (!consecutive) {
                 continue;
             }
 
+            const startTime =
+                candidate[0].start_time;
+
+            const endTime =
+                candidate[
+                    candidate.length - 1
+                ].end_time;
+
+            /*
+             * HARD WEEKLY DAILY BOUNDARIES
+             */
+
+            if (
+                timeToMinutes(startTime) <
+                timeToMinutes(SCHEDULE_START)
+            ) {
+                continue;
+            }
+
+            if (
+                timeToMinutes(endTime) >
+                timeToMinutes(SCHEDULE_END)
+            ) {
+                continue;
+            }
 
             windows.push({
 
@@ -751,16 +911,13 @@ const buildWindows = (
                     ),
 
                 start_time:
-                    candidate[0].start_time,
+                    startTime,
 
                 end_time:
-                    candidate[
-                        candidate.length - 1
-                    ].end_time
+                    endTime
             });
         }
     }
-
 
     return windows;
 };
@@ -781,16 +938,13 @@ const getProfessorMap = async (
     if (
         subjectIds.length === 0
     ) {
-
         return map;
     }
-
 
     const placeholders =
         subjectIds
             .map(() => "?")
             .join(",");
-
 
     const [rows] =
         await db.query(`
@@ -815,26 +969,19 @@ const getProfessorMap = async (
                 p.id
         `, subjectIds);
 
-
-    for (
-        const row
-        of rows
-    ) {
+    for (const row of rows) {
 
         const subjectId =
             num(row.subject_id);
 
-
         if (
             !map.has(subjectId)
         ) {
-
             map.set(
                 subjectId,
                 []
             );
         }
-
 
         map.get(subjectId).push({
 
@@ -854,7 +1001,6 @@ const getProfessorMap = async (
                 row.department
         });
     }
-
 
     return map;
 };
@@ -880,7 +1026,6 @@ const getRooms = async () => {
             capacity ASC,
             id ASC
     `);
-
 
     return rows.map(room => ({
 
@@ -932,7 +1077,6 @@ const loadExistingSchedules = async (
             academicTermId
         ]);
 
-
     return rows.map(row => ({
 
         ...row,
@@ -963,17 +1107,14 @@ const loadExistingSchedules = async (
 
 const reserveExistingSchedules = (
     rows,
-    occupancy
+    occupancy,
+    slotLookup
 ) => {
 
-    for (
-        const row
-        of rows
-    ) {
+    for (const row of rows) {
 
         const slotId =
             num(row.time_slot_id);
-
 
         reserveSlotIds(
             occupancy.sectionSlots,
@@ -981,19 +1122,46 @@ const reserveExistingSchedules = (
             [slotId]
         );
 
-
         reserveSlotIds(
             occupancy.professorSlots,
             row.professor_id,
             [slotId]
         );
 
-
         reserveSlotIds(
             occupancy.roomSlots,
             row.room_id,
             [slotId]
         );
+
+        /*
+         * Existing section schedule also contributes
+         * to weekly day balancing.
+         */
+
+        const slot =
+            slotLookup.get(slotId);
+
+        if (slot) {
+
+            updateSectionDayLoad(
+                occupancy,
+                row.section_id,
+                slot.day,
+                1
+            );
+
+            const sectionId =
+                num(row.section_id);
+
+            occupancy.sectionTotalLoad.set(
+                sectionId,
+                getSectionTotalLoad(
+                    occupancy,
+                    sectionId
+                ) + 1
+            );
+        }
     }
 };
 
@@ -1010,11 +1178,7 @@ const getExistingRequirementCounts = (
 
     const map = new Map();
 
-
-    for (
-        const row
-        of existingRows
-    ) {
+    for (const row of existingRows) {
 
         const sectionId =
             num(row.section_id);
@@ -1022,31 +1186,25 @@ const getExistingRequirementCounts = (
         const subjectId =
             num(row.subject_id);
 
-
         if (
             !map.has(sectionId)
         ) {
-
             map.set(
                 sectionId,
                 new Map()
             );
         }
 
-
         const sectionMap =
             map.get(sectionId);
-
 
         const type =
             row.room_type === "laboratory"
                 ? "laboratory"
                 : "lecture";
 
-
         const key =
             `${subjectId}:${type}`;
-
 
         sectionMap.set(
             key,
@@ -1055,7 +1213,6 @@ const getExistingRequirementCounts = (
             ) + 1
         );
     }
-
 
     return map;
 };
@@ -1077,9 +1234,7 @@ const getMissingRequirements = (
             num(section.id)
         ) || new Map();
 
-
     const missing = [];
-
 
     for (
         const requirement
@@ -1089,19 +1244,15 @@ const getMissingRequirements = (
         const key =
             `${requirement.subject_id}:${requirement.type}`;
 
-
         const existingCount =
             sectionCounts.get(key) || 0;
-
 
         if (
             existingCount >=
             requirement.hours
         ) {
-
             continue;
         }
-
 
         missing.push({
 
@@ -1112,7 +1263,6 @@ const getMissingRequirements = (
                 existingCount
         });
     }
-
 
     return missing;
 };
@@ -1134,9 +1284,7 @@ const getSectionStatus = (
             num(section.id)
         ) || new Map();
 
-
     let completed = 0;
-
 
     for (
         const requirement
@@ -1146,19 +1294,15 @@ const getSectionStatus = (
         const key =
             `${requirement.subject_id}:${requirement.type}`;
 
-
         const count =
             sectionCounts.get(key) || 0;
-
 
         if (
             count >= requirement.hours
         ) {
-
             completed++;
         }
     }
-
 
     return {
 
@@ -1185,7 +1329,6 @@ const getResourceLoad = (
     map,
     id
 ) => {
-
     return (
         map.get(num(id))?.size || 0
     );
@@ -1209,142 +1352,24 @@ const getValidRooms = (
             ? "laboratory"
             : "lecture";
 
-
     return rooms.filter(room => {
 
         if (
             room.room_type !==
             requiredType
         ) {
-
             return false;
         }
-
 
         if (
             room.capacity <
             num(section.student_count)
         ) {
-
             return false;
         }
 
-
         return true;
     });
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| PROFESSOR SCARCITY
-|--------------------------------------------------------------------------
-*/
-
-const getProfessorScarcity = (
-    professor,
-    requirement,
-    professorMap
-) => {
-
-    const list =
-        professorMap.get(
-            num(requirement.subject_id)
-        ) || [];
-
-
-    /*
-     * Fewer professors = more scarce.
-     */
-
-    return Math.max(
-        1,
-        100 - list.length * 10
-    );
-};
-
-
-/*
-|--------------------------------------------------------------------------
-| CANDIDATE SCORE
-|--------------------------------------------------------------------------
-|
-| Lower = preferred.
-|
-| We deliberately include scarcity.
-|
-|--------------------------------------------------------------------------
-*/
-
-const scoreCandidate = (
-    candidate,
-    occupancy,
-    requirement,
-    professorMap
-) => {
-
-    const professorLoad =
-        getResourceLoad(
-            occupancy.professorSlots,
-            candidate.professorId
-        );
-
-
-    const roomLoad =
-        getResourceLoad(
-            occupancy.roomSlots,
-            candidate.roomId
-        );
-
-
-    const professorCount =
-        (
-            professorMap.get(
-                num(requirement.subject_id)
-            ) || []
-        ).length;
-
-
-    const scarcityPenalty =
-        professorCount <= 1
-            ? 100000
-            : professorCount <= 2
-                ? 30000
-                : professorCount <= 3
-                    ? 10000
-                    : 0;
-
-
-    const roomWaste =
-        candidate.room.capacity -
-        num(candidate.studentCount);
-
-
-    /*
-     * Earlier slots slightly preferred.
-     */
-
-    const dayIndex =
-        DAY_ORDER.indexOf(
-            candidate.day
-        );
-
-
-    const timeScore =
-        dayIndex * 100 +
-        String(
-            candidate.start_time
-        );
-
-
-    return (
-        professorLoad * 10000 +
-        roomLoad * 1000 +
-        scarcityPenalty +
-        roomWaste * 5 +
-        candidate.roomId +
-        dayIndex
-    );
 };
 
 
@@ -1408,16 +1433,129 @@ const makeCandidate = (
 
 /*
 |--------------------------------------------------------------------------
-| LAZY CANDIDATE GENERATOR
+| CANDIDATE SCORE
 |--------------------------------------------------------------------------
 |
-| IMPORTANT:
+| IMPORTANT CHANGE:
 |
-| We do NOT create 20,000+ candidate objects.
+| OLD:
+| Monday = always preferred.
 |
-| We only retain the best limited candidates after
-| checking current occupancy.
+| NEW:
+| The scheduler prefers the DAY WITH LESS LOAD
+| for this section.
 |
+| This distributes subjects across the whole week.
+|--------------------------------------------------------------------------
+*/
+
+const scoreCandidate = (
+    candidate,
+    occupancy,
+    requirement,
+    professorMap
+) => {
+
+    const professorLoad =
+        getResourceLoad(
+            occupancy.professorSlots,
+            candidate.professorId
+        );
+
+    const roomLoad =
+        getResourceLoad(
+            occupancy.roomSlots,
+            candidate.roomId
+        );
+
+    const professorCount =
+        (
+            professorMap.get(
+                num(requirement.subject_id)
+            ) || []
+        ).length;
+
+    /*
+     * Professor scarcity remains important.
+     */
+
+    const scarcityPenalty =
+        professorCount <= 1
+            ? 100000
+            : professorCount <= 2
+                ? 30000
+                : professorCount <= 3
+                    ? 10000
+                    : 0;
+
+    /*
+     * WEEKLY BALANCING
+     */
+
+    const dayLoad =
+        getSectionDayLoad(
+            occupancy,
+            candidate.sectionId,
+            candidate.day
+        );
+
+    /*
+     * Strongly discourage stacking
+     * everything on the same day.
+     */
+
+    const dayBalancePenalty =
+        dayLoad * 8000;
+
+    /*
+     * If two days have equal load,
+     * spread toward the day with the
+     * lower index only slightly.
+     *
+     * This is NOT a strong Monday preference.
+     */
+
+    const dayIndex =
+        DAY_ORDER.indexOf(
+            candidate.day
+        );
+
+    const tinyDayTieBreaker =
+        dayIndex * 0.01;
+
+    /*
+     * Avoid wasting large rooms.
+     */
+
+    const roomWaste =
+        candidate.room.capacity -
+        num(candidate.studentCount);
+
+    /*
+     * Slightly prefer earlier time within
+     * the selected day.
+     */
+
+    const startMinute =
+        timeToMinutes(
+            candidate.start_time
+        );
+
+    return (
+        dayBalancePenalty +
+        professorLoad * 10000 +
+        roomLoad * 1000 +
+        scarcityPenalty +
+        roomWaste * 5 +
+        startMinute * 0.01 +
+        tinyDayTieBreaker
+    );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| LAZY CANDIDATE GENERATOR
 |--------------------------------------------------------------------------
 */
 
@@ -1434,14 +1572,12 @@ const getCandidatePool = ({
 
     const candidates = [];
 
-
     const validRooms =
         getValidRooms(
             requirement,
             section,
             rooms
         );
-
 
     if (
         validRooms.length === 0
@@ -1453,37 +1589,36 @@ const getCandidatePool = ({
         };
     }
 
-
     /*
-     * Prefer smaller adequate rooms.
+     * Smaller adequate rooms first.
      */
 
-    validRooms.sort(
-        (a, b) => {
+    const sortedRooms =
+        [...validRooms].sort(
+            (a, b) => {
 
-            const capacityDifference =
-                a.capacity -
-                b.capacity;
+                const capacityDifference =
+                    a.capacity -
+                    b.capacity;
 
-            if (
-                capacityDifference !== 0
-            ) {
+                if (
+                    capacityDifference !== 0
+                ) {
+                    return capacityDifference;
+                }
 
-                return capacityDifference;
+                return a.id - b.id;
             }
-
-            return a.id - b.id;
-        }
-    );
-
+        );
 
     let totalValid = 0;
 
-
     /*
-     * We don't need to materialize every candidate.
+     * IMPORTANT:
      *
-     * We keep only the best `limit`.
+     * Windows are already ordered Monday-Sunday,
+     * but the candidate SCORE decides which
+     * candidates actually survive.
      */
 
     for (
@@ -1491,14 +1626,25 @@ const getCandidatePool = ({
         of windows
     ) {
 
+        /*
+         * Section conflict can reject the
+         * entire window immediately.
+         */
+
+        if (
+            hasSlotConflict(
+                occupancy.sectionSlots,
+                section.id,
+                window.slotIds
+            )
+        ) {
+            continue;
+        }
+
         for (
             const professor
             of professors
         ) {
-
-            /*
-             * Fast professor conflict check.
-             */
 
             if (
                 hasSlotConflict(
@@ -1507,14 +1653,12 @@ const getCandidatePool = ({
                     window.slotIds
                 )
             ) {
-
                 continue;
             }
 
-
             for (
                 const room
-                of validRooms
+                of sortedRooms
             ) {
 
                 if (
@@ -1524,22 +1668,8 @@ const getCandidatePool = ({
                         window.slotIds
                     )
                 ) {
-
                     continue;
                 }
-
-
-                if (
-                    hasSlotConflict(
-                        occupancy.sectionSlots,
-                        section.id,
-                        window.slotIds
-                    )
-                ) {
-
-                    continue;
-                }
-
 
                 const candidate =
                     makeCandidate(
@@ -1550,12 +1680,10 @@ const getCandidatePool = ({
                         window
                     );
 
-
                 totalValid++;
 
-
                 /*
-                 * Keep candidate list bounded.
+                 * Keep only the best candidates.
                  */
 
                 if (
@@ -1569,11 +1697,6 @@ const getCandidatePool = ({
 
                 } else {
 
-                    /*
-                     * Replace the worst candidate
-                     * if this one is better.
-                     */
-
                     let worstIndex = 0;
 
                     let worstScore =
@@ -1584,14 +1707,13 @@ const getCandidatePool = ({
                             professorMap
                         );
 
-
                     for (
                         let i = 1;
                         i < candidates.length;
                         i++
                     ) {
 
-                        const score =
+                        const currentScore =
                             scoreCandidate(
                                 candidates[i],
                                 occupancy,
@@ -1599,20 +1721,18 @@ const getCandidatePool = ({
                                 professorMap
                             );
 
-
                         if (
-                            score >
+                            currentScore >
                             worstScore
                         ) {
 
                             worstScore =
-                                score;
+                                currentScore;
 
                             worstIndex =
                                 i;
                         }
                     }
-
 
                     const newScore =
                         scoreCandidate(
@@ -1621,7 +1741,6 @@ const getCandidatePool = ({
                             requirement,
                             professorMap
                         );
-
 
                     if (
                         newScore <
@@ -1636,7 +1755,6 @@ const getCandidatePool = ({
             }
         }
     }
-
 
     candidates.sort(
         (a, b) =>
@@ -1655,7 +1773,6 @@ const getCandidatePool = ({
             )
     );
 
-
     return {
 
         candidates,
@@ -1667,7 +1784,7 @@ const getCandidatePool = ({
 
 /*
 |--------------------------------------------------------------------------
-| GET REQUIREMENT WINDOWS
+| REQUIREMENT WINDOWS
 |--------------------------------------------------------------------------
 */
 
@@ -1681,7 +1798,6 @@ const getRequirementWindows = (
             requirement.remainingHours ||
             requirement.hours
         );
-
 
     return (
         windowsByHours.get(hours) ||
@@ -1711,21 +1827,17 @@ const estimateRequirementFlexibility = ({
             windowsByHours
         );
 
-
     const professors =
         professorMap.get(
             num(requirement.subject_id)
         ) || [];
 
-
     if (
         windows.length === 0 ||
         professors.length === 0
     ) {
-
         return 0;
     }
-
 
     const validRooms =
         getValidRooms(
@@ -1734,25 +1846,18 @@ const estimateRequirementFlexibility = ({
             rooms
         );
 
-
     if (
         validRooms.length === 0
     ) {
-
         return 0;
     }
 
-
-    /*
-     * Don't scan the whole search space here.
-     *
-     * Sample up to MAX_MRV_CANDIDATE_SCAN.
-     */
-
     let valid = 0;
-
     let scanned = 0;
 
+    /*
+     * Sample rather than scanning every combination.
+     */
 
     outer:
     for (
@@ -1767,10 +1872,8 @@ const estimateRequirementFlexibility = ({
                 window.slotIds
             )
         ) {
-
             continue;
         }
-
 
         for (
             const professor
@@ -1784,10 +1887,8 @@ const estimateRequirementFlexibility = ({
                     window.slotIds
                 )
             ) {
-
                 continue;
             }
-
 
             for (
                 const room
@@ -1796,7 +1897,6 @@ const estimateRequirementFlexibility = ({
 
                 scanned++;
 
-
                 if (
                     !hasSlotConflict(
                         occupancy.roomSlots,
@@ -1804,22 +1904,18 @@ const estimateRequirementFlexibility = ({
                         window.slotIds
                     )
                 ) {
-
                     valid++;
                 }
-
 
                 if (
                     scanned >=
                     MAX_MRV_CANDIDATE_SCAN
                 ) {
-
                     break outer;
                 }
             }
         }
     }
-
 
     return valid;
 };
@@ -1846,7 +1942,6 @@ const selectMRVRequirement = ({
     let selectedFlexibility =
         Infinity;
 
-
     for (
         const requirement
         of requirements
@@ -1857,10 +1952,8 @@ const selectMRVRequirement = ({
                 requirement.id
             )
         ) {
-
             continue;
         }
-
 
         const flexibility =
             estimateRequirementFlexibility({
@@ -1878,11 +1971,6 @@ const selectMRVRequirement = ({
                 occupancy
             });
 
-
-        /*
-         * Zero = immediate failure.
-         */
-
         if (
             flexibility === 0
         ) {
@@ -1894,7 +1982,6 @@ const selectMRVRequirement = ({
                 flexibility: 0
             };
         }
-
 
         if (
             flexibility <
@@ -1908,7 +1995,6 @@ const selectMRVRequirement = ({
                 flexibility;
         }
     }
-
 
     return {
 
@@ -1947,10 +2033,8 @@ const forwardCheck = ({
                 requirement.id
             )
         ) {
-
             continue;
         }
-
 
         const flexibility =
             estimateRequirementFlexibility({
@@ -1968,15 +2052,12 @@ const forwardCheck = ({
                 occupancy
             });
 
-
         if (
             flexibility === 0
         ) {
-
             return false;
         }
     }
-
 
     return true;
 };
@@ -2001,17 +2082,10 @@ const solveGreedy = ({
         `[GREEDY] Starting ${section.section_name}`
     );
 
-
     const assignments = [];
 
     const assignedIds =
         new Set();
-
-
-    /*
-     * We dynamically choose the most constrained
-     * remaining requirement.
-     */
 
     while (
         assignedIds.size <
@@ -2036,23 +2110,15 @@ const solveGreedy = ({
                 occupancy
             });
 
-
         if (
             !selected.requirement ||
             selected.flexibility === 0
         ) {
 
-            console.log(
-                `[GREEDY] No candidate for ` +
-                `${selected.requirement?.subject_code || "unknown"}`
-            );
-
-
             releaseAssignments(
                 assignments,
                 occupancy
             );
-
 
             return {
 
@@ -2065,10 +2131,8 @@ const solveGreedy = ({
             };
         }
 
-
         const requirement =
             selected.requirement;
-
 
         const windows =
             getRequirementWindows(
@@ -2076,12 +2140,10 @@ const solveGreedy = ({
                 windowsByHours
             );
 
-
         const professors =
             professorMap.get(
                 num(requirement.subject_id)
             ) || [];
-
 
         const pool =
             getCandidatePool({
@@ -2104,23 +2166,14 @@ const solveGreedy = ({
                     GREEDY_MAX_ATTEMPTS_PER_REQUIREMENT
             });
 
-
         if (
             pool.candidates.length === 0
         ) {
-
-            console.log(
-                `[GREEDY] No candidate for ` +
-                `${requirement.subject_code} ` +
-                `${requirement.type}`
-            );
-
 
             releaseAssignments(
                 assignments,
                 occupancy
             );
-
 
             return {
 
@@ -2133,10 +2186,12 @@ const solveGreedy = ({
             };
         }
 
+        /*
+         * BEST candidate after weekly balancing.
+         */
 
         const candidate =
             pool.candidates[0];
-
 
         if (
             assignmentHasConflict(
@@ -2150,7 +2205,6 @@ const solveGreedy = ({
                 occupancy
             );
 
-
             return {
 
                 success: false,
@@ -2162,22 +2216,18 @@ const solveGreedy = ({
             };
         }
 
-
         reserveAssignment(
             candidate,
             occupancy
         );
 
-
         assignments.push(
             candidate
         );
 
-
         assignedIds.add(
             requirement.id
         );
-
 
         console.log(
             `[GREEDY] ${section.section_name} | ` +
@@ -2191,7 +2241,6 @@ const solveGreedy = ({
             `${candidate.professor.lastname}`
         );
     }
-
 
     return {
 
@@ -2221,17 +2270,14 @@ const solveBacktracking = ({
         `[BACKTRACK] Starting ${section.section_name}`
     );
 
-
     const start =
         Date.now();
-
 
     let nodes = 0;
 
     let timeout = false;
 
     let nodeLimit = false;
-
 
     const assignments = [];
 
@@ -2243,7 +2289,6 @@ const solveBacktracking = ({
 
         nodes++;
 
-
         if (
             Date.now() - start >=
             MAX_TIME_MS_PER_SECTION
@@ -2253,7 +2298,6 @@ const solveBacktracking = ({
 
             return false;
         }
-
 
         if (
             nodes >
@@ -2265,19 +2309,12 @@ const solveBacktracking = ({
             return false;
         }
 
-
         if (
             assignedIds.size ===
             requirements.length
         ) {
-
             return true;
         }
-
-
-        /*
-         * MRV / fail-first.
-         */
 
         const selected =
             selectMRVRequirement({
@@ -2297,19 +2334,15 @@ const solveBacktracking = ({
                 occupancy
             });
 
-
         if (
             !selected.requirement ||
             selected.flexibility === 0
         ) {
-
             return false;
         }
 
-
         const requirement =
             selected.requirement;
-
 
         const windows =
             getRequirementWindows(
@@ -2317,12 +2350,10 @@ const solveBacktracking = ({
                 windowsByHours
             );
 
-
         const professors =
             professorMap.get(
                 num(requirement.subject_id)
             ) || [];
-
 
         const pool =
             getCandidatePool({
@@ -2345,19 +2376,11 @@ const solveBacktracking = ({
                     BACKTRACK_MAX_CANDIDATES_PER_REQUIREMENT
             });
 
-
         if (
             pool.candidates.length === 0
         ) {
-
             return false;
         }
-
-
-        /*
-         * Candidates are already sorted by
-         * resource-aware score.
-         */
 
         for (
             const candidate
@@ -2368,10 +2391,8 @@ const solveBacktracking = ({
                 timeout ||
                 nodeLimit
             ) {
-
                 return false;
             }
-
 
             if (
                 assignmentHasConflict(
@@ -2379,39 +2400,21 @@ const solveBacktracking = ({
                     occupancy
                 )
             ) {
-
                 continue;
             }
-
 
             reserveAssignment(
                 candidate,
                 occupancy
             );
 
-
             assignments.push(
                 candidate
             );
 
-
             assignedIds.add(
                 requirement.id
             );
-
-
-            console.log(
-                `[BACKTRACK] ${section.section_name} | ` +
-                `${requirement.subject_code} ` +
-                `${requirement.type} | ` +
-                `${candidate.day} ` +
-                `${candidate.start_time}-` +
-                `${candidate.end_time} | ` +
-                `${candidate.room.room_name} | ` +
-                `${candidate.professor.firstname} ` +
-                `${candidate.professor.lastname}`
-            );
-
 
             const possible =
                 forwardCheck({
@@ -2431,23 +2434,18 @@ const solveBacktracking = ({
                     occupancy
                 });
 
-
             if (
                 possible &&
                 backtrack()
             ) {
-
                 return true;
             }
-
 
             assignedIds.delete(
                 requirement.id
             );
 
-
             assignments.pop();
-
 
             releaseAssignment(
                 candidate,
@@ -2455,14 +2453,12 @@ const solveBacktracking = ({
             );
         }
 
-
         return false;
     };
 
 
     const success =
         backtrack();
-
 
     if (
         !success
@@ -2473,7 +2469,6 @@ const solveBacktracking = ({
             occupancy
         );
     }
-
 
     return {
 
@@ -2525,10 +2520,8 @@ const solveHybrid = async ({
         `${section.section_name}`
     );
 
-
     /*
-     * STEP 1
-     * Greedy
+     * FAST PATH
      */
 
     const greedy =
@@ -2547,7 +2540,6 @@ const solveHybrid = async ({
             occupancy
         });
 
-
     if (
         greedy.success
     ) {
@@ -2556,7 +2548,6 @@ const solveHybrid = async ({
             `[HYBRID] Greedy succeeded for ` +
             `${section.section_name}`
         );
-
 
         return {
 
@@ -2573,26 +2564,17 @@ const solveHybrid = async ({
         };
     }
 
+    /*
+     * Greedy already rolled back.
+     */
 
     console.log(
         `[HYBRID] Greedy failed for ` +
         `${section.section_name}`
     );
 
-
     /*
-     * IMPORTANT:
-     *
-     * solveGreedy already rolled back all
-     * temporary reservations.
-     *
-     * Therefore global occupancy is clean.
-     */
-
-
-    /*
-     * STEP 2
-     * Bounded backtracking
+     * EXPENSIVE PATH
      */
 
     const backtrack =
@@ -2611,14 +2593,12 @@ const solveHybrid = async ({
             occupancy
         });
 
-
     console.log(
         `[BACKTRACK] ${section.section_name} | ` +
         `success=${backtrack.success} | ` +
         `nodes=${backtrack.nodes} | ` +
         `time=${backtrack.elapsed}ms`
     );
-
 
     return {
 
@@ -2673,12 +2653,10 @@ const analyzeRequirement = ({
             windowsByHours
         );
 
-
     const professors =
         professorMap.get(
             num(requirement.subject_id)
         ) || [];
-
 
     const validRooms =
         getValidRooms(
@@ -2687,7 +2665,6 @@ const analyzeRequirement = ({
             rooms
         );
 
-
     let available = 0;
 
     let professorBlocked = 0;
@@ -2695,7 +2672,6 @@ const analyzeRequirement = ({
     let roomBlocked = 0;
 
     let sectionBlocked = 0;
-
 
     for (
         const window
@@ -2709,7 +2685,6 @@ const analyzeRequirement = ({
                 window.slotIds
             );
 
-
         for (
             const professor
             of professors
@@ -2721,7 +2696,6 @@ const analyzeRequirement = ({
                     professor.id,
                     window.slotIds
                 );
-
 
             for (
                 const room
@@ -2735,7 +2709,6 @@ const analyzeRequirement = ({
                         window.slotIds
                     );
 
-
                 if (
                     !sectionConflict &&
                     !profConflict &&
@@ -2747,37 +2720,29 @@ const analyzeRequirement = ({
                     continue;
                 }
 
-
                 if (
                     sectionConflict
                 ) {
-
                     sectionBlocked++;
                 }
-
 
                 if (
                     profConflict
                 ) {
-
                     professorBlocked++;
                 }
-
 
                 if (
                     roomConflict
                 ) {
-
                     roomBlocked++;
                 }
             }
         }
     }
 
-
     let bottleneck =
         "MULTIPLE RESOURCES";
-
 
     if (
         available > 0
@@ -2816,7 +2781,6 @@ const analyzeRequirement = ({
         bottleneck =
             "SECTION/TIMESLOT";
     }
-
 
     return {
 
@@ -2870,15 +2834,12 @@ const saveSectionSchedules = async (
     if (
         assignments.length === 0
     ) {
-
         return;
     }
-
 
     await db.query(
         "START TRANSACTION"
     );
-
 
     try {
 
@@ -2886,11 +2847,6 @@ const saveSectionSchedules = async (
             const assignment
             of assignments
         ) {
-
-            /*
-             * One atomic multi-hour assignment
-             * becomes multiple class_schedules rows.
-             */
 
             for (
                 const slot
@@ -2926,7 +2882,6 @@ const saveSectionSchedules = async (
             }
         }
 
-
         await db.query(
             "COMMIT"
         );
@@ -2957,7 +2912,6 @@ const generateSchedules = async (
         academicTermId
     } = req.body;
 
-
     if (
         !programId ||
         !academicTermId
@@ -2968,13 +2922,12 @@ const generateSchedules = async (
         );
     }
 
-
     console.log(
         "\n========================================"
     );
 
     console.log(
-        "HYBRID GLOBAL RESOURCE-AWARE SCHEDULER"
+        "BALANCED WEEKLY RESOURCE-AWARE SCHEDULER"
     );
 
     console.log(
@@ -2987,6 +2940,10 @@ const generateSchedules = async (
 
     console.log(
         `Academic Term: ${academicTermId}`
+    );
+
+    console.log(
+        "Scheduling range: Monday 07:00 → Sunday 22:00"
     );
 
 
@@ -3002,7 +2959,6 @@ const generateSchedules = async (
             academicTermId
         );
 
-
     if (
         sections.length === 0
     ) {
@@ -3011,7 +2967,6 @@ const generateSchedules = async (
             "No sections found for selected program."
         );
     }
-
 
     console.log(
         `Total sections: ${sections.length}`
@@ -3027,7 +2982,6 @@ const generateSchedules = async (
     const timeSlots =
         await getTimeSlots();
 
-
     if (
         timeSlots.length === 0
     ) {
@@ -3037,11 +2991,39 @@ const generateSchedules = async (
         );
     }
 
-
     const slotsByDay =
         groupSlotsByDay(
             timeSlots
         );
+
+    const slotLookup =
+        new Map();
+
+    for (
+        const slot
+        of timeSlots
+    ) {
+
+        slotLookup.set(
+            num(slot.id),
+            slot
+        );
+    }
+
+    console.log(
+        `Available time slots: ${timeSlots.length}`
+    );
+
+    for (
+        const day
+        of DAY_ORDER
+    ) {
+
+        console.log(
+            `[DAY] ${day}: ` +
+            `${(slotsByDay.get(day) || []).length} slots`
+        );
+    }
 
 
     /*
@@ -3053,7 +3035,6 @@ const generateSchedules = async (
     const rooms =
         await getRooms();
 
-
     if (
         rooms.length === 0
     ) {
@@ -3063,15 +3044,8 @@ const generateSchedules = async (
         );
     }
 
-
     console.log(
-        `Available time slots: ` +
-        `${timeSlots.length}`
-    );
-
-    console.log(
-        `Available rooms: ` +
-        `${rooms.length}`
+        `Available rooms: ${rooms.length}`
     );
 
 
@@ -3085,7 +3059,6 @@ const generateSchedules = async (
         await loadExistingSchedules(
             academicTermId
         );
-
 
     console.log(
         `Existing schedule rows: ` +
@@ -3102,21 +3075,16 @@ const generateSchedules = async (
     const occupancy =
         createOccupancy();
 
-
-    /*
-     * Existing schedules occupy global
-     * professor/room/section/time resources.
-     */
-
     reserveExistingSchedules(
         existingSchedules,
-        occupancy
+        occupancy,
+        slotLookup
     );
 
 
     /*
      * --------------------------------------------------------------
-     * EXISTING REQUIREMENTS
+     * EXISTING REQUIREMENT COUNTS
      * --------------------------------------------------------------
      */
 
@@ -3137,7 +3105,6 @@ const generateSchedules = async (
     const allSubjectIds =
         new Set();
 
-
     for (
         const section
         of sections
@@ -3149,13 +3116,11 @@ const generateSchedules = async (
                 academicTermId
             );
 
-
         section.subjects =
             await getSectionSubjects(
                 section.id,
                 academicTermId
             );
-
 
         if (
             section.subjects.length === 0
@@ -3169,12 +3134,10 @@ const generateSchedules = async (
             continue;
         }
 
-
         section.requirements =
             buildRequirements(
                 section.subjects
             );
-
 
         section.missingRequirements =
             getMissingRequirements(
@@ -3182,17 +3145,14 @@ const generateSchedules = async (
                 existingRequirementCounts
             );
 
-
         const status =
             getSectionStatus(
                 section,
                 existingRequirementCounts
             );
 
-
         section.isComplete =
             status.complete;
-
 
         if (
             section.isComplete
@@ -3206,7 +3166,6 @@ const generateSchedules = async (
             continue;
         }
 
-
         for (
             const requirement
             of section.missingRequirements
@@ -3219,12 +3178,17 @@ const generateSchedules = async (
             );
         }
 
-
         preparedSections.push(
             section
         );
     }
 
+
+    /*
+     * --------------------------------------------------------------
+     * NOTHING TO DO
+     * --------------------------------------------------------------
+     */
 
     if (
         preparedSections.length === 0
@@ -3275,12 +3239,8 @@ const generateSchedules = async (
 
     /*
      * --------------------------------------------------------------
-     * BUILD ONLY WINDOWS
+     * BUILD WINDOWS ONCE
      * --------------------------------------------------------------
-     *
-     * Windows are cheap.
-     *
-     * Candidate objects are NOT built here.
      */
 
     const uniqueHours =
@@ -3297,12 +3257,12 @@ const generateSchedules = async (
                         )
                 )
             )
-        ];
-
+        ].sort(
+            (a, b) => a - b
+        );
 
     const windowsByHours =
         new Map();
-
 
     for (
         const hours
@@ -3315,12 +3275,10 @@ const generateSchedules = async (
                 hours
             );
 
-
         windowsByHours.set(
             hours,
             windows
         );
-
 
         console.log(
             `[WINDOWS] ${hours}-hour: ` +
@@ -3334,11 +3292,10 @@ const generateSchedules = async (
      * SECTION ORDERING
      * --------------------------------------------------------------
      *
-     * Hardest sections first.
+     * Harder sections first.
      *
-     * We use requirement flexibility rather than
-     * giant candidate arrays.
-     * --------------------------------------------------------------
+     * IMPORTANT:
+     * We only calculate flexibility once here.
      */
 
     const sectionJobs =
@@ -3346,7 +3303,6 @@ const generateSchedules = async (
             section => {
 
                 let difficulty = 0;
-
 
                 for (
                     const requirement
@@ -3369,16 +3325,14 @@ const generateSchedules = async (
                             occupancy
                         });
 
-
                     /*
                      * Lower flexibility =
-                     * harder section.
+                     * harder.
                      */
 
                     difficulty +=
                         flexibility;
                 }
-
 
                 return {
 
@@ -3409,7 +3363,6 @@ const generateSchedules = async (
         "========================================"
     );
 
-
     sectionJobs.forEach(
         (job, index) => {
 
@@ -3437,7 +3390,7 @@ const generateSchedules = async (
 
     /*
      * --------------------------------------------------------------
-     * SOLVE GLOBAL SEQUENCE
+     * SOLVE
      * --------------------------------------------------------------
      */
 
@@ -3450,10 +3403,8 @@ const generateSchedules = async (
         const job =
             sectionJobs[index];
 
-
         const section =
             job.section;
-
 
         console.log(
             "\n========================================"
@@ -3481,7 +3432,7 @@ const generateSchedules = async (
 
         /*
          * ----------------------------------------------------------
-         * HYBRID SOLVE
+         * SOLVE
          * ----------------------------------------------------------
          */
 
@@ -3518,10 +3469,10 @@ const generateSchedules = async (
                 /*
                  * IMPORTANT:
                  *
-                 * Reservations are intentionally NOT released.
+                 * Do NOT release these assignments.
                  *
-                 * They remain in global occupancy so the next
-                 * section cannot use the same professor/room/time.
+                 * They become global reservations for
+                 * subsequent sections.
                  */
 
                 await saveSectionSchedules(
@@ -3529,11 +3480,9 @@ const generateSchedules = async (
                     academicTermId
                 );
 
-
                 scheduledSections.push(
                     section.section_name
                 );
-
 
                 for (
                     const assignment
@@ -3589,7 +3538,6 @@ const generateSchedules = async (
                     });
                 }
 
-
                 console.log(
                     `[RESULT] ${section.section_name} | ` +
                     `success=true | ` +
@@ -3600,20 +3548,19 @@ const generateSchedules = async (
                     `[SAVED] ${section.section_name} ✅`
                 );
 
-
             } catch (saveError) {
 
                 /*
-                 * DB save failed.
+                 * DB failed.
                  *
-                 * Roll back the global reservations.
+                 * Release the reservations because
+                 * they were not successfully persisted.
                  */
 
                 releaseAssignments(
                     result.assignments,
                     occupancy
                 );
-
 
                 failedSections.push({
 
@@ -3637,7 +3584,6 @@ const generateSchedules = async (
                 });
             }
 
-
             continue;
         }
 
@@ -3649,7 +3595,6 @@ const generateSchedules = async (
          */
 
         const analyses = [];
-
 
         for (
             const requirement
@@ -3675,13 +3620,10 @@ const generateSchedules = async (
         }
 
 
-        let worst =
-            null;
-
+        let worst = null;
 
         let worstScore =
             -Infinity;
-
 
         for (
             const analysis
@@ -3690,26 +3632,20 @@ const generateSchedules = async (
 
             let score = 0;
 
-
             if (
                 analysis.availableCandidates === 0
             ) {
-
                 score += 100000;
             }
-
 
             score +=
                 analysis.professorBlocked;
 
-
             score +=
                 analysis.roomBlocked;
 
-
             score +=
                 analysis.sectionBlocked;
-
 
             if (
                 score >
@@ -3748,9 +3684,7 @@ const generateSchedules = async (
         );
 
 
-        if (
-            worst
-        ) {
+        if (worst) {
 
             console.log(
                 `[ANALYSIS] ${worst.subjectCode} ` +
@@ -3820,7 +3754,6 @@ const generateSchedules = async (
     const completeSuccess =
         failedSections.length === 0;
 
-
     const partial =
         scheduledSections.length > 0 &&
         failedSections.length > 0;
@@ -3860,7 +3793,6 @@ const generateSchedules = async (
         const bottleneck =
             failed.bottleneck;
 
-
         if (
             bottleneck === "PROFESSOR"
         ) {
@@ -3880,7 +3812,8 @@ const generateSchedules = async (
             bottleneckSummary.sectionTimeslot++;
 
         } else if (
-            bottleneck === "MULTIPLE RESOURCES"
+            bottleneck ===
+            "MULTIPLE RESOURCES"
         ) {
 
             bottleneckSummary.multipleResources++;
@@ -3929,6 +3862,11 @@ const generateSchedules = async (
 
     console.log(
         "========================================"
+    );
+
+    console.log(
+        `Scheduling range: ` +
+        `Monday 07:00 → Sunday 22:00`
     );
 
     console.log(
@@ -4035,7 +3973,16 @@ const generateSchedules = async (
         simulation: {
 
             algorithm:
-                "HYBRID_LAZY_GREEDY_MRV_BACKTRACK",
+                "BALANCED_WEEKLY_HYBRID_LAZY_MRV_BACKTRACK",
+
+            scheduleStart:
+                "Monday 07:00",
+
+            scheduleEnd:
+                "Sunday 22:00",
+
+            days:
+                DAY_ORDER,
 
             maxBacktrackNodesPerSection:
                 MAX_BACKTRACK_NODES_PER_SECTION,
@@ -4067,7 +4014,10 @@ const generateSchedules = async (
                 ).length,
 
             existingScheduleRows:
-                existingSchedules.length
+                existingSchedules.length,
+
+            totalTimeSlots:
+                timeSlots.length
         },
 
         message:

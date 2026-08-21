@@ -885,8 +885,8 @@ export default function Curriculum() {
 
             const response =
                 await fetch(
-                    `http://localhost:3000/api/auth/admin/curriculum/subjects/${curriculumId}`,
-                    {
+                        `http://localhost:3000/api/auth/admin/${curriculumId}/deleteCurriculum`,                    
+                        {
                         method: "DELETE",
 
                         headers: {
@@ -895,16 +895,17 @@ export default function Curriculum() {
                         }
                     }
                 );
-
-            const data =
-                await response.json();
-
+            
             if (!response.ok) {
 
                 throw new Error(
                     data.message ||
                     "Failed to remove subject"
                 );
+            }
+
+            if(response.ok){
+                alert("Deleted Curriculum Subject Successfully.");
             }
 
             setCurriculum(

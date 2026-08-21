@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 const allSubjects = ({programs}) => {
     const [subjects, setSubjects] = useState([]);
     const [showModal, setShowModal] = useState(false);
+    const [showAssign, setShowAssign] = useState(false);
 
     const [subject, setSubject] = useState({
         subject_code: "",
@@ -80,6 +81,7 @@ const allSubjects = ({programs}) => {
     const createSubject = async (e) => {
         e.preventDefault();
         console.log("creating subject data", subject)
+
         try {
         const token = localStorage.getItem('admin_token');
 
@@ -110,6 +112,15 @@ const allSubjects = ({programs}) => {
     };
 
     return (
+        <>
+
+        {showAssign && 
+            <div className='assign-wrapper'>
+                <div className='assignModal'>
+
+                </div>
+            </div>
+        }
         <div className="subjects-container">
 
             <div className="subjects-header">
@@ -117,7 +128,7 @@ const allSubjects = ({programs}) => {
 
 
                 <div>
-                    <button>
+                    <button onClick={() => setShowAssign(!showAssign)}>
                         + Assign Professor
                     </button>
                     <button
@@ -263,6 +274,7 @@ const allSubjects = ({programs}) => {
             )}
 
         </div>
+        </>
     );
 };
 

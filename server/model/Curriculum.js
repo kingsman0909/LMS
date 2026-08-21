@@ -173,6 +173,16 @@ const Curriculum = {
             ]);
 
         return result;
+    },
+
+    deleteCurriculum: async (id) => {
+
+        const [result] = await db.query(`
+            DELETE FROM curriculum_subjects
+            WHERE id = ?
+        `, [id]);
+
+        return result;
     }
 
 };

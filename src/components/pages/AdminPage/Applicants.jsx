@@ -9,8 +9,7 @@ export default function AdminApplicants() {
 
     const [applicants, setApplicants] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showCapacityModal, setShowCapacityModal] =
-    useState(false);
+    const [showCapacityModal, setShowCapacityModal] = useState(false);
     const [capacities, setCapacities] = useState([]);
     const [academicTerm, setAcademicTerm] = useState(null);
     

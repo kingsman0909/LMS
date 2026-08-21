@@ -14,12 +14,11 @@ const {loginProf, login, me, enroll,//this enroll is just a mistake it should be
      getEnrollmentCapacities, checkUniversityCapacity,
      getSchedulesBySection, getStudentSubjects, getProfStudent,
      getTotalStudents, getCurriculum, addCurriculum,
-     getSubjectsForCurriculum,
+     getSubjectsForCurriculum, deleteCurriculum,
      announcement, createAnnounce } = require("../controllers/authController");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/CheckRole");
 const { verify } = require("jsonwebtoken");
-
 
 router.post("/login", login);
 router.post("/login/prof", loginProf);
@@ -34,6 +33,7 @@ router.post("/admin/schedule/generate", verifyToken, checkRole("admin"), generat
 router.post("/admin/addCurriculum", verifyToken, checkRole("admin"), addCurriculum);
 
 router.delete("/admin/:id/deleteSubject", verifyToken, checkRole("admin"), deleteSubject);
+router.delete("/admin/:id/deleteCurriculum", verifyToken, checkRole("admin"), deleteCurriculum);
 
 router.get("/student/getSchedule", verifyToken, checkRole("student"), getSchedulesBySection);
 
@@ -44,7 +44,7 @@ router.get("/admin/getEnrollmentCapacities", verifyToken, checkRole("admin"), ge
 router.get("/admin/getEnrollmentCapacity", verifyToken, checkRole("admin"), getEnrollmentCapacity);
 router.get("/admin/getScheduleSections", verifyToken, checkRole("admin"), getScheduleSections);
 router.get("/admin/getSchedules", verifyToken, checkRole("admin"), getSchedules);
-router.get("/getAcademicTerm", verifyToken, getAcademicTerm)
+router.get("/getAcademicTerm", verifyToken, getAcademicTerm);
 router.get("/admin/getSections", verifyToken, getSection);
 router.get("/admin/getSectionById/:id", verifyToken, getSectionById)
 router.get('/getSubjects', verifyToken, getSubjects);

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     FiUsers,
     FiUserCheck,
@@ -15,7 +16,12 @@ import {
 
 import "./styles/AdminDashboard.css";
 
-const AdminDashboard = () => {
+const AdminDashboard = (props) => {
+
+    const navigate = useNavigate();
+    const [schedules, setSchedules] = useState([]);
+    const [sections, setSections] = useState([]);
+    const [scheduleGenerated, setScheduleGenerated] = useState(false);
 
     const [dashboard, setDashboard] = useState({
         totalStudents: 0,
@@ -35,55 +41,147 @@ const AdminDashboard = () => {
 
         professorsUsed: 0,
 
-        scheduleGenerated: false,
         scheduleConflicts: 0,
 
         recentApplications: [],
         alerts: [],
     });
 
-    const [loading, setLoading] = useState(true);
+    const getSections = async () => {
 
-    useEffect(() => {
-        fetchDashboard();
-    }, []);
-
-    const fetchDashboard = async () => {
+        if (!props.term?.id) return;
 
         try {
 
-            setLoading(true);
+            const token =
+                localStorage.getItem(
+                    "admin_token"
+                );
 
             const response = await fetch(
-                "http://localhost:3000/api/auth/admin/dashboard",
+                `http://localhost:3000/api/auth/admin/getScheduleSections?academicTermId=${props.term.id}`,
                 {
                     method: "GET",
-                    credentials: "include",
+                    headers: {
+                        Authorization:
+                            `Bearer ${token}`
+                    }
                 }
             );
 
+            const data =
+                await response.json();
+
+            console.log(
+                "Schedule Sections:",
+                data
+            );
+
             if (!response.ok) {
-                throw new Error("Failed to fetch dashboard");
+                throw new Error(
+                    data.message
+                );
             }
 
-            const data = await response.json();
-
-            setDashboard(data);
+            setSections(
+                data.sections || []
+            );
 
         } catch (error) {
 
             console.error(
-                "Error fetching admin dashboard:",
+                "Failed to fetch sections:",
                 error
             );
-
-        } finally {
-
-            setLoading(false);
-
         }
     };
 
+
+    const getSchedules = async () => {
+
+        if (!props.term?.id) return;
+
+        try {
+
+            const token =
+                localStorage.getItem(
+                    "admin_token"
+                );
+
+            const response = await fetch(
+                `http://localhost:3000/api/auth/admin/getSchedules?academicTermId=${props.term.id}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization:
+                            `Bearer ${token}`
+                    }
+                }
+            );
+
+            const data =
+                await response.json();
+
+            console.log(
+                "Schedules:",
+                data
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message
+                );
+            }
+
+            setSchedules(
+                data.schedules || []
+            );
+            setScheduleGenerated(true);
+
+        } catch (error) {
+
+            console.error(
+                "Failed to fetch schedules:",
+                error
+            );
+        }
+    };
+
+    const getTotalClasses = () => {
+            let total = 0;
+            sections.filter(section => {
+                total += section.classes;
+            })
+
+            return total;
+        }
+
+    const totalSubject = () => {
+            const map = new Map();
+            for (const s of schedules){
+                map.set(s.subject_id, s.capacity);
+            }
+
+            return map.size;
+        }
+  
+
+
+    const pendingCount =
+        sections.filter(
+            section =>
+                section.status ===
+                "Scheduled"
+        ).length;
+
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        getSections();
+        getSchedules();
+    }, [props.term]);
+
+    
     const {
         totalStudents,
         totalProfessors,
@@ -94,15 +192,11 @@ const AdminDashboard = () => {
         approvedApplications,
         rejectedApplications,
 
-        totalSubjects,
-        totalClasses,
-
         roomsUsed,
         totalRooms,
 
         professorsUsed,
 
-        scheduleGenerated,
         scheduleConflicts,
 
         recentApplications,
@@ -165,7 +259,6 @@ const AdminDashboard = () => {
 
                 <button
                     className="dashboard-refresh-btn"
-                    onClick={fetchDashboard}
                 >
                     <FiRefreshCw />
 
@@ -488,7 +581,7 @@ const AdminDashboard = () => {
                             </span>
 
                             <strong>
-                                {totalSections}
+                                {pendingCount}
                             </strong>
 
                         </div>
@@ -501,7 +594,7 @@ const AdminDashboard = () => {
                             </span>
 
                             <strong>
-                                {totalSubjects}
+                                {totalSubject()}
                             </strong>
 
                         </div>
@@ -514,7 +607,7 @@ const AdminDashboard = () => {
                             </span>
 
                             <strong>
-                                {totalClasses}
+                                {getTotalClasses()}
                             </strong>
 
                         </div>
@@ -541,7 +634,7 @@ const AdminDashboard = () => {
                     </div>
 
 
-                    <button className="dashboard-primary-btn">
+                    <button className="dashboard-primary-btn" onClick={()=>{props.handlePage(6)}}>
 
                         {scheduleGenerated
                             ? "View Schedule"

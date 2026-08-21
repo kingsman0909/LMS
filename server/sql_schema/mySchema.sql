@@ -411,8 +411,7 @@ SET FOREIGN_KEY_CHECKS = 1; -- enable foreign key checks turn it to 0 to delete 
 delete from sections
 where id > 0;
 
-select * from users where id = 46583;
-
+select * from users;
 select * from time_slots;
 select * from student_applications;
 select * from users;
@@ -431,6 +430,7 @@ select * from academic_terms;
 select * from student_enrollments;
 select * from class_schedules;
 
+select * from subjects where id in (142, 143, 144, 145, 146);
 delete from class_schedules
 where id > 0;
 
@@ -728,4 +728,5 @@ DELETE FROM users WHERE role = 'student' and id > 0;
 -- inspect everything
 
 COMMIT;
+
 

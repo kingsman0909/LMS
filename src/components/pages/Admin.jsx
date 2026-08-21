@@ -30,31 +30,6 @@ import {
 } from 'react-router-dom';
 
 
-const fetchAnnouncements = async () => {
-    try {
-        const token = localStorage.getItem(`${props.role}_token`);
-
-        const response = await fetch(
-            'http://localhost:3000/api/auth/announcements',
-            {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            }
-        );
-
-        const data = await response.json();
-
-        console.log(data);
-        if (!response.ok) {
-            throw new Error(data.message);
-        }
-        setAnnouncements(data.announcements);
-    } catch (error) {
-        console.error("hello");
-    }
-};
 
 const Admin = ({role}) => {
 
@@ -64,7 +39,6 @@ const Admin = ({role}) => {
     const [academicTerm, setAcademicTerm] = useState([]);
     const [programs, setPrograms] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
-
 
     const navigate = useNavigate();
 
@@ -94,6 +68,33 @@ const Admin = ({role}) => {
         alert(error.message);
     }
     };
+
+    const fetchAnnouncements = async () => {
+    try {
+        const token = localStorage.getItem(`${props.role}_token`);
+
+        const response = await fetch(
+            'http://localhost:3000/api/auth/announcements',
+            {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        console.log(data);
+        if (!response.ok) {
+            throw new Error(data.message);
+        }
+        setAnnouncements(data.announcements);
+    } catch (error) {
+        console.error("hello");
+    }
+};
+
 
     useEffect(() => {
         fetchTerm();
@@ -157,12 +158,14 @@ const Admin = ({role}) => {
     "/admin/allStudents": 3,
     "/admin/professors": 4,
     "/admin/allSubjects": 5,
-    "/admin/schedules": 6
+    "/admin/schedules": 6,
+    "/admin/curriculum": 7
   };
 
-      const ind = pathMap[location.pathname] ?? 0;
-
-      const handlePage = (index, label) =>{
+  
+    const ind = pathMap[location.pathname] ?? 0;
+       
+      const handlePage = (index) =>{
     switch(index){
       case 0:
         navigate('/admin');
@@ -376,7 +379,7 @@ const Admin = ({role}) => {
                     fontSize={1.1}
                     smoothing={100}
                     defaultActive={ind}
-                    onItemClick={(index, label) => handlePage(index, label)}
+                    onItemClick={(index, label) => handlePage(index)}
                         />
                 </div>
             </div>
@@ -390,7 +393,7 @@ const Admin = ({role}) => {
                 <Route path='/professors' element={<AllProfessor />} />
                 <Route path='/announcements' element={<Announcements />} />
                 <Route path='/curriculum' element={<Curriculum />} />
-                <Route path='/' element={<Dashboard />} />
+                <Route path='/' element={<Dashboard term={academicTerm} handlePage={handlePage}/>} />
             </Routes>
         </div>
 

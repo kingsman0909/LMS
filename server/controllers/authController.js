@@ -598,6 +598,22 @@ const deleteSubject = async(req, res) => {
     }
 }
 
+const deleteCurriculum = async(req, res) => {
+    try{
+        const subjectId = req.params.id;
+        const response = await authService.deleteCurriculum(subjectId);
+        res.status(204).json({
+            message: "deleted successfully"
+        })
+
+    }
+    catch(err){
+        return ({
+            message: err.message
+        })
+    }
+}
+
 const getEnrollmentCapacity = async (
     req,
     res
@@ -1043,6 +1059,7 @@ module.exports = {
     checkUniversityCapacity,
     getSchedulesBySection,
     getStudentSubjects,
-    getProfStudent
+    getProfStudent,
+    deleteCurriculum
 };
 

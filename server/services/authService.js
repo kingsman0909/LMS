@@ -134,6 +134,21 @@ const deleteSubject = async(id) => {
     }
 }
 
+const deleteCurriculum = async(id) => {
+    try{
+        const response = await Curriculum.deleteCurriculum(id);
+
+        return ({
+            message: "succesfully deleted Curriculum Subject"
+        })
+    }
+    catch(err){
+        return({
+            message: "Error in deleting subject in controller"
+        })
+    }
+}
+
 const createSubject = async(data) => {
     const subject_code = await Subject.findByCode(data.subject_code);
 
@@ -143,7 +158,9 @@ const createSubject = async(data) => {
         ) 
     }
     try{
-        await Subject.createSubject(data);
+        const programId = data.programs[0];
+        console.log("service creating subject with program ID: ", programId)
+        await Subject.createSubject(data, programId);
 
         return{
             message: "Sections successfully added!"
@@ -1022,6 +1039,7 @@ module.exports = {
     createSubject,
     createProgram,
     deleteSubject,
+    deleteCurriculum,
     getSchedulesByTerm,
     getSectionsForSchedule,
     getSchedulesBySection,
