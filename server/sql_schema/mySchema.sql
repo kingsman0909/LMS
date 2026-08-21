@@ -607,6 +607,7 @@ SELECT
         n
     ) AS address,
 
+
     'pending' AS status
 
 FROM
@@ -731,5 +732,4 @@ DELETE FROM users WHERE role = 'student' and id > 0;
 COMMIT;
 
 delete from curriculum_subjects
-where id > 0
-
+where id > 0;
