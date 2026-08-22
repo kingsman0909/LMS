@@ -43,6 +43,23 @@
     font-size: 14px;
 }
 
+.capacity-btn{
+    height: 42px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 8px;
+
+    background: rgb(50, 231, 50);
+    color: #061006;
+
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.capacity-btn:hover{
+    opacity: 0.9;
+}
+
 
 .generate-btn {
     height: 42px;

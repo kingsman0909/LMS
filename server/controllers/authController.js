@@ -124,6 +124,58 @@ const createSubject = async (req, res) => {
 
 };
 
+// =====================================================
+// GET SUBJECTS BY PROGRAM
+// For Professor Subject Assignment
+// =====================================================
+
+const getCurriculumSubjects = async (req, res) => {
+
+    try {
+
+        const { programId, professorId } = req.query;
+
+
+        if (!programId) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Program ID is required."
+            });
+
+        }
+
+        const subjects =
+            await Subjects.getCurriculumSubjects(programId, professorId);
+
+        return res.status(200).json({
+
+            success: true,
+
+            subjects
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Error getting subjects by program:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Failed to get subjects by program."
+
+        });
+
+    }
+
+};
+
 const createSections = async (req, res) => {
  
     try{
@@ -1021,6 +1073,44 @@ const getSubjectsForCurriculum = async (req, res) => {
     }
 };
 
+// =========================================================
+// ASSIGN SUBJECTS TO PROFESSOR
+// =========================================================
+
+const assignSubjectsToProfessor = async (req, res) => {
+
+    try {
+
+        const { professorId, subjectIds } = req.body;
+
+        const result =
+            await authService.assignSubjectsToProfessor(
+                professorId,
+                subjectIds
+            );
+
+        return res.status(201).json({
+            success: true,
+            message: "Subjects assigned to professor successfully",
+            data: result
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Error assigning subjects to professor:",
+            error
+        );
+
+        return res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+
+
 
 
 
@@ -1028,6 +1118,7 @@ module.exports = {
     login,
     me,
     getSubjectsForCurriculum,
+    assignSubjectsToProfessor,
     getCurriculum,
     addCurriculum,
     deleteSubject,
@@ -1051,6 +1142,7 @@ module.exports = {
     getSectionById,
     getAcademicTerm,
     createSubject,
+    getCurriculumSubjects,
     createProgram,
     getProgramsWithSections,
     generateSchedule,

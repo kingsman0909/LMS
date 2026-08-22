@@ -398,6 +398,17 @@ CREATE TABLE student_sections (
     )
 );
 
+CREATE TABLE departments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    department_code VARCHAR(20) NOT NULL UNIQUE,
+    department_name VARCHAR(100) NOT NULL UNIQUE,
+    description VARCHAR(255) NULL,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP
+);
+
 
 
 delete from student
@@ -429,6 +440,8 @@ select * from announcements;
 select * from academic_terms;
 select * from student_enrollments;
 select * from class_schedules;
+select * from departments;
+
 
 select * from subjects where id in (142, 143, 144, 145, 146);
 delete from class_schedules
@@ -438,12 +451,14 @@ SHOW CREATE TABLE class_schedules;
 SHOW CREATE TABLE time_slots;
 SHOW CREATE TABLE rooms;
 SHOW CREATE TABLE profesor;
+SHOW CREATE TABLE programs;
 SHOW CREATE TABLE users;
+SHOW CREATE TABLE departments;
 SHOW CREATE TABLE professor_subjects;
 SHOW CREATE TABLE curriculum_subjects;
 SHOW CREATE TABLE subjects;
 SHOW CREATE TABLE academic_terms;
-show create table student_enrollments;
+show create table student_sections;
 
 show create table class_schedules;
 SHOW CREATE TABLE sections;
@@ -731,5 +746,14 @@ DELETE FROM users WHERE role = 'student' and id > 0;
 
 COMMIT;
 
+delete from professor_subjects
+where id > 0;
+
+delete from class_schedules
+where id > 0;
+
 delete from curriculum_subjects
 where id > 0;
+
+
+

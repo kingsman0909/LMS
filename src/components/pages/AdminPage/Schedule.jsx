@@ -19,6 +19,8 @@ const AdminSchedule = () => {
     const [sections, setSections] = useState([]);
     const [students, setStudents] = useState([]);
     const [totalStudents, setTotalStudents] = useState(0);
+    const [capacityLoading, setCapacityLoading] = useState(false);
+    const [capacityData, setCapacityData] = useState(null);
     // =========================
     // GENERATE MODAL
     // =========================
@@ -110,6 +112,66 @@ const AdminSchedule = () => {
         return 0;
     }
 };
+
+
+const handleCheckCapacity = async () => {
+
+    console.log("checking capacity")
+    try {
+
+        setCapacityLoading(true);
+
+
+        const response =
+            await fetch(
+                `http://localhost:3000/api/auth/admin/checkUniversityCapacity?academicTermId=${term.id}`,
+                {
+                    method: "GET",
+
+                    headers: {
+                        Authorization:
+                            `Bearer ${localStorage.getItem("admin_token")}`
+                    }
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+        console.log("simulated capacity: ",data);
+        if (!response.ok) {
+
+            throw new Error(
+                data.message ||
+                "Failed to check capacity."
+            );
+        }
+
+
+        setCapacityData(
+            data.data
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        alert(
+            error.message
+        );
+
+    }
+
+    finally {
+        alert("Done checking!")
+        setCapacityLoading(false);
+        
+    }
+};
+
 
     // =========================
     // GET PROGRAMS WITH SECTIONS
@@ -594,7 +656,9 @@ const closeScheduleModal = () => {
 
 
                 <div className="schedule-actions">
-
+                    <button className="capacity-btn" onClick={handleCheckCapacity}>
+                        Check Capacity
+                    </button>
                     <button
                         className="generate-btn"
                         onClick={() =>

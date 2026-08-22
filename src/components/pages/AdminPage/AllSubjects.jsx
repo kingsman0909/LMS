@@ -114,13 +114,6 @@ const allSubjects = ({programs}) => {
     return (
         <>
 
-        {showAssign && 
-            <div className='assign-wrapper'>
-                <div className='assignModal'>
-
-                </div>
-            </div>
-        }
         <div className="subjects-container">
 
             <div className="subjects-header">
@@ -128,9 +121,6 @@ const allSubjects = ({programs}) => {
 
 
                 <div>
-                    <button onClick={() => setShowAssign(!showAssign)}>
-                        + Assign Professor
-                    </button>
                     <button
                     onClick={() => setShowModal(true)}
                     >

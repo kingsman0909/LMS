@@ -505,10 +505,98 @@ const getSubjectsByStudent = async (
     return rows;
 };
 
+// =====================================================
+// GET SUBJECTS BY PROGRAM
+// For Professor Subject Assignment
+//
+// Returns active subjects directly belonging to a program.
+// curriculum_subjects is NOT involved.
+//
+// Used by:
+// Admin -> Professors -> Assign Subject
+// =====================================================
+
+const getCurriculumSubjects = async (
+    programId,
+    professorId
+) => {
+
+    const [rows] = await db.query(`
+        SELECT
+            s.id,
+            s.subject_code,
+            s.subject_name,
+            s.description,
+            s.units,
+            s.lecture_units,
+            s.lab_units,
+
+            cs.program_id,
+            cs.year_level,
+            cs.semester,
+
+            COUNT(DISTINCT ps_all.professor_id) AS professor_count
+
+        FROM curriculum_subjects cs
+
+        INNER JOIN subjects s
+            ON s.id = cs.subject_id
+
+        LEFT JOIN professor_subjects ps_all
+            ON ps_all.subject_id = s.id
+
+        WHERE cs.program_id = ?
+          AND s.status = 'active'
+
+          AND NOT EXISTS (
+              SELECT 1
+              FROM professor_subjects ps_current
+              WHERE ps_current.subject_id = s.id
+                AND ps_current.professor_id = ?
+          )
+
+        GROUP BY
+            s.id,
+            s.subject_code,
+            s.subject_name,
+            s.description,
+            s.units,
+            s.lecture_units,
+            s.lab_units,
+            cs.program_id,
+            cs.year_level,
+            cs.semester
+
+        ORDER BY
+            CASE cs.year_level
+                WHEN '1st Year' THEN 1
+                WHEN '2nd Year' THEN 2
+                WHEN '3rd Year' THEN 3
+                WHEN '4th Year' THEN 4
+                ELSE 5
+            END,
+
+            CASE cs.semester
+                WHEN '1st Semester' THEN 1
+                WHEN '2nd Semester' THEN 2
+                WHEN 'Summer' THEN 3
+                ELSE 4
+            END,
+
+            s.subject_code ASC
+    `, [
+        programId,
+        professorId
+    ]);
+
+    return rows;
+};
 
 module.exports = {
 
     getSubjects,
+
+    getCurriculumSubjects,
 
     getSubjectsAdmin,
 

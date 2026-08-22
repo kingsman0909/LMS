@@ -776,26 +776,44 @@ const getSectionById = async (id) => {
 };
 
 
-const checkUniversityCapacity = async (
-    academicTermId
-) => {
 
-    if (!academicTermId) {
 
+/*
+|--------------------------------------------------------------------------
+| CHECK UNIVERSITY CAPACITY
+|--------------------------------------------------------------------------
+| Receives ONLY academicTermId.
+|--------------------------------------------------------------------------
+*/
+
+const checkUniversityCapacity = async (academicTermId) => {
+
+    const id = Number(academicTermId);
+
+    if (
+        !Number.isInteger(id) ||
+        id <= 0
+    ) {
         throw new Error(
-            "Academic term ID is required."
+            "Academic term ID is required and must be a valid positive integer."
         );
     }
 
-
     const result =
-        await capacityChecker.checkEnrollmentCapacity({
-            academicTermId
-        });
-
+        await capacityChecker.checkEnrollmentCapacity(id);
 
     return result;
 };
+
+
+/*
+|--------------------------------------------------------------------------
+| EXPORT
+|--------------------------------------------------------------------------
+*/
+
+
+
 
 
 
@@ -1021,11 +1039,36 @@ const addCurriculum = async ({
 
 
 
+// =========================================================
+// ASSIGN SUBJECTS TO PROFESSOR
+// =========================================================
+
+const assignSubjectsToProfessor = async (professorId, subjectIds) => {
+
+    if (!professorId) {
+        throw new Error("Professor ID is required");
+    }
+
+    if (!Array.isArray(subjectIds) || subjectIds.length === 0) {
+        throw new Error("At least one subject must be selected");
+    }
+
+    const result = await Prof.assignSubjectsToProfessor(
+        professorId,
+        subjectIds
+    );
+
+    return result;
+};
+
+
+
 
 module.exports = {
     loginUser,
     createAnnounce,
     apply,
+    assignSubjectsToProfessor,
     checkUniversityCapacity,
     getApplicants,
     approveApplicant,
