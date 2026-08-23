@@ -73,6 +73,7 @@ const getSubjectsAdmin = async () => {
     const [rows] = await db.query(`
         SELECT
             s.id,
+            s.program_id,
             s.subject_code,
             s.subject_name,
             s.description,
@@ -80,49 +81,30 @@ const getSubjectsAdmin = async () => {
             s.lecture_units,
             s.lab_units,
 
-            cs.year_level,
-            cs.semester,
+            p.program_code,
+            p.program_name,
 
-            GROUP_CONCAT(
-                DISTINCT p.id
-                ORDER BY p.id
-                SEPARATOR ','
-            ) AS program_ids,
-
-            GROUP_CONCAT(
-                DISTINCT p.program_code
-                ORDER BY p.program_code
-                SEPARATOR ', '
-            ) AS program_codes
-
-        FROM subjects s
-
-        LEFT JOIN curriculum_subjects cs
-            ON s.id = cs.subject_id
-
-        LEFT JOIN programs p
-            ON cs.program_id = p.id
-
-        GROUP BY
-            s.id,
-            s.subject_code,
-            s.subject_name,
-            s.description,
-            s.units,
-            s.lecture_units,
-            s.lab_units,
             cs.year_level,
             cs.semester
 
+        FROM subjects s
+
+        LEFT JOIN programs p
+            ON s.program_id = p.id
+
+        LEFT JOIN curriculum_subjects cs
+            ON cs.subject_id = s.id
+            AND cs.program_id = s.program_id
+
         ORDER BY
+            s.subject_code,
+            s.program_id,
             cs.year_level,
-            cs.semester,
-            s.subject_code
+            cs.semester
     `);
 
     return rows;
 };
-
 
 // =====================================================
 // GET SUBJECTS WITH ASSIGNED PROFESSOR
@@ -280,62 +262,34 @@ const findById = async (id) => {
 
 
 // =====================================================
-// FIND SUBJECT BY CODE
+// FIND SUBJECT BY CODE AND PROGRAM
 // =====================================================
 
-const findByCode = async (code) => {
+const findByCodeAndProgram = async (code, programId) => {
 
     const [rows] = await db.query(`
         SELECT
             s.id,
+            s.program_id,
             s.subject_code,
             s.subject_name,
             s.description,
             s.units,
             s.lecture_units,
             s.lab_units,
-
-            cs.year_level,
-            cs.semester,
-
-            GROUP_CONCAT(
-                DISTINCT p.id
-                ORDER BY p.id
-                SEPARATOR ','
-            ) AS program_ids,
-
-            GROUP_CONCAT(
-                DISTINCT p.program_name
-                ORDER BY p.program_name
-                SEPARATOR ', '
-            ) AS program_names
+            s.status
 
         FROM subjects s
 
-        LEFT JOIN curriculum_subjects cs
-            ON s.id = cs.subject_id
-
-        LEFT JOIN programs p
-            ON cs.program_id = p.id
-
         WHERE s.subject_code = ?
+          AND s.program_id = ?
 
-        GROUP BY
-            s.id,
-            s.subject_code,
-            s.subject_name,
-            s.description,
-            s.units,
-            s.lecture_units,
-            s.lab_units,
-            cs.year_level,
-            cs.semester
+        LIMIT 1
 
-    `, [code]);
+    `, [code, programId]);
 
-    return rows[0];
+    return rows[0] || null;
 };
-
 
 // =====================================================
 // CREATE SUBJECT
@@ -445,6 +399,8 @@ const deleteSubject = async (id) => {
         DELETE FROM subjects
         WHERE id = ?
     `, [id]);
+
+
 
     return result;
 };
@@ -606,7 +562,7 @@ module.exports = {
 
     findById,
 
-    findByCode,
+    findByCodeAndProgram,
 
     createSubject,
 

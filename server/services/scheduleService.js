@@ -39,6 +39,18 @@ const MAX_BOTTLENECK_SCAN = 3000;
 
 /*
 |--------------------------------------------------------------------------
+| PROFESSOR WORKLOAD
+|--------------------------------------------------------------------------
+|
+| A professor's total scheduled hours per academic term/week
+| cannot exceed max_hours_per_week.
+|
+*/
+
+const DEFAULT_MAX_PROFESSOR_HOURS = 18;
+
+/*
+|--------------------------------------------------------------------------
 | DEBUG
 |--------------------------------------------------------------------------
 */
@@ -94,18 +106,40 @@ const uniqueNumbers = values => {
 
 const createOccupancy = () => ({
     sectionSlots: new Map(),
+
     professorSlots: new Map(),
+
     roomSlots: new Map(),
+
     sectionDayHours: new Map(),
+
+    /*
+     * professorId => total weekly hours
+     */
+    professorWeeklyHours: new Map(),
+
+    /*
+     * professorId => max weekly hours
+     */
+    professorMaxWeeklyHours: new Map(),
 
     _version: 0
 });
 
-const getOccupiedSet = (map, key) => {
-    return map.get(num(key)) || null;
+const getOccupiedSet = (
+    map,
+    key
+) => {
+    return map.get(
+        num(key)
+    ) || null;
 };
 
-const hasSlotConflict = (map, key, slotIds) => {
+const hasSlotConflict = (
+    map,
+    key,
+    slotIds
+) => {
     const occupied =
         getOccupiedSet(
             map,
@@ -117,7 +151,11 @@ const hasSlotConflict = (map, key, slotIds) => {
     }
 
     for (const slotId of slotIds) {
-        if (occupied.has(num(slotId))) {
+        if (
+            occupied.has(
+                num(slotId)
+            )
+        ) {
             return true;
         }
     }
@@ -171,8 +209,143 @@ const releaseSlotIds = (
         );
     }
 
-    if (occupied.size === 0) {
+    if (
+        occupied.size === 0
+    ) {
         map.delete(key);
+    }
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| PROFESSOR WEEKLY HOURS
+|--------------------------------------------------------------------------
+*/
+
+const getProfessorWeeklyHours = (
+    occupancy,
+    professorId
+) => {
+    return (
+        occupancy.professorWeeklyHours.get(
+            num(professorId)
+        ) || 0
+    );
+};
+
+const getProfessorMaxWeeklyHours = (
+    occupancy,
+    professorId
+) => {
+    return (
+        occupancy.professorMaxWeeklyHours.get(
+            num(professorId)
+        ) ??
+        DEFAULT_MAX_PROFESSOR_HOURS
+    );
+};
+
+const getProfessorRemainingHours = (
+    occupancy,
+    professorId
+) => {
+    const used =
+        getProfessorWeeklyHours(
+            occupancy,
+            professorId
+        );
+
+    const max =
+        getProfessorMaxWeeklyHours(
+            occupancy,
+            professorId
+        );
+
+    return Math.max(
+        0,
+        max - used
+    );
+};
+
+const canProfessorTakeHours = (
+    occupancy,
+    professorId,
+    hours
+) => {
+    const max =
+        getProfessorMaxWeeklyHours(
+            occupancy,
+            professorId
+        );
+
+    /*
+     * NULL max_hours_per_week means use
+     * the configured default.
+     */
+    if (
+        max === null ||
+        max === undefined
+    ) {
+        return true;
+    }
+
+    const current =
+        getProfessorWeeklyHours(
+            occupancy,
+            professorId
+        );
+
+    return (
+        current + num(hours) <=
+        num(max)
+    );
+};
+
+const addProfessorWeeklyHours = (
+    occupancy,
+    professorId,
+    hours
+) => {
+    professorId = num(professorId);
+
+    const current =
+        getProfessorWeeklyHours(
+            occupancy,
+            professorId
+        );
+
+    occupancy.professorWeeklyHours.set(
+        professorId,
+        current + num(hours)
+    );
+};
+
+const removeProfessorWeeklyHours = (
+    occupancy,
+    professorId,
+    hours
+) => {
+    professorId = num(professorId);
+
+    const current =
+        getProfessorWeeklyHours(
+            occupancy,
+            professorId
+        );
+
+    const next =
+        current - num(hours);
+
+    if (next <= 0) {
+        occupancy.professorWeeklyHours.delete(
+            professorId
+        );
+    } else {
+        occupancy.professorWeeklyHours.set(
+            professorId,
+            next
+        );
     }
 };
 
@@ -224,8 +397,9 @@ const addSectionDayHours = (
 
     sectionMap.set(
         day,
-        (sectionMap.get(day) || 0) +
-            num(hours)
+        (
+            sectionMap.get(day) || 0
+        ) + num(hours)
     );
 };
 
@@ -261,7 +435,9 @@ const removeSectionDayHours = (
         );
     }
 
-    if (sectionMap.size === 0) {
+    if (
+        sectionMap.size === 0
+    ) {
         occupancy.sectionDayHours.delete(
             sectionId
         );
@@ -317,6 +493,9 @@ const reserveAssignment = (
     assignment,
     occupancy
 ) => {
+    const hours =
+        assignment.slotIds.length;
+
     reserveSlotIds(
         occupancy.sectionSlots,
         assignment.sectionId,
@@ -335,11 +514,17 @@ const reserveAssignment = (
         assignment.slotIds
     );
 
+    addProfessorWeeklyHours(
+        occupancy,
+        assignment.professorId,
+        hours
+    );
+
     addSectionDayHours(
         occupancy,
         assignment.sectionId,
         assignment.day,
-        assignment.slotIds.length
+        hours
     );
 };
 
@@ -347,6 +532,9 @@ const releaseAssignment = (
     assignment,
     occupancy
 ) => {
+    const hours =
+        assignment.slotIds.length;
+
     releaseSlotIds(
         occupancy.sectionSlots,
         assignment.sectionId,
@@ -365,11 +553,17 @@ const releaseAssignment = (
         assignment.slotIds
     );
 
+    removeProfessorWeeklyHours(
+        occupancy,
+        assignment.professorId,
+        hours
+    );
+
     removeSectionDayHours(
         occupancy,
         assignment.sectionId,
         assignment.day,
-        assignment.slotIds.length
+        hours
     );
 };
 
@@ -430,6 +624,20 @@ const candidateConflictMask = (
         )
     ) {
         mask |= 4;
+    }
+
+    /*
+     * NEW:
+     * Professor weekly-hour constraint.
+     */
+    if (
+        !canProfessorTakeHours(
+            occupancy,
+            candidate.professorId,
+            candidate.slotIds.length
+        )
+    ) {
+        mask |= 8;
     }
 
     return mask;
@@ -1008,7 +1216,9 @@ const getProfessorMap = async (
                 p.id,
                 p.employee_id,
                 p.firstname,
-                p.lastname
+                p.lastname,
+
+                p.max_weekly_hours
 
             FROM professor_subjects ps
 
@@ -1045,7 +1255,14 @@ const getProfessorMap = async (
                 row.firstname,
 
             lastname:
-                row.lastname
+                row.lastname,
+
+            max_hours_per_week:
+                row.max_hours_per_week == null
+                    ? DEFAULT_MAX_PROFESSOR_HOURS
+                    : num(
+                        row.max_hours_per_week
+                    )
         });
     }
 
@@ -1155,6 +1372,64 @@ const loadExistingSchedules = async (
 
 /*
 |--------------------------------------------------------------------------
+| LOAD PROFESSOR MAX HOURS
+|--------------------------------------------------------------------------
+*/
+
+const loadProfessorMaxHours = async (
+    occupancy,
+    professorIds
+) => {
+    if (
+        professorIds.length === 0
+    ) {
+        return;
+    }
+
+    const ids =
+        uniqueNumbers(
+            professorIds
+        );
+
+    if (
+        ids.length === 0
+    ) {
+        return;
+    }
+
+    const placeholders =
+        ids.map(() => "?").join(",");
+
+    const [rows] =
+        await db.query(`
+            SELECT
+                id,
+                max_weekly_hours
+            FROM profesor
+            WHERE id IN (${placeholders})
+        `, ids);
+
+    for (const row of rows) {
+        const professorId =
+            num(row.id);
+
+        const maxHours =
+            row.max_hours_per_week == null
+                ? DEFAULT_MAX_PROFESSOR_HOURS
+                : num(
+                    row.max_hours_per_week
+                );
+
+        occupancy.professorMaxWeeklyHours.set(
+            professorId,
+            maxHours
+        );
+    }
+};
+
+
+/*
+|--------------------------------------------------------------------------
 | EXISTING OCCUPANCY
 |--------------------------------------------------------------------------
 */
@@ -1183,6 +1458,17 @@ const reserveExistingSchedules = (
             occupancy.roomSlots,
             row.room_id,
             [slotId]
+        );
+
+        /*
+         * NEW:
+         * Existing schedules consume professor
+         * weekly hours.
+         */
+        addProfessorWeeklyHours(
+            occupancy,
+            row.professor_id,
+            1
         );
 
         addSectionDayHours(
@@ -1400,6 +1686,25 @@ const scoreCandidate = (
             candidate.professorId
         );
 
+    const professorWeeklyHours =
+        getProfessorWeeklyHours(
+            occupancy,
+            candidate.professorId
+        );
+
+    const professorMaxHours =
+        getProfessorMaxWeeklyHours(
+            occupancy,
+            candidate.professorId
+        );
+
+    const remainingAfterAssignment =
+        professorMaxHours -
+        (
+            professorWeeklyHours +
+            candidate.slotIds.length
+        );
+
     const roomLoad =
         getResourceLoad(
             occupancy.roomSlots,
@@ -1423,6 +1728,24 @@ const scoreCandidate = (
                 : professorCount === 3
                     ? 10000
                     : 0;
+
+    /*
+     * Prefer professors who still have enough
+     * remaining capacity.
+     *
+     * But do NOT over-prioritize them so much
+     * that scheduling becomes unbalanced.
+     */
+    const workloadPenalty =
+        remainingAfterAssignment <= 0
+            ? 500000
+            : (
+                remainingAfterAssignment <= 3
+                    ? 15000
+                    : remainingAfterAssignment <= 6
+                        ? 5000
+                        : 0
+            );
 
     const roomWaste =
         candidate.room.capacity -
@@ -1483,6 +1806,7 @@ const scoreCandidate = (
         professorLoad * 10000 +
         roomLoad * 1000 +
         scarcityPenalty +
+        workloadPenalty +
         roomWaste * 5 +
         dayLoadPenalty +
         longDayPenalty +
@@ -1559,13 +1883,6 @@ const makeCandidate = (
 |--------------------------------------------------------------------------
 | CANDIDATE POOL
 |--------------------------------------------------------------------------
-|
-| IMPORTANT:
-| We never generate thousands of candidates and then sort
-| the entire array.
-|
-| We keep only the best `limit` candidates while scanning.
-|--------------------------------------------------------------------------
 */
 
 const getCandidatePool = ({
@@ -1592,13 +1909,16 @@ const getCandidatePool = ({
     ) {
         return {
             candidates: [],
-            totalValid: 0
+            totalValid: 0,
+            professorCapacityBlocked: 0
         };
     }
 
     const candidates = [];
 
     let totalValid = 0;
+
+    let professorCapacityBlocked = 0;
 
     const insertBoundedCandidate =
         candidate => {
@@ -1685,6 +2005,21 @@ const getCandidatePool = ({
             const professor
             of professors
         ) {
+            /*
+             * NEW:
+             * Weekly professor limit.
+             */
+            if (
+                !canProfessorTakeHours(
+                    occupancy,
+                    professor.id,
+                    window.slotIds.length
+                )
+            ) {
+                professorCapacityBlocked++;
+                continue;
+            }
+
             if (
                 hasSlotConflict(
                     occupancy.professorSlots,
@@ -1737,7 +2072,8 @@ const getCandidatePool = ({
 
     return {
         candidates,
-        totalValid
+        totalValid,
+        professorCapacityBlocked
     };
 };
 
@@ -1887,6 +2223,20 @@ const estimateRequirementFlexibility = ({
             const professor
             of professors
         ) {
+            /*
+             * NEW:
+             * Professor weekly capacity.
+             */
+            if (
+                !canProfessorTakeHours(
+                    occupancy,
+                    professor.id,
+                    window.slotIds.length
+                )
+            ) {
+                continue;
+            }
+
             if (
                 hasSlotConflict(
                     occupancy.professorSlots,
@@ -1945,6 +2295,13 @@ const estimateRequirementFlexibility = ({
                     return valid;
                 }
             }
+        }
+
+        if (
+            scanned >=
+            MAX_MRV_RAW_SCAN
+        ) {
+            break;
         }
     }
 
@@ -2263,12 +2620,22 @@ const solveGreedy = ({
             `${candidate.end_time} | ` +
             `${candidate.room.room_name} | ` +
             `${candidate.professor.firstname} ` +
-            `${candidate.professor.lastname}`
+            `${candidate.professor.lastname} | ` +
+            `Professor Load: ` +
+            `${getProfessorWeeklyHours(
+                occupancy,
+                candidate.professorId
+            )}/` +
+            `${getProfessorMaxWeeklyHours(
+                occupancy,
+                candidate.professorId
+            )}h`
         );
     }
 
     return {
         success: true,
+
         assignments
     };
 };
@@ -2297,7 +2664,9 @@ const solveBacktracking = ({
         Date.now();
 
     let nodes = 0;
+
     let timeout = false;
+
     let nodeLimit = false;
 
     const assignments = [];
@@ -2440,7 +2809,15 @@ const solveBacktracking = ({
                     `${candidate.end_time} | ` +
                     `${candidate.room.room_name} | ` +
                     `${candidate.professor.firstname} ` +
-                    `${candidate.professor.lastname}`
+                    `${candidate.professor.lastname} | ` +
+                    `Load=${getProfessorWeeklyHours(
+                        occupancy,
+                        candidate.professorId
+                    )}/` +
+                    `${getProfessorMaxWeeklyHours(
+                        occupancy,
+                        candidate.professorId
+                    )}h`
                 );
             }
 
@@ -2665,8 +3042,13 @@ const analyzeRequirement = ({
         );
 
     let available = 0;
+
     let professorBlocked = 0;
+
+    let professorWeeklyLimitBlocked = 0;
+
     let roomBlocked = 0;
+
     let sectionBlocked = 0;
 
     let scanned = 0;
@@ -2686,6 +3068,19 @@ const analyzeRequirement = ({
             const professor
             of professors
         ) {
+            const professorWeeklyBlocked =
+                !canProfessorTakeHours(
+                    occupancy,
+                    professor.id,
+                    window.slotIds.length
+                );
+
+            if (
+                professorWeeklyBlocked
+            ) {
+                professorWeeklyLimitBlocked++;
+            }
+
             const profConflict =
                 hasSlotConflict(
                     occupancy.professorSlots,
@@ -2709,7 +3104,8 @@ const analyzeRequirement = ({
                 if (
                     !sectionConflict &&
                     !profConflict &&
-                    !roomConflict
+                    !roomConflict &&
+                    !professorWeeklyBlocked
                 ) {
                     available++;
                 } else {
@@ -2721,6 +3117,12 @@ const analyzeRequirement = ({
 
                     if (
                         profConflict
+                    ) {
+                        professorBlocked++;
+                    }
+
+                    if (
+                        professorWeeklyBlocked
                     ) {
                         professorBlocked++;
                     }
@@ -2760,10 +3162,23 @@ const analyzeRequirement = ({
         "MULTIPLE RESOURCES";
 
     if (
+        professors.length === 0
+    ) {
+        bottleneck =
+            "PROFESSOR";
+    } else if (
         available > 0
     ) {
         bottleneck =
             "COMBINATION / BACKTRACKING CONSTRAINT";
+    } else if (
+        professorWeeklyLimitBlocked >
+            0 &&
+        professorWeeklyLimitBlocked >=
+            professors.length
+    ) {
+        bottleneck =
+            "PROFESSOR WEEKLY HOURS";
     } else if (
         professorBlocked >
             roomBlocked &&
@@ -2818,6 +3233,8 @@ const analyzeRequirement = ({
 
         professorBlocked,
 
+        professorWeeklyLimitBlocked,
+
         roomBlocked,
 
         sectionBlocked,
@@ -2831,6 +3248,71 @@ const analyzeRequirement = ({
 
         bottleneck
     };
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| PROFESSOR WORKLOAD SUMMARY
+|--------------------------------------------------------------------------
+*/
+
+const buildProfessorWorkloadSummary = (
+    occupancy
+) => {
+    const professorIds = new Set([
+        ...occupancy.professorWeeklyHours.keys(),
+        ...occupancy.professorMaxWeeklyHours.keys()
+    ]);
+
+    const summary = [];
+
+    for (const professorId of professorIds) {
+        const used =
+            getProfessorWeeklyHours(
+                occupancy,
+                professorId
+            );
+
+        const max =
+            getProfessorMaxWeeklyHours(
+                occupancy,
+                professorId
+            );
+
+        summary.push({
+            professorId,
+
+            usedHours:
+                used,
+
+            maxHours:
+                max,
+
+            remainingHours:
+                Math.max(
+                    0,
+                    max - used
+                ),
+
+            utilizationPercent:
+                max > 0
+                    ? Number(
+                        (
+                            used / max * 100
+                        ).toFixed(2)
+                    )
+                    : 0
+        });
+    }
+
+    summary.sort(
+        (a, b) =>
+            b.usedHours -
+            a.usedHours
+    );
+
+    return summary;
 };
 
 
@@ -2915,6 +3397,7 @@ const saveSectionSchedules = async (
 */
 
 const generateSchedules = async req => {
+
     /*
      * academicTermId is the ID itself.
      */
@@ -2977,7 +3460,8 @@ const generateSchedules = async req => {
     );
 
     console.log(
-        "Daily workload cap: NONE"
+        "Professor weekly workload limit: " +
+        `${DEFAULT_MAX_PROFESSOR_HOURS} hours`
     );
 
 
@@ -3309,6 +3793,110 @@ const generateSchedules = async req => {
 
     /*
     |--------------------------------------------------------------------------
+    | LOAD PROFESSOR LIMITS
+    |--------------------------------------------------------------------------
+    */
+
+    const professorIds = [];
+
+    for (
+        const professors
+        of professorMap.values()
+    ) {
+        for (
+            const professor
+            of professors
+        ) {
+            professorIds.push(
+                professor.id
+            );
+        }
+    }
+
+    await loadProfessorMaxHours(
+        occupancy,
+        professorIds
+    );
+
+    /*
+     * Make sure professors found through
+     * professor_subjects also have their limit.
+     */
+    for (
+        const professors
+        of professorMap.values()
+    ) {
+        for (
+            const professor
+            of professors
+        ) {
+            if (
+                !occupancy.professorMaxWeeklyHours.has(
+                    professor.id
+                )
+            ) {
+                occupancy.professorMaxWeeklyHours.set(
+                    professor.id,
+                    professor.max_hours_per_week ??
+                    DEFAULT_MAX_PROFESSOR_HOURS
+                );
+            }
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PROFESSOR LOAD LOG
+    |--------------------------------------------------------------------------
+    */
+
+    console.log(
+        "\n========================================"
+    );
+
+    console.log(
+        "PROFESSOR WEEKLY CAPACITY"
+    );
+
+    console.log(
+        "========================================"
+    );
+
+    const uniqueProfessorIds =
+        uniqueNumbers(
+            professorIds
+        );
+
+    for (
+        const professorId
+        of uniqueProfessorIds
+    ) {
+        const used =
+            getProfessorWeeklyHours(
+                occupancy,
+                professorId
+            );
+
+        const max =
+            getProfessorMaxWeeklyHours(
+                occupancy,
+                professorId
+            );
+
+        console.log(
+            `[PROFESSOR ${professorId}] ` +
+            `${used}/${max} hours | ` +
+            `remaining=${Math.max(
+                0,
+                max - used
+            )}`
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | WINDOWS
     |--------------------------------------------------------------------------
     */
@@ -3438,28 +4026,6 @@ const generateSchedules = async req => {
             b.difficulty
     );
 
-    console.log(
-        "\n========================================"
-    );
-
-    console.log(
-        "SECTION SOLVING ORDER"
-    );
-
-    console.log(
-        "========================================"
-    );
-
-    sectionJobs.forEach(
-        (job, index) => {
-            console.log(
-                `${index + 1}. ` +
-                `${job.section.section_name} ` +
-                `difficulty=${job.difficulty}`
-            );
-        }
-    );
-
 
     /*
     |--------------------------------------------------------------------------
@@ -3468,7 +4034,9 @@ const generateSchedules = async req => {
     */
 
     const scheduledSections = [];
+
     const failedSections = [];
+
     const generatedSchedules = [];
 
 
@@ -3512,13 +4080,6 @@ const generateSchedules = async req => {
         console.log(
             "========================================"
         );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | SOLVE
-        |--------------------------------------------------------------------------
-        */
 
         const result =
             await solveHybrid({
@@ -3572,13 +4133,6 @@ const generateSchedules = async req => {
                     section.section_name
                 );
 
-
-                /*
-                |--------------------------------------------------------------------------
-                | GENERATED SCHEDULES
-                |--------------------------------------------------------------------------
-                */
-
                 for (
                     const assignment
                     of result.assignments
@@ -3618,6 +4172,24 @@ const generateSchedules = async req => {
                             professorId:
                                 assignment.professorId,
 
+                            professorMaxHours:
+                                getProfessorMaxWeeklyHours(
+                                    occupancy,
+                                    assignment.professorId
+                                ),
+
+                            professorCurrentWeeklyHours:
+                                getProfessorWeeklyHours(
+                                    occupancy,
+                                    assignment.professorId
+                                ),
+
+                            professorRemainingHours:
+                                getProfessorRemainingHours(
+                                    occupancy,
+                                    assignment.professorId
+                                ),
+
                             room:
                                 assignment.room.room_name,
 
@@ -3639,50 +4211,11 @@ const generateSchedules = async req => {
                     }
                 }
 
-
-                /*
-                |--------------------------------------------------------------------------
-                | WEEKLY LOAD
-                |--------------------------------------------------------------------------
-                */
-
-                const weeklyLoad = {};
-
-                for (
-                    const day
-                    of DAY_ORDER
-                ) {
-                    weeklyLoad[day] =
-                        getSectionDayHours(
-                            occupancy,
-                            section.id,
-                            day
-                        );
-                }
-
                 console.log(
                     `[RESULT] ` +
                     `${section.section_name} | ` +
                     `success=true | ` +
                     `method=${result.method}`
-                );
-
-                console.log(
-                    `[WEEKLY LOAD] ` +
-                    `${section.section_name} | ` +
-                    DAY_ORDER.map(
-                        day =>
-                            `${day}=` +
-                            `${weeklyLoad[day]}h`
-                    ).join(" | ")
-                );
-
-                console.log(
-                    `[WEEKLY TOTAL] ` +
-                    `${getSectionTotalScheduledHours(
-                        occupancy,
-                        section.id
-                    )} hours`
                 );
 
                 console.log(
@@ -3746,6 +4279,7 @@ const generateSchedules = async req => {
         }
 
         let worst = null;
+
         let worstScore = -Infinity;
 
         for (
@@ -3762,6 +4296,10 @@ const generateSchedules = async req => {
 
             score +=
                 analysis.professorBlocked;
+
+            score +=
+                analysis.professorWeeklyLimitBlocked *
+                2;
 
             score +=
                 analysis.roomBlocked;
@@ -3830,19 +4368,16 @@ const generateSchedules = async req => {
             );
 
             console.log(
+                `  professorWeeklyLimitBlocked=` +
+                `${worst.professorWeeklyLimitBlocked}`
+            );
+
+            console.log(
                 `  roomBlocked=${worst.roomBlocked}`
             );
 
             console.log(
                 `  sectionBlocked=${worst.sectionBlocked}`
-            );
-
-            console.log(
-                `  scanned=${worst.scannedCandidates}`
-            );
-
-            console.log(
-                `  analysisLimited=${worst.analysisLimited}`
             );
         }
 
@@ -3885,18 +4420,39 @@ const generateSchedules = async req => {
 
     /*
     |--------------------------------------------------------------------------
+    | PROFESSOR WORKLOAD SUMMARY
+    |--------------------------------------------------------------------------
+    */
+
+    const professorWorkload =
+        buildProfessorWorkloadSummary(
+            occupancy
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
     | BOTTLENECK SUMMARY
     |--------------------------------------------------------------------------
     */
 
     const bottleneckSummary = {
         professor: 0,
+
+        professorWeeklyHours: 0,
+
         room: 0,
+
         sectionTimeslot: 0,
+
         multipleResources: 0,
+
         combination: 0,
+
         searchTimeout: 0,
+
         nodeLimit: 0,
+
         unknown: 0
     };
 
@@ -3912,6 +4468,12 @@ const generateSchedules = async req => {
             "PROFESSOR"
         ) {
             bottleneckSummary.professor++;
+
+        } else if (
+            bottleneck ===
+            "PROFESSOR WEEKLY HOURS"
+        ) {
+            bottleneckSummary.professorWeeklyHours++;
 
         } else if (
             bottleneck ===
@@ -3952,6 +4514,38 @@ const generateSchedules = async req => {
         } else {
             bottleneckSummary.unknown++;
         }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PROFESSOR LOAD LOG
+    |--------------------------------------------------------------------------
+    */
+
+    console.log(
+        "\n========================================"
+    );
+
+    console.log(
+        "FINAL PROFESSOR WORKLOAD"
+    );
+
+    console.log(
+        "========================================"
+    );
+
+    for (
+        const professor
+        of professorWorkload
+    ) {
+        console.log(
+            `Professor ${professor.professorId} | ` +
+            `${professor.usedHours}/` +
+            `${professor.maxHours}h | ` +
+            `remaining=${professor.remainingHours}h | ` +
+            `utilization=${professor.utilizationPercent}%`
+        );
     }
 
 
@@ -4013,6 +4607,11 @@ const generateSchedules = async req => {
     );
 
     console.log(
+        `Professor Weekly Hours: ` +
+        `${bottleneckSummary.professorWeeklyHours}`
+    );
+
+    console.log(
         `Room: ` +
         `${bottleneckSummary.room}`
     );
@@ -4059,9 +4658,6 @@ const generateSchedules = async req => {
 
         academicTermId,
 
-        /*
-         * Keep this as the actual boolean.
-         */
         simulation,
 
         mode:
@@ -4092,6 +4688,12 @@ const generateSchedules = async req => {
 
         bottleneckSummary,
 
+        /*
+         * NEW:
+         * Very useful for your checker/UI.
+         */
+        professorWorkload,
+
         schedules:
             generatedSchedules,
 
@@ -4100,7 +4702,7 @@ const generateSchedules = async req => {
                 simulation,
 
             algorithm:
-                "HYBRID_OPTIMIZED_MRV_GREEDY_BACKTRACK_WEEKLY_DISTRIBUTION",
+                "HYBRID_OPTIMIZED_MRV_GREEDY_BACKTRACK_WEEKLY_PROFESSOR_CAPACITY",
 
             databaseWrite:
                 writeToDatabase,
@@ -4116,6 +4718,12 @@ const generateSchedules = async req => {
 
             weeklyDistribution:
                 true,
+
+            professorWeeklyHoursEnabled:
+                true,
+
+            defaultProfessorMaxHoursPerWeek:
+                DEFAULT_MAX_PROFESSOR_HOURS,
 
             maxBacktrackNodesPerSection:
                 MAX_BACKTRACK_NODES_PER_SECTION,

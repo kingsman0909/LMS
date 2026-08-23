@@ -150,20 +150,23 @@ const deleteCurriculum = async(id) => {
 }
 
 const createSubject = async(data) => {
-    const subject_code = await Subject.findByCode(data.subject_code);
-
-    if(subject_code){
-        throw new Error(
-            "Subject already exist"
-        ) 
-    }
+    
     try{
-        const programId = data.programs[0];
-        console.log("service creating subject with program ID: ", programId)
-        await Subject.createSubject(data, programId);
 
+        for(let i = 0; i < data.programs.length; i++){
+            const programId = data.programs[i];
+            const subject_code = await Subject.findByCodeAndProgram(data.subject_code, programId);
+
+            if(subject_code){
+                throw new Error(
+                    "Subject already exist"
+                ) 
+            }
+
+            await Subject.createSubject(data, programId);
+        }
         return{
-            message: "Sections successfully added!"
+            message: "Subject successfully added!"
         }
     }
     catch(err){

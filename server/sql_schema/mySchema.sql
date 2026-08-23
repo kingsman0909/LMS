@@ -755,5 +755,7 @@ where id > 0;
 delete from curriculum_subjects
 where id > 0;
 
+select * from subjects where id = 20;
 
+show create table subjects;
 
