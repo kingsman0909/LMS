@@ -41,10 +41,6 @@ const MAX_BOTTLENECK_SCAN = 3000;
 |--------------------------------------------------------------------------
 | PROFESSOR WORKLOAD
 |--------------------------------------------------------------------------
-|
-| A professor's total scheduled hours per academic term/week
-| cannot exceed max_hours_per_week.
-|
 */
 
 const DEFAULT_MAX_PROFESSOR_HOURS = 18;
@@ -279,10 +275,6 @@ const canProfessorTakeHours = (
             professorId
         );
 
-    /*
-     * NULL max_hours_per_week means use
-     * the configured default.
-     */
     if (
         max === null ||
         max === undefined
@@ -347,6 +339,225 @@ const removeProfessorWeeklyHours = (
             next
         );
     }
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| PROFESSOR WORKLOAD PRIORITY
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| This is the main workload-maximization logic.
+|
+| Example:
+|
+| Professor A = 16/18
+| Professor B = 10/18
+| Requirement = 2 hours
+|
+| A gets priority because:
+|
+| A remaining after = 0
+| B remaining after = 6
+|
+| Therefore A is selected first.
+|
+|--------------------------------------------------------------------------
+*/
+
+const getProfessorWorkloadPriority = (
+    occupancy,
+    professorId,
+    assignmentHours
+) => {
+    const current =
+        getProfessorWeeklyHours(
+            occupancy,
+            professorId
+        );
+
+    const max =
+        getProfessorMaxWeeklyHours(
+            occupancy,
+            professorId
+        );
+
+    const hours =
+        num(assignmentHours);
+
+    const remainingBefore =
+        Math.max(
+            0,
+            max - current
+        );
+
+    const remainingAfter =
+        remainingBefore - hours;
+
+    if (
+        remainingAfter < 0
+    ) {
+        return {
+            eligible: false,
+
+            current,
+
+            max,
+
+            remainingBefore,
+
+            remainingAfter,
+
+            exactFill: false
+        };
+    }
+
+    return {
+        eligible: true,
+
+        current,
+
+        max,
+
+        remainingBefore,
+
+        remainingAfter,
+
+        exactFill:
+            remainingAfter === 0
+    };
+};
+
+/*
+|--------------------------------------------------------------------------
+| SORT PROFESSORS BY WORKLOAD
+|--------------------------------------------------------------------------
+|
+| Priority:
+|
+| 1. Professor must be able to fit the requirement.
+| 2. Exact fill is preferred.
+| 3. Smallest remaining capacity AFTER assignment.
+| 4. Highest current workload.
+| 5. Lowest professor ID.
+|
+| This produces:
+|
+| 16/18 + 2h -> 18/18
+| before
+| 10/18 + 2h -> 12/18
+|
+|--------------------------------------------------------------------------
+*/
+
+const sortProfessorsByWorkload = (
+    professors,
+    occupancy,
+    assignmentHours
+) => {
+    const hours =
+        num(assignmentHours);
+
+    return [...professors].sort(
+        (a, b) => {
+
+            const pa =
+                getProfessorWorkloadPriority(
+                    occupancy,
+                    a.id,
+                    hours
+                );
+
+            const pb =
+                getProfessorWorkloadPriority(
+                    occupancy,
+                    b.id,
+                    hours
+                );
+
+            /*
+             * Ineligible professors always go last.
+             */
+            if (
+                pa.eligible !==
+                pb.eligible
+            ) {
+                return pa.eligible
+                    ? -1
+                    : 1;
+            }
+
+            if (!pa.eligible) {
+                return (
+                    num(a.id) -
+                    num(b.id)
+                );
+            }
+
+            /*
+             * EXACT FILL FIRST.
+             *
+             * Example:
+             *
+             * A = 16/18, requirement = 2
+             * B = 15/18, requirement = 2
+             *
+             * A -> 18/18
+             * B -> 17/18
+             *
+             * A wins.
+             */
+            if (
+                pa.exactFill !==
+                pb.exactFill
+            ) {
+                return pa.exactFill
+                    ? -1
+                    : 1;
+            }
+
+            /*
+             * Smallest remaining capacity AFTER
+             * assignment first.
+             *
+             * 16/18 + 1 = 17/18
+             * 15/18 + 1 = 16/18
+             *
+             * 17/18 is preferred because the
+             * professor is closer to full.
+             */
+            if (
+                pa.remainingAfter !==
+                pb.remainingAfter
+            ) {
+                return (
+                    pa.remainingAfter -
+                    pb.remainingAfter
+                );
+            }
+
+            /*
+             * If equal remaining-after,
+             * prefer higher current workload.
+             */
+            if (
+                pa.current !==
+                pb.current
+            ) {
+                return (
+                    pb.current -
+                    pa.current
+                );
+            }
+
+            return (
+                num(a.id) -
+                num(b.id)
+            );
+        }
+    );
 };
 
 
@@ -626,10 +837,6 @@ const candidateConflictMask = (
         mask |= 4;
     }
 
-    /*
-     * NEW:
-     * Professor weekly-hour constraint.
-     */
     if (
         !canProfessorTakeHours(
             occupancy,
@@ -868,7 +1075,7 @@ const getAllSectionSubjects = async (
 
 /*
 |--------------------------------------------------------------------------
-| SECTION SUBJECTS COMPATIBILITY
+| SECTION SUBJECTS
 |--------------------------------------------------------------------------
 */
 
@@ -1258,10 +1465,10 @@ const getProfessorMap = async (
                 row.lastname,
 
             max_hours_per_week:
-                row.max_hours_per_week == null
+                row.max_weekly_hours == null
                     ? DEFAULT_MAX_PROFESSOR_HOURS
                     : num(
-                        row.max_hours_per_week
+                        row.max_weekly_hours
                     )
         });
     }
@@ -1374,6 +1581,13 @@ const loadExistingSchedules = async (
 |--------------------------------------------------------------------------
 | LOAD PROFESSOR MAX HOURS
 |--------------------------------------------------------------------------
+|
+| FIX:
+|
+| SELECT max_weekly_hours
+| must be read as row.max_weekly_hours.
+|
+|--------------------------------------------------------------------------
 */
 
 const loadProfessorMaxHours = async (
@@ -1414,10 +1628,10 @@ const loadProfessorMaxHours = async (
             num(row.id);
 
         const maxHours =
-            row.max_hours_per_week == null
+            row.max_weekly_hours == null
                 ? DEFAULT_MAX_PROFESSOR_HOURS
                 : num(
-                    row.max_hours_per_week
+                    row.max_weekly_hours
                 );
 
         occupancy.professorMaxWeeklyHours.set(
@@ -1460,11 +1674,6 @@ const reserveExistingSchedules = (
             [slotId]
         );
 
-        /*
-         * NEW:
-         * Existing schedules consume professor
-         * weekly hours.
-         */
         addProfessorWeeklyHours(
             occupancy,
             row.professor_id,
@@ -1661,6 +1870,15 @@ const getValidRooms = (
 |--------------------------------------------------------------------------
 | CANDIDATE SCORING
 |--------------------------------------------------------------------------
+|
+| VERY IMPORTANT:
+|
+| Lower score = better candidate.
+|
+| Professor workload is now the strongest
+| non-hard constraint.
+|
+|--------------------------------------------------------------------------
 */
 
 const getResourceLoad = (
@@ -1698,12 +1916,60 @@ const scoreCandidate = (
             candidate.professorId
         );
 
-    const remainingAfterAssignment =
-        professorMaxHours -
-        (
-            professorWeeklyHours +
-            candidate.slotIds.length
+    const assignmentHours =
+        candidate.slotIds.length;
+
+    const remainingBefore =
+        Math.max(
+            0,
+            professorMaxHours -
+            professorWeeklyHours
         );
+
+    const remainingAfter =
+        remainingBefore -
+        assignmentHours;
+
+    /*
+     * Exact fill.
+     *
+     * Example:
+     * 16/18 + 2 = 18/18
+     */
+    const exactFill =
+        remainingAfter === 0;
+
+    /*
+     * The smaller the remaining capacity,
+     * the better.
+     *
+     * This is the main workload optimization.
+     */
+    const workloadFillScore =
+        Math.max(
+            0,
+            remainingAfter
+        ) * 100000;
+
+    /*
+     * Exact fills receive a huge advantage.
+     */
+    const exactFillBonus =
+        exactFill
+            ? -10000000
+            : 0;
+
+    /*
+     * Prefer professors who already have
+     * more workload when the remaining-after
+     * value is equal.
+     */
+    const currentWorkloadPreference =
+        Math.max(
+            0,
+            professorMaxHours -
+            professorWeeklyHours
+        ) * 100;
 
     const roomLoad =
         getResourceLoad(
@@ -1720,6 +1986,12 @@ const scoreCandidate = (
             ) || []
         ).length;
 
+    /*
+     * Scarcity remains important.
+     *
+     * If only one professor can teach a subject,
+     * protect that professor's availability.
+     */
     const scarcityPenalty =
         professorCount <= 1
             ? 100000
@@ -1730,38 +2002,23 @@ const scoreCandidate = (
                     : 0;
 
     /*
-     * Prefer professors who still have enough
-     * remaining capacity.
-     *
-     * But do NOT over-prioritize them so much
-     * that scheduling becomes unbalanced.
+     * Room waste.
      */
-    const workloadPenalty =
-        remainingAfterAssignment <= 0
-            ? 500000
-            : (
-                remainingAfterAssignment <= 3
-                    ? 15000
-                    : remainingAfterAssignment <= 6
-                        ? 5000
-                        : 0
-            );
-
     const roomWaste =
         candidate.room.capacity -
         num(
             candidate.studentCount
         );
 
+    /*
+     * Section day distribution.
+     */
     const existingDayHours =
         getSectionDayHours(
             occupancy,
             candidate.sectionId,
             candidate.day
         );
-
-    const assignmentHours =
-        candidate.slotIds.length;
 
     const projectedDayHours =
         existingDayHours +
@@ -1791,7 +2048,7 @@ const scoreCandidate = (
                 projectedDayHours - 6,
                 2
             ) *
-            SECTION_LONG_DAY_WEIGHT
+                SECTION_LONG_DAY_WEIGHT
             : 0;
 
     const spreadBonus =
@@ -1802,18 +2059,41 @@ const scoreCandidate = (
             )
             : 0;
 
+    /*
+     * WORKLOAD PRIORITY:
+     *
+     * exact fill
+     * ↓
+     * smallest remaining capacity
+     * ↓
+     * highest existing workload
+     */
     return (
-        professorLoad * 10000 +
-        roomLoad * 1000 +
+        exactFillBonus +
+
+        workloadFillScore +
+
+        currentWorkloadPreference +
+
         scarcityPenalty +
-        workloadPenalty +
+
+        roomLoad * 1000 +
+
         roomWaste * 5 +
+
         dayLoadPenalty +
+
         longDayPenalty +
+
         newDayPenalty +
+
         spreadBonus +
+
         candidate.dayIndex * 2 +
-        candidate.roomId
+
+        candidate.roomId +
+
+        professorLoad
     );
 };
 
@@ -1883,6 +2163,10 @@ const makeCandidate = (
 |--------------------------------------------------------------------------
 | CANDIDATE POOL
 |--------------------------------------------------------------------------
+|
+| PROFESSOR WORKLOAD ORDER IS APPLIED HERE.
+|
+|--------------------------------------------------------------------------
 */
 
 const getCandidatePool = ({
@@ -1920,8 +2204,34 @@ const getCandidatePool = ({
 
     let professorCapacityBlocked = 0;
 
+    /*
+     * Sort professors BEFORE generating candidates.
+     *
+     * This means:
+     *
+     * 16/18
+     * 15/18
+     * 10/18
+     *
+     * becomes:
+     *
+     * 16/18 first
+     * 15/18 second
+     * 10/18 third
+     *
+     * when requirement = 2 hours.
+     */
+    const sortedProfessors =
+        sortProfessorsByWorkload(
+            professors,
+            occupancy,
+            requirement.remainingHours ||
+            requirement.hours
+        );
+
     const insertBoundedCandidate =
         candidate => {
+
             if (
                 candidates.length <
                 limit
@@ -1987,6 +2297,11 @@ const getCandidatePool = ({
             }
         };
 
+    /*
+     * WINDOWS remain flexible.
+     *
+     * Professor is ordered by workload.
+     */
     for (
         const window
         of windows
@@ -2003,11 +2318,10 @@ const getCandidatePool = ({
 
         for (
             const professor
-            of professors
+            of sortedProfessors
         ) {
             /*
-             * NEW:
-             * Weekly professor limit.
+             * HARD weekly capacity constraint.
              */
             if (
                 !canProfessorTakeHours(
@@ -2017,9 +2331,13 @@ const getCandidatePool = ({
                 )
             ) {
                 professorCapacityBlocked++;
+
                 continue;
             }
 
+            /*
+             * HARD professor timeslot conflict.
+             */
             if (
                 hasSlotConflict(
                     occupancy.professorSlots,
@@ -2063,6 +2381,34 @@ const getCandidatePool = ({
                         professorMap
                     );
 
+                /*
+                 * Store workload information
+                 * directly on the candidate.
+                 */
+                const workload =
+                    getProfessorWorkloadPriority(
+                        occupancy,
+                        professor.id,
+                        window.slotIds.length
+                    );
+
+                candidate.professorWorkload = {
+                    before:
+                        workload.current,
+
+                    max:
+                        workload.max,
+
+                    remainingBefore:
+                        workload.remainingBefore,
+
+                    remainingAfter:
+                        workload.remainingAfter,
+
+                    exactFill:
+                        workload.exactFill
+                };
+
                 insertBoundedCandidate(
                     candidate
                 );
@@ -2072,7 +2418,9 @@ const getCandidatePool = ({
 
     return {
         candidates,
+
         totalValid,
+
         professorCapacityBlocked
     };
 };
@@ -2205,6 +2553,20 @@ const estimateRequirementFlexibility = ({
     let valid = 0;
     let scanned = 0;
 
+    /*
+     * Workload-sorted professors.
+     *
+     * This does NOT change the flexibility count,
+     * but it lets us find useful candidates earlier.
+     */
+    const sortedProfessors =
+        sortProfessorsByWorkload(
+            professors,
+            occupancy,
+            requirement.remainingHours ||
+            requirement.hours
+        );
+
     for (
         const window
         of windows
@@ -2221,12 +2583,8 @@ const estimateRequirementFlexibility = ({
 
         for (
             const professor
-            of professors
+            of sortedProfessors
         ) {
-            /*
-             * NEW:
-             * Professor weekly capacity.
-             */
             if (
                 !canProfessorTakeHours(
                     occupancy,
@@ -2569,6 +2927,13 @@ const solveGreedy = ({
             };
         }
 
+        /*
+         * The candidate pool is already sorted
+         * by professor workload.
+         *
+         * Therefore candidate[0] is the best
+         * workload-fitting valid candidate.
+         */
         const candidate =
             pool.candidates[0];
 
@@ -2627,6 +2992,11 @@ const solveGreedy = ({
                 candidate.professorId
             )}/` +
             `${getProfessorMaxWeeklyHours(
+                occupancy,
+                candidate.professorId
+            )}h | ` +
+            `Remaining: ` +
+            `${getProfessorRemainingHours(
                 occupancy,
                 candidate.professorId
             )}h`
@@ -2759,6 +3129,18 @@ const solveBacktracking = ({
             return false;
         }
 
+        /*
+         * Candidate pool is already sorted:
+         *
+         * 1. exact workload fill
+         * 2. smallest remaining capacity
+         * 3. highest current workload
+         * 4. scarcity
+         * 5. room/day considerations
+         *
+         * Backtracking therefore tries the most
+         * workload-efficient professor first.
+         */
         for (
             const candidate
             of pool.candidates
@@ -2815,6 +3197,10 @@ const solveBacktracking = ({
                         candidate.professorId
                     )}/` +
                     `${getProfessorMaxWeeklyHours(
+                        occupancy,
+                        candidate.professorId
+                    )}h | ` +
+                    `Remaining=${getProfessorRemainingHours(
                         occupancy,
                         candidate.professorId
                     )}h`
@@ -3306,10 +3692,27 @@ const buildProfessorWorkloadSummary = (
         });
     }
 
+    /*
+     * Highest utilization first.
+     */
     summary.sort(
-        (a, b) =>
-            b.usedHours -
-            a.usedHours
+        (a, b) => {
+
+            if (
+                b.usedHours !==
+                a.usedHours
+            ) {
+                return (
+                    b.usedHours -
+                    a.usedHours
+                );
+            }
+
+            return (
+                a.professorId -
+                b.professorId
+            );
+        }
     );
 
     return summary;
@@ -3462,6 +3865,11 @@ const generateSchedules = async req => {
     console.log(
         "Professor weekly workload limit: " +
         `${DEFAULT_MAX_PROFESSOR_HOURS} hours`
+    );
+
+    console.log(
+        "Professor workload strategy: " +
+        "FILL-FIRST / EXACT-FILL PRIORITY"
     );
 
 
@@ -3819,8 +4227,8 @@ const generateSchedules = async req => {
     );
 
     /*
-     * Make sure professors found through
-     * professor_subjects also have their limit.
+     * Ensure every professor from
+     * professor_subjects has a limit.
      */
     for (
         const professors
@@ -3868,6 +4276,9 @@ const generateSchedules = async req => {
             professorIds
         );
 
+    const initialProfessorLoad =
+        [];
+
     for (
         const professorId
         of uniqueProfessorIds
@@ -3884,13 +4295,52 @@ const generateSchedules = async req => {
                 professorId
             );
 
-        console.log(
-            `[PROFESSOR ${professorId}] ` +
-            `${used}/${max} hours | ` +
-            `remaining=${Math.max(
+        const remaining =
+            Math.max(
                 0,
                 max - used
-            )}`
+            );
+
+        initialProfessorLoad.push({
+            professorId,
+            used,
+            max,
+            remaining
+        });
+    }
+
+    /*
+     * Show highest workload first.
+     */
+    initialProfessorLoad.sort(
+        (a, b) => {
+
+            if (
+                b.used !==
+                a.used
+            ) {
+                return (
+                    b.used -
+                    a.used
+                );
+            }
+
+            return (
+                a.professorId -
+                b.professorId
+            );
+        }
+    );
+
+    for (
+        const professor
+        of initialProfessorLoad
+    ) {
+        console.log(
+            `[PROFESSOR ${professor.professorId}] ` +
+            `${professor.used}/` +
+            `${professor.max} hours | ` +
+            `remaining=${professor.remaining}`
         );
     }
 
@@ -4189,6 +4639,12 @@ const generateSchedules = async req => {
                                     occupancy,
                                     assignment.professorId
                                 ),
+
+                            professorExactFill:
+                                getProfessorRemainingHours(
+                                    occupancy,
+                                    assignment.professorId
+                                ) === 0,
 
                             room:
                                 assignment.room.room_name,
@@ -4519,7 +4975,7 @@ const generateSchedules = async req => {
 
     /*
     |--------------------------------------------------------------------------
-    | PROFESSOR LOAD LOG
+    | FINAL PROFESSOR LOAD LOG
     |--------------------------------------------------------------------------
     */
 
@@ -4688,10 +5144,6 @@ const generateSchedules = async req => {
 
         bottleneckSummary,
 
-        /*
-         * NEW:
-         * Very useful for your checker/UI.
-         */
         professorWorkload,
 
         schedules:
@@ -4702,7 +5154,10 @@ const generateSchedules = async req => {
                 simulation,
 
             algorithm:
-                "HYBRID_OPTIMIZED_MRV_GREEDY_BACKTRACK_WEEKLY_PROFESSOR_CAPACITY",
+                "HYBRID_MRV_FILL_FIRST_PROFESSOR_WORKLOAD",
+
+            workloadStrategy:
+                "EXACT_FILL_FIRST_THEN_SMALLEST_REMAINING_CAPACITY",
 
             databaseWrite:
                 writeToDatabase,
