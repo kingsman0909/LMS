@@ -135,7 +135,10 @@ const AdminDashboard = (props) => {
             setSchedules(
                 data.schedules || []
             );
-            setScheduleGenerated(true);
+
+            if( data.schedules && data.schedules.length > 0){
+                setScheduleGenerated(true);
+            }
 
         } catch (error) {
 
@@ -172,6 +175,7 @@ const AdminDashboard = (props) => {
                 section.status ===
                 "Scheduled"
         ).length;
+
 
     const [loading, setLoading] = useState(false);
 
@@ -537,7 +541,7 @@ const AdminDashboard = (props) => {
                                     : "status-icon warning"
                             }
                         >
-
+                            
                             {scheduleGenerated
                                 ? <FiCheckCircle />
                                 : <FiClock />

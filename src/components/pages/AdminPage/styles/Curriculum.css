@@ -5,7 +5,6 @@
     background: white;
     border-radius: 20px;
     width: 100%;
-    margin-inline: 30px;
 }
 
 /* =========================================================
@@ -350,8 +349,18 @@
    TABLE
 ========================================================= */
 
+.subject-table-wrapper{
+    overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
 .subject-table {
     border-top: 1px solid #edf0ee;
+    overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .table-header,
@@ -729,20 +738,6 @@
 @media (max-width: 1000px) {
     .program-list {
         grid-template-columns: repeat(2, 1fr);
-    }
-
-    .table-header {
-        display: none;
-    }
-
-    .subject-row {
-        grid-template-columns: 35px 1fr 80px 30px;
-        gap: 10px;
-        padding: 12px 18px;
-    }
-
-    .subject-description {
-        display: none;
     }
 
     .professor {

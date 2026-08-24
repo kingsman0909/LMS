@@ -443,3 +443,11 @@
     padding-inline: 40px;
 }
 
+@media screen and (max-width: 768px) {
+    .admin-logo{
+        padding: 0 5px;
+    }
+    .admin-title{
+        display: none;
+    }
+}

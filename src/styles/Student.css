@@ -1,246 +1,513 @@
-.student{
+/* =========================================================
+   ROOT STUDENT LAYOUT
+========================================================= */
+
+.student {
     display: flex;
     flex-direction: column;
+
     width: 100%;
-    height: 100vh;
+    max-width: 100%;
+    min-width: 0;
+
+    min-height: 100vh;
+
+    box-sizing: border-box;
+
     color: whitesmoke;
-    justify-content: space-between;
     padding-top: 60px;
+
+    overflow-x: hidden;
 }
 
-.student h1{
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.s-header {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 60px;
+    min-height: 60px;
+
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 50px;
+
+    color: var(--primary-dark);
+    background-color: rgb(1, 49, 20);
+
+    box-shadow: 0 0 10px gray;
+
+    z-index: 1000;
+}
+
+
+/* =========================================================
+   HEADER LEFT
+========================================================= */
+
+.s-header > div {
+    display: flex;
+    align-items: center;
+
+    min-width: 0;
+}
+
+.h-left {
+    gap: 50px;
+    min-width: 0;
+}
+
+.student h1 {
     padding: 0;
     margin: 0;
+
     font-style: italic;
     color: var(--text-color-g);
     font-size: 40px;
+
     cursor: pointer;
 }
 
-.s-name{
+.s-name {
     color: rgb(197, 196, 196);
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.s-header{
+
+/* =========================================================
+   RIGHT ICONS
+========================================================= */
+
+.right-icons {
     display: flex;
-    justify-content: space-between;
-    color: var(--primary-dark);
-    background-color: rgb(1, 49, 20);
-    padding-inline: 50px;
-    min-height: 60px;
-    position: fixed;
-    top: 0;
-    z-index: 100;
-    width: 100%;
-    box-shadow: 0 0 10px gray;
-}
+    align-items: center;
 
-
-.right-icons{
     gap: 10px;
     font-size: 28px;
+
+    flex-shrink: 0;
 }
 
-.notif-box{
+.menu,
+.notif,
+.profile {
+    position: relative;
+
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 5px;
+
+    transition: all 0.3s linear;
+
+    flex-shrink: 0;
+}
+
+.menu:hover,
+.notif:hover,
+.profile:hover {
+    background-color: black;
+}
+
+.right-icons div:hover .icon {
+    color: white;
+}
+
+.icon {
+    cursor: pointer;
+    color: var(--text-color-g);
+    transition: all 0.3s linear;
+}
+
+
+/* =========================================================
+   NOTIFICATION
+========================================================= */
+
+.notif-box {
     position: absolute;
-    bottom: 0;
+
     right: 0;
-    width: 300px;
-    height: 400px;
-    z-index: 10;
-    border-radius: 10px;
-    color: var(--text);
-    font-size: small;
+    bottom: 0;
+
     transform: translateY(101%);
+
+    width: 300px;
+    max-width: calc(100vw - 30px);
+    height: 400px;
+    max-height: calc(100vh - 80px);
+
+    box-sizing: border-box;
+
+    z-index: 1100;
+
+    border-radius: 10px;
+    border: 1px solid gray;
+
+    color: var(--text);
     background-color: var(--bg);
+
     padding: 10px;
 
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+
     gap: 10px;
-    border: 1px solid gray;
+
     overflow-y: auto;
-
-    h2{
-        align-self: flex-start;
-        color: var(--primary-dark);
-        width: 100%;
-        padding-bottom: 10px;
-        border-bottom: 1px solid white;
-    }
-    p{
-        cursor: pointer;
-        width: 100%;
-        padding: 5px;
-        transition: all 0.2s ease;
-        padding-bottom: 5px;
-        border-bottom: 1px solid gray;
-    }
-    p:hover{
-        background-color: gray;
-        border-radius: 5px;
-
-    }
 }
 
-.menu, .notif, .profile{
-    position: relative;
-    height: 40px;
-    width: 40px;
-    display: flex;
-    justify-content: center;
-    border-radius: 5px;
-    transition: all 0.3s linear;
+.notif-box h2 {
+    align-self: flex-start;
+
+    width: 100%;
+
+    padding-bottom: 10px;
+    margin: 0;
+
+    color: var(--primary-dark);
+
+    border-bottom: 1px solid white;
 }
 
-.menu:hover, .notif:hover, .profile:hover{
-    background-color: black;
-}
+.notif-box p {
+    width: 100%;
 
-.right-icons div:hover .icon{
-    color: white;
-}
-.icon{
+    box-sizing: border-box;
+
+    padding: 5px;
+    margin: 0;
+
     cursor: pointer;
-    color: var(--text-color-g);
-    transition: all 0.3s linear;
+
+    border-bottom: 1px solid gray;
+
+    transition: all 0.2s ease;
 }
-.profile{
-    position: relative;
-    display: flex;
+
+.notif-box p:hover {
+    background-color: gray;
+    border-radius: 5px;
+}
+
+
+/* =========================================================
+   PROFILE / LOGOUT
+========================================================= */
+
+.profile {
     flex-direction: column;
 }
 
-.logout{
+.logout {
     position: absolute;
+
     width: 100px;
     height: fit-content;
+
     padding: 10px;
+
     bottom: 0;
-    transform: translateY(110%);
     right: 0;
+
+    transform: translateY(110%);
+
+    box-sizing: border-box;
+
     border: 1px solid gray;
     border-radius: 5px;
+
     background-color: black;
+
     display: flex;
     flex-direction: column;
+    align-items: center;
 }
 
-.logout button{
+.logout button {
     border: none;
+
     background: white;
+
     height: 30px;
     width: 90px;
+
     cursor: pointer;
+
     border-radius: 10px;
+
     transition: all 0.3s ease;
 }
-.logout button:hover{
+
+.logout button:hover {
     opacity: 0.7;
 }
-.s-header div{
-    display: flex;
-    align-items: center;
-}
 
-.h-left{
-    gap: 50px;
-}
 
-.s-body{
+/* =========================================================
+   BODY
+========================================================= */
+
+.s-body {
     display: flex;
+
     flex: 1;
-    justify-content: space-between;
+
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+    min-height: 0;
+
+    box-sizing: border-box;
 }
 
-.b-menu{
-    height: 100%;
-    background-color: rgb(45, 46, 45);
+
+/* =========================================================
+   SIDEBAR WRAPPER
+========================================================= */
+
+.b-wrapper {
     width: 250px;
-    transition: all 0.5s ease;
-    position: fixed;
-    left: 0;
-    top: calc(0 - 60px);
-    color: rgb(197, 196, 196);
-    z-index: 100;
+    min-width: 250px;
+
+    height: calc(100vh - 60px);
+
+    flex-shrink: 0;
+
+    transition: width 0.5s ease;
+
+    box-sizing: border-box;
 }
 
-.menu-info{
+.b-wrapper.close {
+    width: 0;
+    min-width: 0;
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.b-menu {
+    position: fixed;
+
+    left: 0;
+    top: 60px;
+    bottom: 0;
+
+    width: 250px;
+
+    box-sizing: border-box;
+
+    background-color: rgb(45, 46, 45);
+    color: rgb(197, 196, 196);
+
+    z-index: 900;
+
+    transition: transform 0.5s ease;
     display: flex;
     flex-direction: column;
+    gap: 0px;
+    .line-sidebar{
+        transform: translateY(-50px);
+    }
+
+}
+
+.b-menu.close,
+.b-menu.closeBar {
+    transform: translateX(-100%);
+
+    .line-sidebar{
+        transform: translateY(-50px);
+    }
+}
+
+
+/* =========================================================
+   SIDEBAR CONTENT
+========================================================= */
+
+.menu-info {
+    display: flex;
+    flex-direction: column;
+    margin-top: 30px;
     align-items: center;
-    padding-top: 40px;
-    margin-bottom: 20px;
     color: rgb(197, 196, 196);
     overflow: hidden;
 }
 
-.menu-info div{
+.menu-info div {
     display: flex;
     flex-direction: column;
     align-items: center;
+
     padding: 10px;
+
     border-radius: 10px;
 }
-.menu-info h2{
+
+.menu-info h2 {
     color: var(--text-color-g);
 }
-.menu-info h1{
+
+.menu-info h1 {
     font-style: normal;
     margin: 0;
 }
-.menu-info p{
+
+.menu-info p {
     font-style: italic;
 }
-.menu-info h4{
+
+.menu-info h4 {
     align-self: flex-start;
 }
 
-.b-menu.close{
-    transform: translateX(-100%);
-}
 
-.b-menu.closeBar{
-    transform: translateX(-100%);
-}
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
 
-.b-wrapper{
-    height: 100%;
-    width: 250px;
-    transition: all 0.5s ease;
-}
-.b-wrapper.close{
-    width: 0;
-}
-
-
-.b-content{
+.b-content {
     position: relative;
+
     flex: 1;
+
+    width: 0;
+    min-width: 0;
+    min-height: 0;
+
+    box-sizing: border-box;
+
     display: flex;
     flex-direction: column;
     align-items: center;
+
     gap: 10px;
+
+    overflow-x: hidden;
 }
 
-.b-content::before{
-    content: "";
+
+/* IMPORTANT:
+   React Router's Routes needs to be allowed to shrink
+*/
+
+.b-content > * {
     width: 100%;
-    height: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+
+/* =========================================================
+   BACKGROUND
+========================================================= */
+
+.b-content::before {
+    content: "";
+
     position: fixed;
-    background-image: black;
+
+    left: 0;
+    top: 0;
+
+    width: 100vw;
+    height: 100vh;
+
     background-repeat: no-repeat;
     background-position: center;
     background-size: cover;
+
     z-index: -1;
+
     opacity: 0.3;
+
+    pointer-events: none;
 }
 
-.box{
+
+/* =========================================================
+   BOX
+========================================================= */
+
+.box {
     height: 300px;
     width: 90%;
+
+    box-sizing: border-box;
+
     border: 3px solid var(--text-color-g);
     border-radius: 20px;
 }
 
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+
+    .s-header {
+        padding: 0 15px;
+    }
+
+    .h-left {
+        gap: 10px;
+    }
+
+    .student h1 {
+        font-size: 30px;
+    }
+
+    .s-name {
+        max-width: 140px;
+        font-size: 11px;
+    }
+
+    /*
+       Sidebar no longer consumes layout width.
+       It becomes an overlay.
+    */
+
+    .b-wrapper {
+        width: 0;
+        min-width: 0;
+    }
+
+    .b-menu {
+        width: 250px;
+    }
+
+    .b-content {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .notif-box {
+        right: -50px;
+    }
+}

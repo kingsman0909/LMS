@@ -1356,7 +1356,7 @@ export default function Curriculum() {
                         </div>
 
                     ) : (
-
+                        <div className="subject-table-wrapper">
                         <div className="subject-table">
 
                             <div className="table-header">
@@ -1473,9 +1473,10 @@ export default function Curriculum() {
                             )}
 
                         </div>
+                        </div>
 
                     )}
-
+                    
                 </div>
 
             </div>

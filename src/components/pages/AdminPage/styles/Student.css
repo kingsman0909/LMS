@@ -103,10 +103,13 @@
 
 .student-table-container {
     overflow-x: auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .student-table-container table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
 }
 
