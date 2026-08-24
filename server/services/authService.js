@@ -9,7 +9,6 @@ const Programs = require('../model/Programs');
 const Section = require('../model/Sections');
 const Academic = require('../model/AcademicTerm');
 const Subject = require('../model/Subjects');
-const { TbWashDryP } = require("react-icons/tb");
 const scheduleModel = require("../model/Schedule");
 const capacityChecker = require("../services/capacityCheckerService");
 const Curriculum = require("../model/Curriculum");
