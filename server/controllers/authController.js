@@ -316,31 +316,65 @@ const getCourses = async (req, res) => {
 }
 
 const getSubjects = async (req, res) => {
-    
-    try{
+    console.log("=================================");
+    console.log("GET SUBJECTS CONTROLLER START");
+    console.log("=================================");
+
+    try {
+        console.log("STEP 1 - req.user:", req.user);
 
         const userRole = req.user.role;
-        const term = await academic.getActiveAcademicTerm();
-        const semester = term.semester;
 
-        
-        let subjects = null;
-        if(userRole === "admin"){
+        console.log("STEP 2 - userRole:", userRole);
+
+        console.log("STEP 3 - calling getActiveAcademicTerm");
+
+        const term = await academic.getActiveAcademicTerm();
+
+        console.log("STEP 4 - term:", term);
+
+        const semester = term?.semester;
+
+        console.log("STEP 5 - semester:", semester);
+
+        let subjects;
+
+        if (userRole === "admin") {
+            console.log("STEP 6 - calling Subjects.getSubjectsAdmin()");
+
             subjects = await Subjects.getSubjectsAdmin();
+
+            console.log("STEP 7 - admin subjects:", subjects);
+        } else {
+            console.log("STEP 6 - calling Subjects.getSubjects()");
+
+            subjects = await Subjects.getSubjects(semester);
+
+            console.log("STEP 7 - regular subjects:", subjects);
         }
-        else{
-            subjects = await Subjects.getSubjects(semester)
-        }
-        res.status(200).json({
+
+        console.log("STEP 8 - SUCCESS");
+
+        return res.status(200).json({
             subjects
         });
-    }
-    catch(error){
-        res.status(500).json({
-            message: "Failed to fetch subjects"
+
+    } catch (error) {
+        console.error("=================================");
+        console.error("GET SUBJECTS ERROR");
+        console.error("=================================");
+        console.error(error);
+        console.error("MESSAGE:", error.message);
+        console.error("STACK:", error.stack);
+
+        return res.status(500).json({
+            message: "Failed to fetch subjects",
+            error: error.message
         });
     }
-}
+};
+
+
 
 const getStudentSubjects = async (req, res) => {
     
@@ -1110,6 +1144,78 @@ const assignSubjectsToProfessor = async (req, res) => {
 };
 
 
+const {checkAllProgramCapacities} = require("../services/Simulation");
+
+const SimulateStudents = async (req, res) => {
+
+    try {
+
+        console.log(
+            "\n========================================"
+        );
+
+        console.log(
+            "SIMULATE STUDENTS REQUEST"
+        );
+
+        console.log(
+            "========================================"
+        );
+
+
+        const result =
+            await checkAllProgramCapacities();
+
+
+        return res.status(200).json(
+            result
+        );
+
+    } catch (error) {
+
+        console.error(
+            "\n[SIMULATE STUDENTS ERROR]"
+        );
+
+        console.error(
+            error
+        );
+
+
+        return res.status(500).json({
+
+            success:
+                false,
+
+            message:
+                error.message ||
+                "Failed to simulate student capacity."
+        });
+    }
+};
+
+
+
+const { runOptimizer } = require("../services/nodeWrapper");
+
+const OptimalScheduler =  async (req, res) => {
+    console.log("controller reached")
+    try {
+        const { programId, academicTermId } = req.body;
+
+        const result = await runOptimizer(programId, academicTermId);
+
+        res.json({
+            success: result.status === "ok",
+            result
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
 
 
 
@@ -1117,6 +1223,8 @@ const assignSubjectsToProfessor = async (req, res) => {
 module.exports = {
     login,
     me,
+    OptimalScheduler,
+    SimulateStudents,
     getSubjectsForCurriculum,
     assignSubjectsToProfessor,
     getCurriculum,

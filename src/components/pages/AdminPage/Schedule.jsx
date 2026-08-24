@@ -1,6 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import "./styles/Schedule.css";
+import { API_BASE_URL } from "../../../config";
 
 const AdminSchedule = () => {
 
@@ -13,26 +13,31 @@ const AdminSchedule = () => {
 
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [selectedSection, setSelectedSection] = useState(null);
+
     const [term, setTerm] = useState(null);
     const [programs, setPrograms] = useState([]);
     const [schedules, setSchedules] = useState([]);
     const [sections, setSections] = useState([]);
     const [students, setStudents] = useState([]);
     const [totalStudents, setTotalStudents] = useState(0);
+
+    // =========================
+    // CAPACITY STATES
+    // =========================
+
     const [capacityLoading, setCapacityLoading] = useState(false);
     const [capacityData, setCapacityData] = useState(null);
+    const [showCapacityModal, setShowCapacityModal] = useState(false);
+
     // =========================
     // GENERATE MODAL
     // =========================
 
-    const [showGenerateModal, setShowGenerateModal] =
-        useState(false);
+    const [showGenerateModal, setShowGenerateModal] = useState(false);
 
-    const [selectedProgram, setSelectedProgram] =
-        useState("");
+    const [selectedProgram, setSelectedProgram] = useState("");
 
-    const [selectedAcademicTerm, setSelectedAcademicTerm] =
-        useState("");
+    const [selectedAcademicTerm, setSelectedAcademicTerm] = useState("");
 
 
     // =========================
@@ -46,19 +51,16 @@ const AdminSchedule = () => {
             const token =
                 localStorage.getItem("admin_token");
 
-            const response = await fetch(
-                "http://localhost:3000/api/auth/getAcademicTerm",
+            const response = await fetch(`${API_BASE_URL}/api/auth/getAcademicTerm`,
                 {
                     method: "GET",
                     headers: {
-                        Authorization:
-                            `Bearer ${token}`
+                        Authorization: `Bearer ${token}`
                     }
                 }
             );
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
             console.log(
                 "Academic Term:",
@@ -67,7 +69,8 @@ const AdminSchedule = () => {
 
             if (!response.ok) {
                 throw new Error(
-                    data.message
+                    data.message ||
+                    "Failed to fetch academic term."
                 );
             }
 
@@ -79,98 +82,156 @@ const AdminSchedule = () => {
                 "Failed to fetch academic term:",
                 error
             );
+
         }
     };
 
+
+    // =========================
+    // FETCH TOTAL STUDENTS
+    // =========================
+
     const fetchTotalStudents = async () => {
-    try {
-        const token =
+
+        try {
+
+            const token =
                 localStorage.getItem("admin_token");
 
-        const response = await fetch(
-            "http://localhost:3000/api/auth/admin/getTotalStudents",
-            {
-                method: "GET",
-                credentials: "include",
-                headers: {
-                        Authorization:
-                            `Bearer ${token}`
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/getTotalStudents`,
+                {
+                    method: "GET",
+                    credentials: "include",
+                    headers: {
+                        Authorization: `Bearer ${token}`
                     }
-                
-            }
-        );
+                }
+            );
 
-        if (!response.ok) {
-            throw new Error("Failed to fetch total students");
+            if (!response.ok) {
+
+                const data = await response.json().catch(() => ({}));
+
+                throw new Error(
+                    data.message ||
+                    "Failed to fetch total students"
+                );
+            }
+
+            const data = await response.json();
+
+            console.log(
+                "Total students:",
+                data
+            );
+
+            setTotalStudents(
+                Number(data.totalStudents) || 0
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Error fetching total students:",
+                error
+            );
+
+        }
+    };
+
+
+    // =========================
+    // CHECK UNIVERSITY CAPACITY
+    // =========================
+
+    const handleCheckCapacity = async () => {
+
+        if (!term?.id) {
+
+            alert(
+                "Academic term is not available yet."
+            );
+
+            return;
         }
 
-        const data = await response.json();
-        console.log("total student: ", data);
-        setTotalStudents(data.totalStudents);
-    } catch (error) {
-        console.error("Error fetching total students:", error);
-        return 0;
-    }
-};
+        try {
 
+            setCapacityLoading(true);
 
-const handleCheckCapacity = async () => {
+            const token =
+                localStorage.getItem("admin_token");
 
-    console.log("checking capacity")
-    try {
-
-        setCapacityLoading(true);
-
-
-        const response =
-            await fetch(
-                `http://localhost:3000/api/auth/admin/checkUniversityCapacity?academicTermId=${term.id}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/checkUniversityCapacity?academicTermId=${term.id}`,
                 {
                     method: "GET",
 
                     headers: {
                         Authorization:
-                            `Bearer ${localStorage.getItem("admin_token")}`
+                            `Bearer ${token}`
                     }
                 }
             );
 
+            const data = await response.json();
 
-        const data =
-            await response.json();
-
-        console.log("simulated capacity: ",data);
-        if (!response.ok) {
-
-            throw new Error(
-                data.message ||
-                "Failed to check capacity."
+            console.log(
+                "Capacity checker response:",
+                data
             );
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.message ||
+                    "Failed to check capacity."
+                );
+            }
+
+            /*
+             * NEW API STRUCTURE
+             *
+             * data.data:
+             *
+             * {
+             *   academicTermId,
+             *   checkedPrograms,
+             *   failed,
+             *   failedPrograms,
+             *   globalAllocation,
+             *   globalProfessorSummary,
+             *   globalSubjectBottlenecks,
+             *   message,
+             *   passed,
+             *   passedPrograms,
+             *   professorSummary,
+             *   programProfessorCapacity
+             * }
+             */
+
+            setCapacityData(
+                data.data || null
+            );
+
+            setShowCapacityModal(true);
+
+        } catch (error) {
+
+            console.error(
+                "Capacity check error:",
+                error
+            );
+
+            alert(
+                error.message ||
+                "Failed to check professor capacity."
+            );
+
+        } finally {
+
+            setCapacityLoading(false);
         }
-
-
-        setCapacityData(
-            data.data
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-        alert(
-            error.message
-        );
-
-    }
-
-    finally {
-        alert("Done checking!")
-        setCapacityLoading(false);
-        
-    }
-};
+    };
 
 
     // =========================
@@ -184,12 +245,9 @@ const handleCheckCapacity = async () => {
         try {
 
             const token =
-                localStorage.getItem(
-                    "admin_token"
-                );
+                localStorage.getItem("admin_token");
 
-            const response = await fetch(
-                `http://localhost:3000/api/auth/admin/getProgramsWithSections?academicTermId=${term.id}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/getProgramsWithSections?academicTermId=${term.id}`,
                 {
                     method: "GET",
                     headers: {
@@ -199,8 +257,7 @@ const handleCheckCapacity = async () => {
                 }
             );
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
             console.log(
                 "Programs:",
@@ -208,8 +265,10 @@ const handleCheckCapacity = async () => {
             );
 
             if (!response.ok) {
+
                 throw new Error(
-                    data.message
+                    data.message ||
+                    "Failed to fetch programs."
                 );
             }
 
@@ -238,12 +297,9 @@ const handleCheckCapacity = async () => {
         try {
 
             const token =
-                localStorage.getItem(
-                    "admin_token"
-                );
+                localStorage.getItem("admin_token");
 
-            const response = await fetch(
-                `http://localhost:3000/api/auth/admin/getScheduleSections?academicTermId=${term.id}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/getScheduleSections?academicTermId=${term.id}`,
                 {
                     method: "GET",
                     headers: {
@@ -253,8 +309,7 @@ const handleCheckCapacity = async () => {
                 }
             );
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
             console.log(
                 "Schedule Sections:",
@@ -262,8 +317,10 @@ const handleCheckCapacity = async () => {
             );
 
             if (!response.ok) {
+
                 throw new Error(
-                    data.message
+                    data.message ||
+                    "Failed to fetch sections."
                 );
             }
 
@@ -292,12 +349,9 @@ const handleCheckCapacity = async () => {
         try {
 
             const token =
-                localStorage.getItem(
-                    "admin_token"
-                );
+                localStorage.getItem("admin_token");
 
-            const response = await fetch(
-                `http://localhost:3000/api/auth/admin/getSchedules?academicTermId=${term.id}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/getSchedules?academicTermId=${term.id}`,
                 {
                     method: "GET",
                     headers: {
@@ -307,8 +361,7 @@ const handleCheckCapacity = async () => {
                 }
             );
 
-            const data =
-                await response.json();
+            const data = await response.json();
 
             console.log(
                 "Schedules:",
@@ -316,8 +369,10 @@ const handleCheckCapacity = async () => {
             );
 
             if (!response.ok) {
+
                 throw new Error(
-                    data.message
+                    data.message ||
+                    "Failed to fetch schedules."
                 );
             }
 
@@ -334,21 +389,24 @@ const handleCheckCapacity = async () => {
         }
     };
 
+
+    // =========================
+    // GET STUDENTS
+    // =========================
+
     const fetchStudents = async () => {
 
         try {
 
-            const token = localStorage.getItem("admin_token");
+            const token =
+                localStorage.getItem("admin_token");
 
-            if(!token){
-                return <p>No token</p>
-            }
-            const response = await fetch(
-                "http://localhost:3000/api/auth/admin/getStudents",
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/getStudents`,
                 {
                     method: "GET",
                     headers: {
-                        Authorization: `Bearer ${token}`
+                        Authorization:
+                            `Bearer ${token}`
                     }
                 }
             );
@@ -356,14 +414,21 @@ const handleCheckCapacity = async () => {
             const data = await response.json();
 
             if (response.ok) {
-                setStudents(data.students);
+
+                setStudents(
+                    data.students || []
+                );
             }
 
         } catch (error) {
-            console.error(error);
-        }
 
+            console.error(
+                "Failed to fetch students:",
+                error
+            );
+        }
     };
+
 
     // =========================
     // INITIAL FETCH
@@ -377,8 +442,9 @@ const handleCheckCapacity = async () => {
 
     }, []);
 
+
     // =========================
-    // FETCH AFTER TERM IS READY
+    // FETCH AFTER TERM READY
     // =========================
 
     useEffect(() => {
@@ -400,7 +466,7 @@ const handleCheckCapacity = async () => {
         sections.filter(section => {
 
             const sectionText =
-                `${section.program || ""} ${section.year}-${section.section}`;
+                `${section.program || ""} ${section.year || ""}-${section.section || ""}`;
 
             const matchesSearch =
                 sectionText
@@ -411,8 +477,8 @@ const handleCheckCapacity = async () => {
 
             const matchesYear =
                 yearFilter === "all" ||
-                section.year.toString()
-                    === yearFilter;
+                String(section.year) ===
+                    yearFilter;
 
             return (
                 matchesSearch &&
@@ -420,9 +486,6 @@ const handleCheckCapacity = async () => {
             );
         });
 
-        
-
-    
 
     // =========================
     // STATISTICS
@@ -444,6 +507,103 @@ const handleCheckCapacity = async () => {
         ).length;
 
 
+    // =====================================================
+    // NEW PROGRAM CAPACITY DATA
+    // =====================================================
+
+    const programProfessorCapacity =
+        Array.isArray(
+            capacityData?.programProfessorCapacity
+        )
+            ? capacityData.programProfessorCapacity
+            : [];
+
+
+    // =========================
+    // CAPACITY PROGRAM COUNTS
+    // =========================
+
+    const capacitySufficientPrograms =
+        programProfessorCapacity.filter(
+            program =>
+                String(program.status).toUpperCase() ===
+                "SUFFICIENT"
+        );
+
+
+    const capacityInsufficientPrograms =
+        programProfessorCapacity.filter(
+            program =>
+                String(program.status).toUpperCase() !==
+                    "SUFFICIENT" &&
+                program.sectionCount > 0
+        );
+
+
+    const capacitySkippedPrograms =
+        programProfessorCapacity.filter(
+            program =>
+                Number(program.sectionCount) === 0
+        );
+
+
+    // =========================
+    // GET PROGRAM STATUS
+    // =========================
+
+    const getProgramCapacityStatus =
+        (program) => {
+
+            const status =
+                String(
+                    program?.status || ""
+                ).toUpperCase();
+
+
+            if (
+                Number(program?.sectionCount) === 0
+            ) {
+
+                return "SKIPPED";
+            }
+
+
+            if (
+                status === "SUFFICIENT" ||
+                program?.allocationFeasible === true
+            ) {
+
+                return "SUFFICIENT";
+            }
+
+
+            return "INSUFFICIENT";
+        };
+
+
+    // =========================
+    // GET PROGRAM STATUS CLASS
+    // =========================
+
+    const getProgramCapacityClass =
+        (program) => {
+
+            const status =
+                getProgramCapacityStatus(
+                    program
+                );
+
+            if (status === "SKIPPED") {
+                return "capacity-skipped";
+            }
+
+            if (status === "SUFFICIENT") {
+                return "capacity-sufficient";
+            }
+
+            return "capacity-insufficient";
+        };
+
 
     // =========================
     // GENERATE SCHEDULE
@@ -464,14 +624,12 @@ const handleCheckCapacity = async () => {
                 return;
             }
 
-
             try {
 
                 const token =
                     localStorage.getItem(
                         "admin_token"
                     );
-
 
                 console.log(
                     "Generating schedule:",
@@ -484,10 +642,8 @@ const handleCheckCapacity = async () => {
                     }
                 );
 
-
                 const response =
-                    await fetch(
-                        "http://localhost:3000/api/auth/admin/schedule/generate",
+                    await fetch(`${API_BASE_URL}/api/auth/admin/schedule/generate`,
                         {
                             method: "POST",
 
@@ -515,16 +671,13 @@ const handleCheckCapacity = async () => {
                         }
                     );
 
-
                 const data =
                     await response.json();
-
 
                 console.log(
                     "Generate Schedule Response:",
                     data
                 );
-
 
                 if (!response.ok) {
 
@@ -534,22 +687,15 @@ const handleCheckCapacity = async () => {
                     );
                 }
 
-
                 alert(
                     data.message ||
                     "Schedule generated successfully."
                 );
 
+                setShowGenerateModal(false);
 
-                setShowGenerateModal(
-                    false
-                );
-
-
-                // Refresh database data
                 await getSections();
                 await getSchedules();
-
 
             } catch (error) {
 
@@ -569,36 +715,64 @@ const handleCheckCapacity = async () => {
     // =========================
     // VIEW SECTION SCHEDULE
     // =========================
-const viewSchedule = (section) => {
 
-    const sectionSchedules = schedules.filter(
-        schedule =>
-            Number(schedule.section_id) ===
-            Number(section.id)
-    );
+    const viewSchedule = (section) => {
 
-    console.log("Section:", section);
-    console.log("Section schedules:", sectionSchedules);
+        const sectionSchedules =
+            schedules.filter(
+                schedule =>
+                    Number(schedule.section_id) ===
+                    Number(section.id)
+            );
 
-    if (sectionSchedules.length === 0) {
-        alert(
-            `No schedule found for ${section.program} ${section.year}-${section.section}`
+        console.log(
+            "Section:",
+            section
         );
-        return;
-    }
 
-    setSelectedSection({
-        ...section,
-        schedules: sectionSchedules
-    });
+        console.log(
+            "Section schedules:",
+            sectionSchedules
+        );
 
-    setShowScheduleModal(true);
-};
+        if (
+            sectionSchedules.length === 0
+        ) {
 
-const closeScheduleModal = () => {
-    setShowScheduleModal(false);
-    setSelectedSection(null);
-};
+            alert(
+                `No schedule found for ${section.program} ${section.year}-${section.section}`
+            );
+
+            return;
+        }
+
+        setSelectedSection({
+            ...section,
+            schedules:
+                sectionSchedules
+        });
+
+        setShowScheduleModal(true);
+    };
+
+
+    const closeScheduleModal = () => {
+
+        setShowScheduleModal(false);
+
+        setSelectedSection(null);
+    };
+
+
+    // =========================
+    // CLOSE CAPACITY MODAL
+    // =========================
+
+    const closeCapacityModal = () => {
+
+        setShowCapacityModal(false);
+    };
+
 
     // =========================
     // YEAR LABEL
@@ -629,9 +803,9 @@ const closeScheduleModal = () => {
         };
 
 
-    // =========================
+    // =====================================================
     // RENDER
-    // =========================
+    // =====================================================
 
     return (
 
@@ -656,9 +830,25 @@ const closeScheduleModal = () => {
 
 
                 <div className="schedule-actions">
-                    <button className="capacity-btn" onClick={handleCheckCapacity}>
-                        Check Capacity
+
+                    <button
+                        className="capacity-btn"
+                        onClick={
+                            handleCheckCapacity
+                        }
+                        disabled={
+                            capacityLoading
+                        }
+                    >
+
+                        {capacityLoading
+                            ? "Checking..."
+                            : "Check Capacity"
+                        }
+
                     </button>
+
+
                     <button
                         className="generate-btn"
                         onClick={() =>
@@ -844,8 +1034,7 @@ const closeScheduleModal = () => {
 
                         <tbody>
 
-                            {filteredSections.length >
-                            0 ? (
+                            {filteredSections.length > 0 ? (
 
                                 filteredSections.map(
                                     section => (
@@ -861,7 +1050,9 @@ const closeScheduleModal = () => {
                                                 <div className="section-name">
 
                                                     <strong>
-                                                        {section.program}
+                                                        {
+                                                            section.program
+                                                        }
                                                     </strong>
 
                                                     <span>
@@ -912,12 +1103,10 @@ const closeScheduleModal = () => {
 
 
                                             <td>
-
                                                 {
                                                     section.classes ||
                                                     0
                                                 }
-
                                             </td>
 
 
@@ -989,7 +1178,699 @@ const closeScheduleModal = () => {
             </div>
 
 
-            {/* ================= GENERATE MODAL ================= */}
+            {/* =====================================================
+                PROFESSOR CAPACITY MODAL
+            ===================================================== */}
+
+            {showCapacityModal && capacityData && (
+
+                <div
+                    className="capacity-modal-overlay"
+                    onClick={closeCapacityModal}
+                >
+
+                    <div
+                        className="capacity-modal"
+                        onClick={(e) =>
+                            e.stopPropagation()
+                        }
+                    >
+
+                        {/* ================= HEADER ================= */}
+
+                        <div className="capacity-modal-header">
+
+                            <div>
+
+                                <div className="capacity-modal-title-row">
+
+                                    <div className="capacity-title-icon">
+                                        ✓
+                                    </div>
+
+                                    <div>
+
+                                        <h2>
+                                            Professor Capacity
+                                        </h2>
+
+                                        <p>
+                                            {
+                                                capacityData
+                                                    .globalProfessorSummary
+                                                    ?.semester ||
+                                                capacityData
+                                                    .professorSummary
+                                                    ?.semester ||
+                                                "Current Semester"
+                                            }{" "}
+                                            Professor Availability
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <button
+                                className="capacity-modal-close"
+                                onClick={
+                                    closeCapacityModal
+                                }
+                            >
+                                ×
+                            </button>
+
+                        </div>
+
+
+                        {/* ================= SUMMARY ================= */}
+
+                        <div className="capacity-summary">
+
+                            <div className="capacity-summary-card">
+
+                                <span>
+                                    Programs Checked
+                                </span>
+
+                                <strong>
+                                    {
+                                        capacityData.checkedPrograms ??
+                                        programProfessorCapacity.filter(
+                                            program =>
+                                                Number(
+                                                    program.sectionCount
+                                                ) > 0
+                                        ).length
+                                    }
+                                </strong>
+
+                            </div>
+
+
+                            <div className="capacity-summary-card sufficient">
+
+                                <span>
+                                    Sufficient
+                                </span>
+
+                                <strong>
+                                    {
+                                        capacitySufficientPrograms.length
+                                    }
+                                </strong>
+
+                            </div>
+
+
+                            <div className="capacity-summary-card insufficient">
+
+                                <span>
+                                    Insufficient
+                                </span>
+
+                                <strong>
+                                    {
+                                        capacityInsufficientPrograms.length
+                                    }
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        {/* =====================================================
+                            PROGRAM LIST
+                        ===================================================== */}
+
+                        <div className="capacity-modal-body">
+
+                            <div className="capacity-section-title">
+
+                                <h3>
+                                    Program Professor Capacity
+                                </h3>
+
+                                <span>
+                                    {
+                                        capacityData
+                                            .globalProfessorSummary
+                                            ?.semester ||
+                                        capacityData
+                                            .professorSummary
+                                            ?.semester
+                                    }
+                                </span>
+
+                            </div>
+
+
+                            <div className="capacity-program-list">
+
+                                {programProfessorCapacity.length > 0 ? (
+
+                                    programProfessorCapacity.map(
+                                        (program) => {
+
+                                            const status =
+                                                getProgramCapacityStatus(
+                                                    program
+                                                );
+
+                                            const isSufficient =
+                                                status ===
+                                                "SUFFICIENT";
+
+                                            const isSkipped =
+                                                status ===
+                                                "SKIPPED";
+
+                                            const shortage =
+                                                Number(
+                                                    program.professorShortage
+                                                ) || 0;
+
+                                            const requiredHours =
+                                                Number(
+                                                    program.requiredTeachingHours
+                                                ) || 0;
+
+                                            const allocatedHours =
+                                                Number(
+                                                    program.allocatableQualifiedCapacity
+                                                ) || 0;
+
+                                            const professorsNeeded =
+                                                Number(
+                                                    program.professorsNeeded
+                                                ) || 0;
+
+                                            const professorsUsed =
+                                                Number(
+                                                    program.professorsUsed
+                                                ) || 0;
+
+                                            const qualifiedProfessors =
+                                                Number(
+                                                    program.qualifiedProfessors
+                                                ) || 0;
+
+
+                                            return (
+
+                                                <div
+                                                    className={
+                                                        `capacity-program-card ${
+                                                            getProgramCapacityClass(
+                                                                program
+                                                            )
+                                                        }`
+                                                    }
+                                                    key={
+                                                        program.programId
+                                                    }
+                                                >
+
+                                                    {/* ================= PROGRAM INFO ================= */}
+
+                                                    <div className="capacity-program-info">
+
+                                                        <div className="capacity-status-icon">
+
+                                                            {isSkipped
+                                                                ? "–"
+                                                                : isSufficient
+                                                                    ? "✓"
+                                                                    : "!"
+                                                            }
+
+                                                        </div>
+
+
+                                                        <div>
+
+                                                            <h4>
+                                                                {
+                                                                    program.programCode ||
+                                                                    program.code ||
+                                                                    `Program ${program.programId}`
+                                                                }
+                                                            </h4>
+
+                                                            <p>
+                                                                {
+                                                                    program.programName
+                                                                }
+                                                            </p>
+
+                                                        </div>
+
+                                                    </div>
+
+
+                                                    {/* ================= RESULT ================= */}
+
+                                                    <div className="capacity-program-result">
+
+                                                        {isSkipped ? (
+
+                                                            <>
+
+                                                                <span className="capacity-status-text skipped">
+                                                                    No Sections
+                                                                </span>
+
+                                                                <strong>
+                                                                    0
+                                                                </strong>
+
+                                                                <small>
+                                                                    Sections
+                                                                </small>
+
+                                                            </>
+
+                                                        ) : isSufficient ? (
+
+                                                            <>
+
+                                                                <span className="capacity-status-text sufficient">
+                                                                    Sufficient
+                                                                </span>
+
+                                                                <strong>
+                                                                    {
+                                                                        professorsUsed
+                                                                    }
+                                                                    /
+                                                                    {
+                                                                        qualifiedProfessors
+                                                                    }
+                                                                </strong>
+
+                                                                <small>
+                                                                    Professors
+                                                                </small>
+
+                                                            </>
+
+                                                        ) : (
+
+                                                            <>
+
+                                                                <span className="capacity-status-text insufficient">
+                                                                    Insufficient
+                                                                </span>
+
+                                                                <strong>
+                                                                    {
+                                                                        shortage
+                                                                    }
+                                                                </strong>
+
+                                                                <small>
+                                                                    Professor
+                                                                    {
+                                                                        shortage === 1
+                                                                            ? ""
+                                                                            : "s"
+                                                                    }
+                                                                    {" "}needed
+                                                                </small>
+
+                                                            </>
+
+                                                        )}
+
+                                                    </div>
+
+
+                                                    {/* ================= EXTRA PROGRAM DETAILS ================= */}
+
+                                                    <div className="capacity-program-details">
+
+                                                        <div>
+
+                                                            <span>
+                                                                Sections: <strong>
+                                                                {
+                                                                    program.sectionCount ??
+                                                                    0
+                                                                }
+                                                            </strong>
+                                                            </span>
+
+                                                            
+
+                                                        </div>
+
+
+                                                        <div>
+
+                                                            <span>
+                                                                Required Hours: <strong>{requiredHours.toLocaleString()}</strong>
+                                                            </span>
+
+                                                        
+
+                                                        </div>
+
+
+                                                        <div>
+
+                                                            <span>
+                                                                Qualified: <strong>{qualifiedProfessors}</strong>
+                                                            </span>
+
+                                                        </div>
+
+
+                                                        <div>
+
+                                                            <span>
+                                                                Capacity: <strong>{allocatedHours.toLocaleString()}</strong>
+                                                            </span>
+                                                        </div>
+
+                                                    </div>
+
+                                                </div>
+
+                                            );
+
+                                        }
+                                    )
+
+                                ) : (
+
+                                    <div className="capacity-empty">
+
+                                        No program professor capacity
+                                        results found.
+
+                                    </div>
+
+                                )}
+
+                            </div>
+
+
+                            {/* =====================================================
+                                PROGRAM PROFESSOR SUMMARY
+                            ===================================================== */}
+
+                            {capacityData.professorSummary && (
+
+                                <div className="global-capacity-box">
+
+                                    <div>
+
+                                        <span>
+                                            Required Professor Hours
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                Number(
+                                                    capacityData
+                                                        .professorSummary
+                                                        .totalRequiredProfessorHours
+                                                ).toLocaleString()
+                                            }
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <span>
+                                            Program Professor Requirement
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                Number(
+                                                    capacityData
+                                                        .professorSummary
+                                                        .totalProgramProfessorRequirement
+                                                ).toLocaleString()
+                                            }
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <span>
+                                            Program Professor Shortage
+                                        </span>
+
+                                        <strong className="global-shortage">
+                                            {
+                                                Number(
+                                                    capacityData
+                                                        .professorSummary
+                                                        .totalProgramProfessorShortage
+                                                ).toLocaleString()
+                                            }
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <span>
+                                            Checked Programs
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                capacityData.checkedPrograms ??
+                                                0
+                                            }
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+                            )}
+
+
+                            {/* =====================================================
+                                GLOBAL ALLOCATION
+                            ===================================================== */}
+
+                            {capacityData.globalAllocation && (
+
+                                <div className="global-capacity-box">
+
+                                    <div>
+
+                                        <span>
+                                            Required Hours
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                Number(
+                                                    capacityData
+                                                        .globalAllocation
+                                                        .requiredHours
+                                                ).toLocaleString()
+                                            }
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <span>
+                                            Allocated Hours
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                Number(
+                                                    capacityData
+                                                        .globalAllocation
+                                                        .allocatedHours
+                                                ).toLocaleString()
+                                            }
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <span>
+                                            Professors Used
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                capacityData
+                                                    .globalAllocation
+                                                    .professorsUsed ??
+                                                0
+                                            }
+                                        </strong>
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <span>
+                                            Shortage Hours
+                                        </span>
+
+                                        <strong className="global-shortage">
+                                            {
+                                                Number(
+                                                    capacityData
+                                                        .globalAllocation
+                                                        .shortageHours
+                                                ).toLocaleString()
+                                            }
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+                            )}
+
+
+                            {/* =====================================================
+                                GLOBAL SUBJECT BOTTLENECKS
+                            ===================================================== */}
+
+                            {Array.isArray(
+                                capacityData.globalSubjectBottlenecks
+                            ) &&
+                                capacityData.globalSubjectBottlenecks.length > 0 && (
+
+                                    <div className="global-capacity-box">
+
+                                        <div>
+
+                                            <span>
+                                                Subject Bottlenecks
+                                            </span>
+
+                                            <strong className="global-shortage">
+                                                {
+                                                    capacityData
+                                                        .globalSubjectBottlenecks
+                                                        .length
+                                                }
+                                            </strong>
+
+                                        </div>
+
+
+                                        <div>
+
+                                            <span>
+                                                University Capacity
+                                            </span>
+
+                                            <strong>
+                                                {
+                                                    capacityData
+                                                        .globalAllocation
+                                                        ?.feasible
+                                                            ? "Feasible"
+                                                            : "Insufficient"
+                                                }
+                                            </strong>
+
+                                        </div>
+
+                                    </div>
+
+                                )}
+
+                        </div>
+
+
+                        {/* ================= FOOTER ================= */}
+
+                        <div className="capacity-modal-footer">
+
+                            <div className="capacity-footer-message">
+
+                                {
+                                    capacityInsufficientPrograms.length >
+                                    0
+                                ? (
+
+                                    <>
+
+                                        <span className="footer-warning-icon">
+                                            !
+                                        </span>
+
+                                        <span>
+                                            {
+                                                capacityData.message ||
+                                                `${capacityInsufficientPrograms.length} program(s) have insufficient professor capacity.`
+                                            }
+                                        </span>
+
+                                    </>
+
+                                ) : (
+
+                                    <>
+
+                                        <span className="footer-success-icon">
+                                            ✓
+                                        </span>
+
+                                        <span>
+                                            All checked programs have
+                                            sufficient professor capacity.
+                                        </span>
+
+                                    </>
+
+                                )}
+
+                            </div>
+
+
+                            <button
+                                className="capacity-modal-done"
+                                onClick={
+                                    closeCapacityModal
+                                }
+                            >
+                                Close
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            )}
+
+
+            {/* =====================================================
+                GENERATE MODAL
+            ===================================================== */}
 
             {showGenerateModal && (
 
@@ -1029,8 +1910,6 @@ const closeScheduleModal = () => {
 
                         <div className="modal-body">
 
-                            {/* PROGRAM */}
-
                             <div className="form-group">
 
                                 <label>
@@ -1064,13 +1943,17 @@ const closeScheduleModal = () => {
                                                     program.id
                                                 }
                                             >
+
                                                 {
                                                     program.program_code
                                                 }
+
                                                 {" — "}
+
                                                 {
                                                     program.program_name
                                                 }
+
                                             </option>
 
                                         )
@@ -1080,8 +1963,6 @@ const closeScheduleModal = () => {
 
                             </div>
 
-
-                            {/* ACADEMIC TERM */}
 
                             <div className="form-group">
 
@@ -1112,13 +1993,17 @@ const closeScheduleModal = () => {
                                                 term.id
                                             }
                                         >
+
                                             {
                                                 term.school_year
                                             }
+
                                             {" — "}
+
                                             {
                                                 term.semester
                                             }
+
                                         </option>
 
                                     )}
@@ -1161,151 +2046,209 @@ const closeScheduleModal = () => {
 
             )}
 
-            {showScheduleModal && selectedSection && (
-    <div className="schedule-modal-overlay">
 
-        <div className="schedule-modal">
+            {/* =====================================================
+                SCHEDULE MODAL
+            ===================================================== */}
 
-            {/* HEADER */}
-            <div className="schedule-modal-header">
+            {showScheduleModal &&
+                selectedSection && (
 
-                <div>
-                    <h2>
-                        {selectedSection.program}{" "}
-                        {selectedSection.year}-
-                        {selectedSection.section}
-                    </h2>
+                    <div className="schedule-modal-overlay">
 
-                    <p>
-                        Class Schedule
-                    </p>
-                </div>
+                        <div className="schedule-modal">
 
-                <button
-                    className="schedule-modal-close"
-                    onClick={closeScheduleModal}
-                >
-                    ×
-                </button>
+                            <div className="schedule-modal-header">
 
-            </div>
+                                <div>
 
-
-            {/* BODY */}
-                <div className="schedule-modal-body">
-
-                    {selectedSection.schedules.map(
-                        (schedule) => (
-
-                            <div
-                                className="schedule-card"
-                                key={schedule.id}
-                            >
-
-                                <div className="schedule-card-header">
-
-                                    <div>
-                                        <strong>
-                                            {schedule.subject_code}
-                                        </strong>
-
-                                        <span>
-                                            {" - "}
-                                            {schedule.subject_name}
-                                        </span>
-                                    </div>
-
-                                    <span
-                                        className={
-                                            schedule.room_type ===
-                                            "laboratory"
-                                                ? "schedule-type lab"
-                                                : "schedule-type lecture"
+                                    <h2>
+                                        {
+                                            selectedSection.program
+                                        }{" "}
+                                        {
+                                            selectedSection.year
+                                        }-
+                                        {
+                                            selectedSection.section
                                         }
-                                    >
-                                        {schedule.room_type.toUpperCase()}
-                                    </span>
+                                    </h2>
+
+                                    <p>
+                                        Class Schedule
+                                    </p>
 
                                 </div>
 
 
-                                <div className="schedule-card-details">
-
-                                    <div>
-                                        <span className="detail-label">
-                                            Day
-                                        </span>
-
-                                        <span>
-                                            {schedule.day}
-                                        </span>
-                                    </div>
-
-
-                                    <div>
-                                        <span className="detail-label">
-                                            Time
-                                        </span>
-
-                                        <span>
-                                            {schedule.start_time.slice(0, 5)}
-                                            {" - "}
-                                            {schedule.end_time.slice(0, 5)}
-                                        </span>
-                                    </div>
-
-
-                                    <div>
-                                        <span className="detail-label">
-                                            Room
-                                        </span>
-
-                                        <span>
-                                            {schedule.room_name}
-                                        </span>
-                                    </div>
-
-
-                                    <div>
-                                        <span className="detail-label">
-                                            Professor
-                                        </span>
-
-                                        <span>
-                                            {schedule.professor_name}
-                                        </span>
-                                    </div>
-
-                                </div>
+                                <button
+                                    className="schedule-modal-close"
+                                    onClick={
+                                        closeScheduleModal
+                                    }
+                                >
+                                    ×
+                                </button>
 
                             </div>
 
-                        )
-                    )}
 
-                </div>
+                            <div className="schedule-modal-body">
+
+                                {
+                                    selectedSection.schedules.map(
+                                        (schedule) => (
+
+                                            <div
+                                                className="schedule-card"
+                                                key={
+                                                    schedule.id
+                                                }
+                                            >
+
+                                                <div className="schedule-card-header">
+
+                                                    <div>
+
+                                                        <strong>
+                                                            {
+                                                                schedule.subject_code
+                                                            }
+                                                        </strong>
+
+                                                        <span>
+                                                            {" - "}
+                                                            {
+                                                                schedule.subject_name
+                                                            }
+                                                        </span>
+
+                                                    </div>
 
 
-                {/* FOOTER */}
-                <div className="schedule-modal-footer">
+                                                    <span
+                                                        className={
+                                                            schedule.room_type ===
+                                                            "laboratory"
+                                                                ? "schedule-type lab"
+                                                                : "schedule-type lecture"
+                                                        }
+                                                    >
+                                                        {
+                                                            schedule.room_type?.toUpperCase()
+                                                        }
+                                                    </span>
 
-                    <span>
-                        {selectedSection.schedules.length} schedule entries
-                    </span>
+                                                </div>
 
-                    <button
-                        onClick={closeScheduleModal}
-                        className="schedule-modal-done"
-                    >
-                        Close
-                    </button>
 
-                </div>
+                                                <div className="schedule-card-details">
 
-            </div>
+                                                    <div>
 
-        </div>
-    )}
+                                                        <span className="detail-label">
+                                                            Day
+                                                        </span>
+
+                                                        <span>
+                                                            {
+                                                                schedule.day
+                                                            }
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div>
+
+                                                        <span className="detail-label">
+                                                            Time
+                                                        </span>
+
+                                                        <span>
+                                                            {
+                                                                schedule.start_time?.slice(
+                                                                    0,
+                                                                    5
+                                                                )
+                                                            }
+                                                            {" - "}
+                                                            {
+                                                                schedule.end_time?.slice(
+                                                                    0,
+                                                                    5
+                                                                )
+                                                            }
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div>
+
+                                                        <span className="detail-label">
+                                                            Room
+                                                        </span>
+
+                                                        <span>
+                                                            {
+                                                                schedule.room_name
+                                                            }
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div>
+
+                                                        <span className="detail-label">
+                                                            Professor
+                                                        </span>
+
+                                                        <span>
+                                                            {
+                                                                schedule.professor_name
+                                                            }
+                                                        </span>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                        )
+                                    )
+                                }
+
+                            </div>
+
+
+                            <div className="schedule-modal-footer">
+
+                                <span>
+                                    {
+                                        selectedSection.schedules.length
+                                    }{" "}
+                                    schedule entries
+                                </span>
+
+                                <button
+                                    onClick={
+                                        closeScheduleModal
+                                    }
+                                    className="schedule-modal-done"
+                                >
+                                    Close
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                )}
 
         </div>
     );

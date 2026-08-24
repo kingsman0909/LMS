@@ -924,3 +924,764 @@ tbody tr:hover {
     }
 
 }
+
+/* =========================================================
+   PROFESSOR CAPACITY MODAL
+========================================================= */
+
+.capacity-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+
+    background: rgba(0, 0, 0, 0.58);
+
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+
+    animation: capacityOverlayFade 0.2s ease;
+}
+
+
+@keyframes capacityOverlayFade {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+}
+
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.capacity-modal {
+    width: min(850px, 100%);
+
+    max-height: 90vh;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    background: #ffffff;
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.28);
+
+    animation: capacityModalEnter 0.25s ease;
+}
+
+
+@keyframes capacityModalEnter {
+
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.capacity-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 24px 28px;
+
+    border-bottom: 1px solid #e8e8e8;
+}
+
+
+.capacity-modal-title-row {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+}
+
+
+.capacity-title-icon {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: #eef7ff;
+
+    color: #1677ff;
+
+    font-size: 20px;
+    font-weight: 800;
+}
+
+
+.capacity-modal-header h2 {
+    margin: 0;
+
+    color: #171717;
+
+    font-size: 21px;
+    font-weight: 700;
+}
+
+
+.capacity-modal-header p {
+    margin: 4px 0 0;
+
+    color: #777;
+
+    font-size: 13px;
+}
+
+
+.capacity-modal-close {
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 9px;
+
+    background: #f5f5f5;
+
+    color: #555;
+
+    font-size: 25px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+
+.capacity-modal-close:hover {
+    background: #eeeeee;
+    color: #111;
+}
+
+
+/* =========================================================
+   SUMMARY
+========================================================= */
+
+.capacity-summary {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 12px;
+
+    padding: 20px 28px 10px;
+}
+
+
+.capacity-summary-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 15px 17px;
+
+    border: 1px solid #e7e7e7;
+
+    border-radius: 12px;
+
+    background: #fafafa;
+}
+
+
+.capacity-summary-card span {
+    color: #707070;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+.capacity-summary-card strong {
+    color: #222;
+
+    font-size: 20px;
+}
+
+
+.capacity-summary-card.sufficient {
+    border-color: #d8efdf;
+    background: #f3fbf5;
+}
+
+
+.capacity-summary-card.sufficient strong {
+    color: #16833a;
+}
+
+
+.capacity-summary-card.insufficient {
+    border-color: #f3d6d6;
+    background: #fff6f6;
+}
+
+
+.capacity-summary-card.insufficient strong {
+    color: #d53030;
+}
+
+
+/* =========================================================
+   BODY
+========================================================= */
+
+.capacity-modal-body {
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding: 18px 28px 24px;
+}
+
+
+.capacity-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 12px;
+}
+
+
+.capacity-section-title h3 {
+    margin: 0;
+
+    color: #202020;
+
+    font-size: 15px;
+    font-weight: 700;
+}
+
+
+.capacity-section-title span {
+    color: #888;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   PROGRAM LIST
+========================================================= */
+
+.capacity-program-list {
+    display: flex;
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+
+.capacity-program-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 15px 17px;
+
+    border: 1px solid #e9e9e9;
+
+    border-left: 4px solid #999;
+
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+
+.capacity-program-card:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 5px 16px rgba(0, 0, 0, 0.06);
+}
+
+
+/* =========================================================
+   SUFFICIENT
+========================================================= */
+
+.capacity-program-card.capacity-sufficient {
+    border-left-color: #20a04b;
+    background: #fbfffc;
+}
+
+
+.capacity-status-icon {
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 10px;
+
+    background: #eeeeee;
+
+    font-weight: 800;
+    font-size: 17px;
+}
+
+
+.capacity-sufficient .capacity-status-icon {
+    background: #e3f7e9;
+    color: #16833a;
+}
+
+
+/* =========================================================
+   INSUFFICIENT
+========================================================= */
+
+.capacity-program-card.capacity-insufficient {
+    border-left-color: #dc3434;
+    background: #fffafa;
+}
+
+
+.capacity-insufficient .capacity-status-icon {
+    background: #fde7e7;
+    color: #d52d2d;
+}
+
+
+/* =========================================================
+   SKIPPED
+========================================================= */
+
+.capacity-program-card.capacity-skipped {
+    border-left-color: #999;
+
+    background: #fafafa;
+}
+
+
+.capacity-skipped .capacity-status-icon {
+    background: #eeeeee;
+    color: #777;
+}
+
+
+/* =========================================================
+   PROGRAM INFO
+========================================================= */
+
+.capacity-program-info {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+}
+
+
+.capacity-program-info > div:last-child {
+    min-width: 0;
+}
+
+
+.capacity-program-info h4 {
+    margin: 0 0 3px;
+
+    color: #222;
+
+    font-size: 14px;
+    font-weight: 700;
+}
+
+
+.capacity-program-info p {
+    max-width: 430px;
+
+    margin: 0;
+
+    overflow: hidden;
+
+    color: #777;
+
+    font-size: 12px;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   RESULT
+========================================================= */
+
+.capacity-program-result {
+    min-width: 130px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: flex-end;
+
+    text-align: right;
+}
+
+
+.capacity-status-text {
+    font-size: 11px;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.5px;
+}
+
+
+.capacity-status-text.sufficient {
+    color: #16833a;
+}
+
+
+.capacity-status-text.insufficient {
+    color: #d52d2d;
+}
+
+
+.capacity-status-text.skipped {
+    color: #777;
+}
+
+
+.capacity-program-result strong {
+    margin-top: 2px;
+
+    color: #222;
+
+    font-size: 21px;
+    font-weight: 800;
+
+    line-height: 1.1;
+}
+
+
+.capacity-sufficient .capacity-program-result strong {
+    color: #16833a;
+}
+
+
+.capacity-insufficient .capacity-program-result strong {
+    color: #d52d2d;
+}
+
+
+.capacity-program-result small {
+    margin-top: 2px;
+
+    color: #888;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.capacity-empty {
+    padding: 30px;
+
+    border: 1px dashed #d8d8d8;
+
+    border-radius: 12px;
+
+    color: #888;
+
+    text-align: center;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   GLOBAL CAPACITY
+========================================================= */
+
+.global-capacity-box {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 10px;
+
+    margin-top: 18px;
+
+    padding: 15px;
+
+    border-radius: 12px;
+
+    background: #f7f9fb;
+
+    border: 1px solid #e5e8eb;
+}
+
+
+.global-capacity-box > div {
+    display: flex;
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+
+.global-capacity-box span {
+    color: #777;
+
+    font-size: 10px;
+
+    line-height: 1.3;
+}
+
+
+.global-capacity-box strong {
+    color: #222;
+
+    font-size: 17px;
+}
+
+
+.global-capacity-box .global-shortage {
+    color: #d52d2d;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.capacity-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 16px 28px;
+
+    border-top: 1px solid #e8e8e8;
+
+    background: #fcfcfc;
+}
+
+
+.capacity-footer-message {
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    min-width: 0;
+
+    color: #666;
+
+    font-size: 12px;
+}
+
+
+.footer-warning-icon,
+.footer-success-icon {
+    width: 23px;
+    height: 23px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    font-weight: 800;
+}
+
+
+.footer-warning-icon {
+    background: #fde7e7;
+    color: #d52d2d;
+}
+
+
+.footer-success-icon {
+    background: #e3f7e9;
+    color: #16833a;
+}
+
+
+.capacity-modal-done {
+    padding: 9px 19px;
+
+    border: none;
+    border-radius: 9px;
+
+    background: #202020;
+
+    color: #ffffff;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        transform 0.15s ease;
+}
+
+
+.capacity-modal-done:hover {
+    background: #000;
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   CAPACITY BUTTON LOADING / DISABLED
+========================================================= */
+
+.capacity-btn:disabled {
+    opacity: 0.65;
+
+    cursor: not-allowed;
+
+    transform: none;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 700px) {
+
+    .capacity-modal-overlay {
+        padding: 12px;
+    }
+
+
+    .capacity-modal {
+        max-height: 94vh;
+
+        border-radius: 14px;
+    }
+
+
+    .capacity-modal-header {
+        padding: 18px;
+    }
+
+
+    .capacity-summary {
+        grid-template-columns: 1fr;
+
+        padding: 14px 18px 8px;
+    }
+
+
+    .capacity-modal-body {
+        padding: 15px 18px 20px;
+    }
+
+
+    .capacity-program-card {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+
+    .capacity-program-result {
+        width: 100%;
+
+        align-items: flex-start;
+
+        text-align: left;
+    }
+
+
+    .capacity-program-info p {
+        max-width: 280px;
+    }
+
+
+    .global-capacity-box {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+
+    .capacity-modal-footer {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        padding: 14px 18px;
+    }
+
+
+    .capacity-modal-done {
+        width: 100%;
+    }
+
+}
+
+.capacity-program-details{
+    color: gray;
+}

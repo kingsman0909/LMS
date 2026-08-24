@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Enrol.css';
+import { API_BASE_URL } from "../../config";
 
 const Enrol = () => {
 
@@ -33,8 +34,7 @@ const Enrol = () => {
 
         const token = localStorage.getItem("student_token");
 
-        const response = await fetch(
-            "http://localhost:3000/api/auth/getPrograms",
+        const response = await fetch(`${API_BASE_URL}/api/auth/getPrograms`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -108,8 +108,7 @@ const Enrol = () => {
 
         try {
 
-            const response = await fetch(
-                "http://localhost:3000/api/auth/enroll",
+            const response = await fetch(`${API_BASE_URL}/api/auth/enroll`,
                 {
                     method: "POST",
 

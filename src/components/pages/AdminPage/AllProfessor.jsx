@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "./styles/Student.css";
+import { API_BASE_URL } from "../../../config";
 
 /*
 |--------------------------------------------------------------------------
@@ -20,8 +21,7 @@ const api = {
         const token =
             localStorage.getItem("admin_token");
 
-        const response = await fetch(
-            "http://localhost:3000/api/auth/admin/getProfessor",
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/getProfessor`,
             {
                 method: "GET",
 
@@ -73,8 +73,7 @@ const api = {
             throw new Error("Professor ID is required.");
         }
 
-        const response = await fetch(
-            `http://localhost:3000/api/auth/admin/getSubjectsByProgram?programId=${encodeURIComponent(
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/getSubjectsByProgram?programId=${encodeURIComponent(
                 programId
             )}&professorId=${encodeURIComponent(
                 professorId
@@ -137,8 +136,7 @@ const api = {
         const token =
             localStorage.getItem("admin_token");
 
-        const response = await fetch(
-            "http://localhost:3000/api/auth/admin/assignSubjectsToProfessor",
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/assignSubjectsToProfessor`,
             {
                 method: "POST",
 

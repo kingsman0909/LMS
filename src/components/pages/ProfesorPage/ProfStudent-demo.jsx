@@ -17,6 +17,7 @@ import {
 } from "react-icons/hi";
 
 import "../../../styles/ProfPage.css";
+import { API_BASE_URL } from "../../../config";
 
 const ProfStudent = (props) => {
 
@@ -60,8 +61,7 @@ const ProfStudent = (props) => {
                     `${props.user.role}_token`
                 );
 
-            const response = await fetch(
-                `http://localhost:3000/api/auth/profesor/getStudents?academicTermId=${academicTermId}&profId=${userId}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/profesor/getStudents?academicTermId=${academicTermId}&profId=${userId}`,
                 {
                     method: "GET",
                     headers: {

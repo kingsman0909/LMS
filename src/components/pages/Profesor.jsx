@@ -10,6 +10,7 @@ import StudentDemo from './ProfesorPage/ProfStudent-demo'
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { Navigate, useLocation } from 'react-router-dom';
 import LineSidebar from './animatedComponents/Sidebar';
+import { API_BASE_URL } from "../../config";
 
 export default function Profesor({role}) {
 const[openMenu, setOpenMenu]= useState(false);
@@ -25,7 +26,7 @@ useEffect(() => {
       const getMe = async () => {
           const token = localStorage.getItem("professor_token");
 
-          const response = await fetch("http://localhost:3000/api/auth/me", {
+          const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
               headers: {
                   Authorization: `Bearer ${token}`
               }
@@ -45,8 +46,7 @@ useEffect(() => {
         try {
         const token = localStorage.getItem(`${role}_token`);
 
-        const response = await fetch(
-            'http://localhost:3000/api/auth/getAcademicTerm',
+        const response = await fetch(`${API_BASE_URL}/api/auth/getAcademicTerm`,
             {
                 method: 'GET',
                 headers: {

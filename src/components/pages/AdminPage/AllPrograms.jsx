@@ -1,6 +1,7 @@
 import React from 'react'
 import './styles/AllPrograms.css';
 import { useState, useEffect } from 'react';
+import { API_BASE_URL } from "../../../config";
 
 const AllPrograms = () => {
   
@@ -32,8 +33,7 @@ const [showModal, setShowModal] = useState(false);
       try{
         const token = localStorage.getItem("admin_token");
 
-        const response = await fetch(
-          "http://localhost:3000/api/auth/admin/createProgram",
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/createProgram`,
           {
             method: "POST",
             headers: {
@@ -68,9 +68,7 @@ const [showModal, setShowModal] = useState(false);
 
     const getPrograms = async () => {
       try{
-        const response = await fetch(
-        "http://localhost:3000/api/auth/getPrograms"
-        );
+        const response = await fetch(`${API_BASE_URL}/api/auth/getPrograms`);
 
         const data = await response.json();
         console.log("getting programs", data)

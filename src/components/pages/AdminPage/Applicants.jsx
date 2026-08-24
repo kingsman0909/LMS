@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import "./styles/Applicants.css";
 import ApplicantModal from "./ApplicantComp/ApplicantModal";
+import { API_BASE_URL } from "../../../config";
 
 export default function AdminApplicants() {
 
@@ -43,8 +44,7 @@ export default function AdminApplicants() {
         const token =
             localStorage.getItem("admin_token");
 
-        const response = await fetch(
-            "http://localhost:3000/api/auth/getAcademicTerm",
+        const response = await fetch(`${API_BASE_URL}/api/auth/getAcademicTerm`,
             {
                 method: "GET",
                 headers: {
@@ -83,72 +83,55 @@ const [capacityData, setCapacityData] =
     useState(null);
 
 
-const handleCheckCapacity = async () => {
-
-    console.log("checking capacity")
+const SimulateStudents = async () => {
     try {
+        console.log("Starting student capacity simulation...");
 
-        setCapacityLoading(true);
-
-
-        const response =
-            await fetch(
-                `http://localhost:3000/api/auth/admin/checkUniversityCapacity?academicTermId=${academicTerm.id}`,
-                {
-                    method: "GET",
-
-                    headers: {
-                        Authorization:
-                            `Bearer ${localStorage.getItem("admin_token")}`
-                    }
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/SimulateStudents`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("admin_token")}`
                 }
-            );
+            }
+        );
 
+        const data = await response.json();
 
-        const data =
-            await response.json();
-
-        console.log("simulated capacity: ",data);
         if (!response.ok) {
-
             throw new Error(
                 data.message ||
-                "Failed to check capacity."
+                "Failed to simulate student capacity."
             );
         }
 
-
-        setCapacityData(
-            data.data
+        console.log(
+            "Student capacity simulation completed:",
+            data
         );
 
-    }
+        return data;
 
-    catch (error) {
+    } catch (error) {
 
-        console.error(error);
-
-        alert(
-            error.message
+        console.error(
+            "SimulateStudents error:",
+            error
         );
 
-    }
-
-    finally {
-        alert("Done checking!")
-        setCapacityLoading(false);
-        
+        throw error;
     }
 };
-    const approvedApplicant = async (student) => {
+
+const approvedApplicant = async (student) => {
 
     try {
 
         const token =   
             localStorage.getItem("admin_token");
 
-        const response = await fetch(
-            `http://localhost:3000/api/auth/admin/applicants/${student.id}/approvedApplicant`,
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/applicants/${student.id}/approvedApplicant`,
             {
                 method: 'POST',
 
@@ -213,8 +196,7 @@ const approveAllApplicants = async () => {
                 student.email
             );
 
-            const response = await fetch(
-                `http://localhost:3000/api/auth/admin/applicants/${student.id}/approvedApplicant`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/applicants/${student.id}/approvedApplicant`,
                 {
                     method: "POST",
 
@@ -267,8 +249,7 @@ const approveAllApplicants = async () => {
         const token =
             localStorage.getItem('admin_token');
 
-        const response = await fetch(
-            'http://localhost:3000/api/auth/applicants',
+        const response = await fetch(`${API_BASE_URL}/api/auth/applicants`,
             {
                 method: 'GET',
 
@@ -405,7 +386,7 @@ useEffect(() => {
                 
                 <div className="applicants-header-right">
                     <button onClick={approveAllApplicants} className="approveAll">Approve All</button>
-                    <button onClick={handleCheckCapacity} className="capacityBtn">Check Capacity</button>
+                    <button onClick={SimulateStudents} className="capacityBtn">Check Capacity</button>
                     <div className="applicant-count">
                     
                     {activeTab === "students"

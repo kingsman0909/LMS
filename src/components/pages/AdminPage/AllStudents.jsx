@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import "./styles/Student.css";
+import { API_BASE_URL } from "../../../config";
 
 const Student = () => {
 
@@ -62,8 +63,7 @@ const Student = () => {
             const token =
                 localStorage.getItem("admin_token");
 
-            const response = await fetch(
-                `http://localhost:3000/api/auth/admin/getStudents?page=${pageNumber}&limit=50&search=${encodeURIComponent(searchValue)}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/getStudents?page=${pageNumber}&limit=50&search=${encodeURIComponent(searchValue)}`,
                 {
                     method: "GET",
 

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../../../styles/StudentPage.css";
+import { API_BASE_URL } from "../../../config";
+
 import {
     FiMapPin,
     FiUser
@@ -92,8 +94,7 @@ const Schedule = (props) => {
                 sectionId: props.user.profile.section_id
             });
 
-            const response = await fetch(
-                `http://localhost:3000/api/auth/student/getSchedule?${params}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/student/getSchedule?${params}`,
                 {
                     method: "GET",
                     headers: {

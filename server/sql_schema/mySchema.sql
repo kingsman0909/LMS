@@ -72,7 +72,6 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP
 );
-
 CREATE TABLE admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
@@ -752,10 +751,31 @@ where id > 0;
 delete from class_schedules
 where id > 0;
 
+
+
 delete from curriculum_subjects
 where id > 0;
 
-select * from subjects where id = 20;
+select * from sections;
 
 show create table subjects;
+select * from profesor;
 
+
+select count(*) from class_schedules;
+SELECT
+    p.id AS professor_id,
+    p.employee_id,
+    p.firstname,
+    p.lastname,
+    p.max_weekly_hours,
+    s.id AS subject_id,
+    s.subject_code,
+    s.subject_name
+FROM profesor p
+INNER JOIN professor_subjects ps
+    ON ps.professor_id = p.id
+INNER JOIN subjects s
+    ON s.id = ps.subject_id
+WHERE s.subject_code = 'CS306'
+ORDER BY p.id;

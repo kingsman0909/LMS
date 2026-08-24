@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "./styles/Curriculum.css";
+import { API_BASE_URL } from "../../../config";
 
 // =====================================================
 // GET PROGRAMS
@@ -10,8 +11,7 @@ const getPrograms = async () => {
         const token =
             localStorage.getItem("admin_token");
 
-        const response = await fetch(
-            "http://localhost:3000/api/auth/getPrograms",
+        const response = await fetch(`${API_BASE_URL}/api/auth/getPrograms`,
             {
                 method: "GET",
                 headers: {
@@ -59,8 +59,7 @@ const getSubjectsForCurriculum = async (
         const token =
             localStorage.getItem("admin_token");
 
-        const response = await fetch(
-            `http://localhost:3000/api/auth/admin/getSubjectsForCurriculum?programId=${programId}`,
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/getSubjectsForCurriculum?programId=${programId}`,
             {
                 method: "GET",
                 headers: {
@@ -112,8 +111,7 @@ const getCurriculum = async (
         const token =
             localStorage.getItem("admin_token");
 
-        const response = await fetch(
-            `http://localhost:3000/api/auth/admin/getCurriculum?programId=${programId}&yearLevel=${yearLevel}&semester=${semester}`,
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/getCurriculum?programId=${programId}&yearLevel=${yearLevel}&semester=${semester}`,
             {
                 method: "GET",
                 headers: {
@@ -775,8 +773,7 @@ export default function Curriculum() {
                 );
 
             const response =
-                await fetch(
-                    "http://localhost:3000/api/auth/admin/addCurriculum",
+                await fetch(`${API_BASE_URL}/api/auth/admin/addCurriculum`,
                     {
                         method: "POST",
 
@@ -884,8 +881,7 @@ export default function Curriculum() {
                 );
 
             const response =
-                await fetch(
-                        `http://localhost:3000/api/auth/admin/${curriculumId}/deleteCurriculum`,                    
+                await fetch(`${API_BASE_URL}/api/auth/admin/${curriculumId}/deleteCurriculum`,                    
                         {
                         method: "DELETE",
 

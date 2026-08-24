@@ -218,7 +218,7 @@ const getTotalStudents = async () => {
     const [[result]] = await db.query(`
         SELECT COUNT(*) AS totalStudents
         FROM users
-        where role = "student"
+        where role = 'student'
     `);
 
     return result.totalStudents;

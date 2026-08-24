@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import './styles/Sections.css';
+import { API_BASE_URL } from "../../../config";
 
 const Sections = ({term}) => {
 
@@ -26,8 +27,7 @@ const Sections = ({term}) => {
         try {
         const token = localStorage.getItem('admin_token');
 
-        const response = await fetch(
-            'http://localhost:3000/api/auth/admin/getSections',
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/getSections`,
             {
                 method: 'GET',
                 headers: {
@@ -61,8 +61,7 @@ const Sections = ({term}) => {
         try {
         const token = localStorage.getItem('admin_token');
 
-        const response = await fetch(
-            'http://localhost:3000/api/auth/getSubjects',
+        const response = await fetch(`${API_BASE_URL}/api/auth/getSubjects`,
             {
                 method: 'GET',
                 headers: {
@@ -92,8 +91,7 @@ const Sections = ({term}) => {
         const token = localStorage.getItem('admin_token');
 
         console.log("kapagod na", section)
-        const response = await fetch(
-            "http://localhost:3000/api/auth/admin/createSections",
+        const response = await fetch(`${API_BASE_URL}/api/auth/admin/createSections`,
             {
                 method: "POST",
                 headers: {

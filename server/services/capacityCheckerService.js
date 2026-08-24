@@ -2,58 +2,49 @@ const db = require("../config/db");
 
 /*
 |--------------------------------------------------------------------------
-| UNIVERSITY PROFESSOR CAPACITY CHECKER SERVICE
+| UNIVERSITY PROFESSOR CAPACITY + SECTION SIMULATION CHECKER
 |--------------------------------------------------------------------------
 |
-| PURPOSE
-|--------------------------------------------------------------------------
-|
-| Strong professor-capacity feasibility checker.
-|
-| PROFESSOR POPULATION RULE
-|--------------------------------------------------------------------------
-|
-| A professor is considered AVAILABLE only when:
-|
-|   users.role   = 'professor'
-|   users.status = 'active'
-|
-| professor_subjects is used ONLY to determine qualification.
-|
-|--------------------------------------------------------------------------
-| TEACHING HOURS
-|--------------------------------------------------------------------------
-|
-| lecture unit = 1 hour / week
-| laboratory unit = 3 hours / week
-|
-|--------------------------------------------------------------------------
 | IMPORTANT
 |--------------------------------------------------------------------------
 |
-| This checker does NOT replace the actual scheduler.
+| Existing return fields are preserved.
 |
-| It does not solve:
+| NEW:
 |
-|   - exact room conflicts
-|   - exact time-slot conflicts
-|   - professor time availability
-|   - section time conflicts
-|   - exact scheduler backtracking
+| simulatedSections
 |
-| It checks whether professor teaching capacity is feasible.
+| This simulation DOES NOT use:
 |
-|--------------------------------------------------------------------------
-*/
-
-
-/*
-|--------------------------------------------------------------------------
-| CONFIG
+|   student_sections
+|
+| It also DOES NOT use existing section rows to determine capacity.
+|
+| It calculates how many sections can theoretically be supported from:
+|
+|   - active professors
+|   - professor max weekly hours
+|   - professor qualifications
+|   - curriculum
+|   - lecture units
+|   - laboratory units
+|
+| Default:
+|
+|   1 lecture unit = 1 hour
+|   1 laboratory unit = 3 hours
+|
+| Student capacity:
+|
+|   50 students / section
+|
 |--------------------------------------------------------------------------
 */
 
 const DEFAULT_MAX_WEEKLY_HOURS = 18;
+const DEFAULT_STUDENTS_PER_SECTION = 50;
+
+const MAX_SIMULATION_SECTIONS = 5000;
 
 
 /*
@@ -110,7 +101,6 @@ const normalizeYearLevel = value => {
         return "";
     }
 
-
     if (
         raw.includes("1st") ||
         raw.includes("first") ||
@@ -122,7 +112,6 @@ const normalizeYearLevel = value => {
 
         return "year_1";
     }
-
 
     if (
         raw.includes("2nd") ||
@@ -136,7 +125,6 @@ const normalizeYearLevel = value => {
         return "year_2";
     }
 
-
     if (
         raw.includes("3rd") ||
         raw.includes("third") ||
@@ -149,7 +137,6 @@ const normalizeYearLevel = value => {
         return "year_3";
     }
 
-
     if (
         raw.includes("4th") ||
         raw.includes("fourth") ||
@@ -161,7 +148,6 @@ const normalizeYearLevel = value => {
 
         return "year_4";
     }
-
 
     return raw.replace(/\s+/g, "_");
 };
@@ -182,7 +168,6 @@ const normalizeSemester = value => {
         return "";
     }
 
-
     if (
         raw === "1" ||
         raw === "1st" ||
@@ -194,7 +179,6 @@ const normalizeSemester = value => {
 
         return "1st semester";
     }
-
 
     if (
         raw === "2" ||
@@ -208,7 +192,6 @@ const normalizeSemester = value => {
         return "2nd semester";
     }
 
-
     if (
         raw === "summer" ||
         raw === "summer semester" ||
@@ -217,7 +200,6 @@ const normalizeSemester = value => {
 
         return "summer";
     }
-
 
     return raw;
 };
@@ -260,7 +242,6 @@ class Dinic {
                 )
             );
 
-
         const forward = {
 
             to,
@@ -274,7 +255,6 @@ class Dinic {
             originalCapacity:
                 safeCapacity
         };
-
 
         const backward = {
 
@@ -291,7 +271,6 @@ class Dinic {
                 0
         };
 
-
         this.graph[from].push(
             forward
         );
@@ -299,7 +278,6 @@ class Dinic {
         this.graph[to].push(
             backward
         );
-
 
         return {
 
@@ -321,16 +299,13 @@ class Dinic {
                 this.nodeCount
             ).fill(-1);
 
-
         const queue = [];
 
         level[source] = 0;
 
         queue.push(source);
 
-
         let head = 0;
-
 
         while (
             head <
@@ -339,7 +314,6 @@ class Dinic {
 
             const node =
                 queue[head++];
-
 
             for (
                 const edge
@@ -360,7 +334,6 @@ class Dinic {
                 }
             }
         }
-
 
         return level[sink] >= 0
             ? level
@@ -383,7 +356,6 @@ class Dinic {
             return pushed;
         }
 
-
         while (
             ptr[node] <
             this.graph[node].length
@@ -393,7 +365,6 @@ class Dinic {
                 this.graph[node][
                     ptr[node]
                 ];
-
 
             if (
                 edge.capacity > 0 &&
@@ -413,14 +384,12 @@ class Dinic {
                         ptr
                     );
 
-
                 if (
                     flow > 0
                 ) {
 
                     edge.capacity -=
                         flow;
-
 
                     this.graph[
                         edge.to
@@ -429,15 +398,12 @@ class Dinic {
                     ].capacity +=
                         flow;
 
-
                     return flow;
                 }
             }
 
-
             ptr[node]++;
         }
-
 
         return 0;
     }
@@ -450,7 +416,6 @@ class Dinic {
 
         let flow = 0;
 
-
         while (true) {
 
             const level =
@@ -459,17 +424,14 @@ class Dinic {
                     sink
                 );
 
-
             if (!level) {
                 break;
             }
-
 
             const ptr =
                 new Array(
                     this.nodeCount
                 ).fill(0);
-
 
             while (true) {
 
@@ -482,7 +444,6 @@ class Dinic {
                         ptr
                     );
 
-
                 if (
                     pushed <= 0
                 ) {
@@ -490,12 +451,10 @@ class Dinic {
                     break;
                 }
 
-
                 flow +=
                     pushed;
             }
         }
-
 
         return flow;
     }
@@ -511,7 +470,6 @@ class Dinic {
             ][
                 edgeReference.index
             ];
-
 
         return (
             edge.originalCapacity -
@@ -536,7 +494,6 @@ const getPrograms = async () => {
         FROM programs
         ORDER BY id ASC
     `);
-
 
     return rows.map(
         row => ({
@@ -567,7 +524,6 @@ const getAcademicTerm = async academicTermId => {
             academicTermId
         );
 
-
     if (
         termId <= 0
     ) {
@@ -576,7 +532,6 @@ const getAcademicTerm = async academicTermId => {
             "A valid academicTermId is required."
         );
     }
-
 
     const [rows] = await db.query(`
         SELECT
@@ -589,7 +544,6 @@ const getAcademicTerm = async academicTermId => {
         termId
     ]);
 
-
     if (
         rows.length === 0
     ) {
@@ -598,7 +552,6 @@ const getAcademicTerm = async academicTermId => {
             `Academic term with ID ${termId} was not found.`
         );
     }
-
 
     return {
 
@@ -616,7 +569,15 @@ const getAcademicTerm = async academicTermId => {
 
 /*
 |--------------------------------------------------------------------------
-| GET PROGRAM SECTIONS
+| EXISTING SECTION DATA
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| This is retained ONLY because the existing return/UI uses sectionCount.
+|
+| It is NOT used by the simulated section capacity.
+|
 |--------------------------------------------------------------------------
 */
 
@@ -639,13 +600,10 @@ const getProgramSections = async (
         academicTermId
     ]);
 
-
     const sectionsByYearLevel =
         new Map();
 
-
     let totalSections = 0;
-
 
     for (
         const row
@@ -657,12 +615,10 @@ const getProgramSections = async (
                 row.year_level
             );
 
-
         const sectionCount =
             positiveInt(
                 row.section_count
             );
-
 
         if (
             !yearLevel
@@ -671,17 +627,14 @@ const getProgramSections = async (
             continue;
         }
 
-
         sectionsByYearLevel.set(
             yearLevel,
             sectionCount
         );
 
-
         totalSections +=
             sectionCount;
     }
-
 
     return {
 
@@ -711,7 +664,6 @@ const getProgramCurriculum = async (
             academicTerm?.semester
         );
 
-
     if (
         !termSemester
     ) {
@@ -720,7 +672,6 @@ const getProgramCurriculum = async (
             `Academic term ${academicTerm?.id || ""} has no valid semester value.`
         );
     }
-
 
     const [rows] = await db.query(`
         SELECT
@@ -756,7 +707,6 @@ const getProgramCurriculum = async (
         programId
     ]);
 
-
     const filteredRows =
         rows.filter(
             row =>
@@ -765,15 +715,6 @@ const getProgramCurriculum = async (
                 ) ===
                 termSemester
         );
-
-
-    console.log(
-        `[CURRICULUM] Program ${programId} | ` +
-        `Term semester: ${termSemester} | ` +
-        `Total curriculum rows: ${rows.length} | ` +
-        `Matching semester rows: ${filteredRows.length}`
-    );
-
 
     return filteredRows.map(
         row => ({
@@ -832,7 +773,7 @@ const getProgramCurriculum = async (
 
 /*
 |--------------------------------------------------------------------------
-| GET ALL UNIVERSITY CURRICULUM
+| GET UNIVERSITY CURRICULUM
 |--------------------------------------------------------------------------
 */
 
@@ -842,7 +783,6 @@ const getUniversityCurriculum = async (
 ) => {
 
     const results = [];
-
 
     for (
         const program
@@ -854,7 +794,6 @@ const getUniversityCurriculum = async (
                 program.id,
                 academicTerm
             );
-
 
         results.push({
 
@@ -868,7 +807,6 @@ const getUniversityCurriculum = async (
 
         });
     }
-
 
     return results;
 };
@@ -890,7 +828,6 @@ const getSubjectWeeklyHours = subject => {
             )
         );
 
-
     const laboratoryHours =
         Math.max(
             0,
@@ -898,7 +835,6 @@ const getSubjectWeeklyHours = subject => {
                 subject.labUnits
             )
         ) * 3;
-
 
     return {
 
@@ -917,22 +853,6 @@ const getSubjectWeeklyHours = subject => {
 /*
 |--------------------------------------------------------------------------
 | GET ACTIVE PROFESSOR QUALIFICATIONS
-|--------------------------------------------------------------------------
-|
-| IMPORTANT FIX
-|--------------------------------------------------------------------------
-|
-| PROFESSOR EXISTENCE:
-|
-|   users.role = 'professor'
-|   users.status = 'active'
-|
-| PROFESSOR QUALIFICATION:
-|
-|   professor_subjects
-|
-| This means inactive professors cannot enter the capacity calculation.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -962,13 +882,6 @@ const getProfessorQualifications = async subjects => {
         };
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | SUBJECT IDS
-    |--------------------------------------------------------------------------
-    */
-
     const subjectIds =
         [
             ...new Set(
@@ -984,7 +897,6 @@ const getProfessorQualifications = async subjects => {
                     )
             )
         ];
-
 
     if (
         subjectIds.length === 0
@@ -1008,21 +920,6 @@ const getProfessorQualifications = async subjects => {
 
         };
     }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LOAD ACTIVE PROFESSOR POOL
-    |--------------------------------------------------------------------------
-    |
-    | THIS IS THE CRITICAL FIX.
-    |
-    | We DO NOT start from professor_subjects.
-    |
-    | We start from actual active professor accounts.
-    |
-    |--------------------------------------------------------------------------
-    */
 
     const [professorRows] =
         await db.query(`
@@ -1052,16 +949,8 @@ const getProfessorQualifications = async subjects => {
                 p.id ASC
         `);
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | BUILD ACTIVE PROFESSOR MAP
-    |--------------------------------------------------------------------------
-    */
-
     const professorMap =
         new Map();
-
 
     for (
         const row
@@ -1073,7 +962,6 @@ const getProfessorQualifications = async subjects => {
                 row.professor_id
             );
 
-
         if (
             professorId <= 0
         ) {
@@ -1081,19 +969,15 @@ const getProfessorQualifications = async subjects => {
             continue;
         }
 
-
         const maxHours =
             row.max_weekly_hours == null
-
                 ? DEFAULT_MAX_WEEKLY_HOURS
-
                 : Math.max(
                     0,
                     num(
                         row.max_weekly_hours
                     )
                 );
-
 
         professorMap.set(
             professorId,
@@ -1129,30 +1013,11 @@ const getProfessorQualifications = async subjects => {
         );
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | QUALIFICATION MAPS
-    |--------------------------------------------------------------------------
-    */
-
     const qualificationsBySubject =
         new Map();
 
-
     const qualificationsByProfessor =
         new Map();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LOAD QUALIFICATIONS
-    |--------------------------------------------------------------------------
-    |
-    | Only ACTIVE professors can appear here.
-    |
-    |--------------------------------------------------------------------------
-    */
 
     const placeholders =
         subjectIds
@@ -1160,7 +1025,6 @@ const getProfessorQualifications = async subjects => {
                 () => "?"
             )
             .join(",");
-
 
     const [qualificationRows] =
         await db.query(`
@@ -1187,13 +1051,6 @@ const getProfessorQualifications = async subjects => {
                 ps.subject_id ASC
         `, subjectIds);
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | BUILD QUALIFICATIONS
-    |--------------------------------------------------------------------------
-    */
-
     for (
         const row
         of qualificationRows
@@ -1204,12 +1061,10 @@ const getProfessorQualifications = async subjects => {
                 row.professor_id
             );
 
-
         const subjectId =
             positiveInt(
                 row.subject_id
             );
-
 
         if (
             professorId <= 0 ||
@@ -1219,41 +1074,18 @@ const getProfessorQualifications = async subjects => {
             continue;
         }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | SAFETY CHECK
-        |--------------------------------------------------------------------------
-        */
-
         const professor =
             professorMap.get(
                 professorId
             );
 
-
         if (!professor) {
-
             continue;
         }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | PROFESSOR -> SUBJECT
-        |--------------------------------------------------------------------------
-        */
 
         professor.qualifiedSubjectIds.add(
             subjectId
         );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | SUBJECT -> PROFESSORS
-        |--------------------------------------------------------------------------
-        */
 
         if (
             !qualificationsBySubject.has(
@@ -1267,19 +1099,11 @@ const getProfessorQualifications = async subjects => {
             );
         }
 
-
         qualificationsBySubject
             .get(subjectId)
             .add(
                 professorId
             );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | PROFESSOR -> SUBJECTS
-        |--------------------------------------------------------------------------
-        */
 
         if (
             !qualificationsByProfessor.has(
@@ -1293,7 +1117,6 @@ const getProfessorQualifications = async subjects => {
             );
         }
 
-
         qualificationsByProfessor
             .get(professorId)
             .add(
@@ -1301,18 +1124,10 @@ const getProfessorQualifications = async subjects => {
             );
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | FINAL PROFESSOR LIST
-    |--------------------------------------------------------------------------
-    */
-
     const professors =
         [
             ...professorMap.values()
         ];
-
 
     const qualifiedProfessorCount =
         professors.filter(
@@ -1322,20 +1137,11 @@ const getProfessorQualifications = async subjects => {
                     .size > 0
         ).length;
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | DEBUG
-    |--------------------------------------------------------------------------
-    */
-
     console.log(
-        `[PROFESSOR POOL] ` +
-        `Active professors: ${professors.length} | ` +
-        `Qualified for requested subjects: ${qualifiedProfessorCount} | ` +
+        `[PROFESSOR POOL] Active professors: ${professors.length} | ` +
+        `Qualified: ${qualifiedProfessorCount} | ` +
         `Requested subjects: ${subjectIds.length}`
     );
-
 
     return {
 
@@ -1370,7 +1176,6 @@ const buildSubjectRequirements = ({
 
     const requirements = [];
 
-
     for (
         const subject
         of curriculum
@@ -1381,12 +1186,10 @@ const buildSubjectRequirements = ({
                 subject
             );
 
-
         const yearKey =
             normalizeYearLevel(
                 subject.yearLevel
             );
-
 
         const sectionCount =
             positiveInt(
@@ -1395,33 +1198,25 @@ const buildSubjectRequirements = ({
                 )
             );
 
-
         const requiredHours =
             sectionCount *
             weekly.totalHours;
-
 
         const qualifiedSet =
             qualificationsBySubject?.get(
                 subject.subjectId
             );
 
-
         const qualifiedProfessorIds =
             qualifiedSet instanceof Set
-
                 ? [...qualifiedSet]
-
                 : [];
-
 
         requirements.push({
 
             requirementKey:
                 programId != null
-
                     ? `${programId}:${subject.curriculumSubjectId}`
-
                     : String(
                         subject.curriculumSubjectId
                     ),
@@ -1485,7 +1280,6 @@ const buildSubjectRequirements = ({
         });
     }
 
-
     return requirements;
 };
 
@@ -1527,7 +1321,6 @@ const allocateProfessorHoursMaxFlow = ({
                 requirement.requiredHours > 0
         );
 
-
     if (
         activeRequirements.length === 0
     ) {
@@ -1561,14 +1354,12 @@ const allocateProfessorHoursMaxFlow = ({
         };
     }
 
-
     const safeProfessors =
         Array.isArray(
             professors
         )
             ? professors
             : [];
-
 
     const usableProfessors =
         safeProfessors.filter(
@@ -1577,13 +1368,6 @@ const allocateProfessorHoursMaxFlow = ({
                     professor.maxWeeklyHours
                 ) > 0
         );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | NODE INDEXING
-    |--------------------------------------------------------------------------
-    */
 
     const SOURCE = 0;
 
@@ -1601,22 +1385,13 @@ const allocateProfessorHoursMaxFlow = ({
     const nodeCount =
         SINK + 1;
 
-
     const flow =
         new Dinic(
             nodeCount
         );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | PROFESSOR NODE MAP
-    |--------------------------------------------------------------------------
-    */
-
     const professorNodeMap =
         new Map();
-
 
     usableProfessors.forEach(
         (
@@ -1628,12 +1403,10 @@ const allocateProfessorHoursMaxFlow = ({
                 professorStart +
                 index;
 
-
             professorNodeMap.set(
                 professor.professorId,
                 node
             );
-
 
             flow.addEdge(
                 SOURCE,
@@ -1647,16 +1420,8 @@ const allocateProfessorHoursMaxFlow = ({
         }
     );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | REQUIREMENT NODE MAP
-    |--------------------------------------------------------------------------
-    */
-
     const requirementNodeMap =
         new Map();
-
 
     activeRequirements.forEach(
         (
@@ -1668,12 +1433,10 @@ const allocateProfessorHoursMaxFlow = ({
                 requirementStart +
                 index;
 
-
             requirementNodeMap.set(
                 requirement.requirementKey,
                 node
             );
-
 
             flow.addEdge(
                 node,
@@ -1687,20 +1450,8 @@ const allocateProfessorHoursMaxFlow = ({
         }
     );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | PROFESSOR -> REQUIREMENT
-    |--------------------------------------------------------------------------
-    |
-    | ONLY QUALIFIED ACTIVE PROFESSORS.
-    |
-    |--------------------------------------------------------------------------
-    */
-
     const professorRequirementEdges =
         [];
-
 
     for (
         const professor
@@ -1711,7 +1462,6 @@ const allocateProfessorHoursMaxFlow = ({
             professorNodeMap.get(
                 professor.professorId
             );
-
 
         for (
             const requirement
@@ -1729,12 +1479,10 @@ const allocateProfessorHoursMaxFlow = ({
                 continue;
             }
 
-
             const requirementNode =
                 requirementNodeMap.get(
                     requirement.requirementKey
                 );
-
 
             const edge =
                 flow.addEdge(
@@ -1753,7 +1501,6 @@ const allocateProfessorHoursMaxFlow = ({
                         )
                     )
                 );
-
 
             professorRequirementEdges.push({
 
@@ -1778,13 +1525,6 @@ const allocateProfessorHoursMaxFlow = ({
         }
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | REQUIRED HOURS
-    |--------------------------------------------------------------------------
-    */
-
     const requiredHours =
         activeRequirements.reduce(
             (
@@ -1800,19 +1540,11 @@ const allocateProfessorHoursMaxFlow = ({
             0
         );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | RUN MAX FLOW
-    |--------------------------------------------------------------------------
-    */
-
     const allocatedHours =
         flow.maxFlow(
             SOURCE,
             SINK
         );
-
 
     const shortageHours =
         Math.max(
@@ -1821,23 +1553,13 @@ const allocateProfessorHoursMaxFlow = ({
             allocatedHours
         );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | READ ACTUAL ALLOCATION
-    |--------------------------------------------------------------------------
-    */
-
     const allocations = [];
-
 
     const allocatedByRequirement =
         new Map();
 
-
     const allocatedByProfessor =
         new Map();
-
 
     for (
         const item
@@ -1849,14 +1571,12 @@ const allocateProfessorHoursMaxFlow = ({
                 item.edge
             );
 
-
         if (
             used <= 0
         ) {
 
             continue;
         }
-
 
         allocations.push({
 
@@ -1880,7 +1600,6 @@ const allocateProfessorHoursMaxFlow = ({
 
         });
 
-
         allocatedByRequirement.set(
             item.requirementKey,
             (
@@ -1889,7 +1608,6 @@ const allocateProfessorHoursMaxFlow = ({
                 ) || 0
             ) + used
         );
-
 
         allocatedByProfessor.set(
             item.professorId,
@@ -1901,13 +1619,6 @@ const allocateProfessorHoursMaxFlow = ({
         );
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | REQUIREMENT RESULTS
-    |--------------------------------------------------------------------------
-    */
-
     const requirementResults =
         activeRequirements.map(
             requirement => {
@@ -1917,14 +1628,12 @@ const allocateProfessorHoursMaxFlow = ({
                         requirement.requirementKey
                     ) || 0;
 
-
                 const shortage =
                     Math.max(
                         0,
                         requirement.requiredHours -
                         allocated
                     );
-
 
                 return {
 
@@ -1975,29 +1684,14 @@ const allocateProfessorHoursMaxFlow = ({
 
                     reason:
                         requirement.qualifiedProfessorCount === 0
-
                             ? "NO_QUALIFIED_PROFESSOR"
-
                             : shortage > 0
-
                                 ? "INSUFFICIENT_SHARED_QUALIFIED_CAPACITY"
-
                                 : "ALLOCATED"
 
                 };
             }
         );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | PROFESSORS USED
-    |--------------------------------------------------------------------------
-    */
-
-    const professorsUsed =
-        allocatedByProfessor.size;
-
 
     return {
 
@@ -2011,7 +1705,8 @@ const allocateProfessorHoursMaxFlow = ({
 
         shortageHours,
 
-        professorsUsed,
+        professorsUsed:
+            allocatedByProfessor.size,
 
         allocations,
 
@@ -2105,7 +1800,6 @@ const calculateProfessorDetails = ({
             ? professors
             : [];
 
-
     return safeProfessors.map(
         professor => {
 
@@ -2120,7 +1814,6 @@ const calculateProfessorDetails = ({
                             )
                 );
 
-
             const potentialProgramHours =
                 qualifiedRequirements.reduce(
                     (
@@ -2134,12 +1827,10 @@ const calculateProfessorDetails = ({
                     0
                 );
 
-
             const allocatedHours =
                 allocationsByProfessor?.get(
                     professor.professorId
                 ) || 0;
-
 
             const maxWeeklyHours =
                 Math.max(
@@ -2148,7 +1839,6 @@ const calculateProfessorDetails = ({
                         professor.maxWeeklyHours
                     )
                 );
-
 
             return {
 
@@ -2170,23 +1860,19 @@ const calculateProfessorDetails = ({
                     professor
                         .qualifiedSubjectIds
                         instanceof Set
-
                         ? [
                             ...professor
                                 .qualifiedSubjectIds
                         ]
-
                         : [],
 
                 qualifiedSubjectsCount:
                     professor
                         .qualifiedSubjectIds
                         instanceof Set
-
                         ? professor
                             .qualifiedSubjectIds
                             .size
-
                         : 0,
 
                 qualifiedForActiveSubjects:
@@ -2205,14 +1891,12 @@ const calculateProfessorDetails = ({
 
                 utilization:
                     maxWeeklyHours > 0
-
                         ? round2(
                             (
                                 allocatedHours /
                                 maxWeeklyHours
                             ) * 100
                         )
-
                         : 0
 
             };
@@ -2235,7 +1919,6 @@ const calculateYearLevelDemand = ({
     const yearMap =
         new Map();
 
-
     for (
         const subject
         of curriculum
@@ -2246,14 +1929,12 @@ const calculateYearLevelDemand = ({
                 subject.yearLevel
             );
 
-
         if (
             !yearKey
         ) {
 
             continue;
         }
-
 
         if (
             !yearMap.has(
@@ -2291,21 +1972,17 @@ const calculateYearLevelDemand = ({
             );
         }
 
-
         const entry =
             yearMap.get(
                 yearKey
             );
-
 
         const weekly =
             getSubjectWeeklyHours(
                 subject
             );
 
-
         entry.subjectCount++;
-
 
         if (
             entry.sectionCount > 0 &&
@@ -2314,13 +1991,11 @@ const calculateYearLevelDemand = ({
 
             entry.activeSubjectCount++;
 
-
             entry.requiredHours +=
                 entry.sectionCount *
                 weekly.totalHours;
         }
     }
-
 
     return [
         ...yearMap.values()
@@ -2334,6 +2009,754 @@ const calculateYearLevelDemand = ({
                     b.normalizedYearLevel
                 )
     );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| BUILD SIMULATION REQUIREMENTS
+|--------------------------------------------------------------------------
+*/
+
+const buildSimulationRequirements = ({
+    curriculum,
+    sectionsByYearLevel,
+    qualificationsBySubject,
+    programId,
+    programName
+}) => {
+
+    return buildSubjectRequirements({
+
+        curriculum,
+
+        sectionsByYearLevel,
+
+        qualificationsBySubject,
+
+        programId,
+
+        programName
+
+    });
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| TEST SIMULATED SECTION COUNTS
+|--------------------------------------------------------------------------
+*/
+
+const testSimulatedSectionCounts = ({
+    curriculum,
+    professors,
+    qualificationsBySubject,
+    sectionCounts,
+    programId,
+    programName
+}) => {
+
+    const requirements =
+        buildSimulationRequirements({
+
+            curriculum,
+
+            sectionsByYearLevel:
+                sectionCounts,
+
+            qualificationsBySubject,
+
+            programId,
+
+            programName
+
+        });
+
+    const activeRequirements =
+        requirements.filter(
+            requirement =>
+                requirement.requiredHours > 0
+        );
+
+    if (
+        activeRequirements.length === 0
+    ) {
+
+        return {
+
+            feasible:
+                true,
+
+            requiredHours:
+                0,
+
+            allocatedHours:
+                0,
+
+            shortageHours:
+                0,
+
+            allocation:
+                null,
+
+            requirements
+
+        };
+    }
+
+    const allocation =
+        allocateProfessorHoursMaxFlow({
+
+            requirements,
+
+            professors
+
+        });
+
+    return {
+
+        feasible:
+            allocation.feasible,
+
+        requiredHours:
+            allocation.requiredHours,
+
+        allocatedHours:
+            allocation.allocatedHours,
+
+        shortageHours:
+            allocation.shortageHours,
+
+        allocation,
+
+        requirements
+
+    };
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| GET ACTIVE YEAR LEVELS
+|--------------------------------------------------------------------------
+*/
+
+const getActiveYearLevels = curriculum => {
+
+    const map =
+        new Map();
+
+    for (
+        const subject
+        of curriculum
+    ) {
+
+        const yearKey =
+            normalizeYearLevel(
+                subject.yearLevel
+            );
+
+        const weekly =
+            getSubjectWeeklyHours(
+                subject
+            );
+
+        if (
+            !yearKey ||
+            weekly.totalHours <= 0
+        ) {
+
+            continue;
+        }
+
+        if (
+            !map.has(
+                yearKey
+            )
+        ) {
+
+            map.set(
+                yearKey,
+                {
+
+                    normalizedYearLevel:
+                        yearKey,
+
+                    yearLevel:
+                        subject.yearLevel,
+
+                    subjectCount:
+                        0,
+
+                    weeklyHours:
+                        0,
+
+                    minimumQualifiedProfessorCount:
+                        Number.MAX_SAFE_INTEGER
+
+                }
+            );
+        }
+
+        const entry =
+            map.get(
+                yearKey
+            );
+
+        entry.subjectCount++;
+
+        entry.weeklyHours +=
+            weekly.totalHours;
+    }
+
+    return [
+        ...map.values()
+    ].sort(
+        (
+            a,
+            b
+        ) =>
+            a.normalizedYearLevel
+                .localeCompare(
+                    b.normalizedYearLevel
+                )
+    );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| SIMULATE MAXIMUM SECTIONS
+|--------------------------------------------------------------------------
+|
+| THIS IS THE NEW PART.
+|
+| No sections table.
+| No student_sections.
+|
+| Starts at ZERO sections.
+|
+| It repeatedly tries to add one section to each active year level.
+|
+| A candidate section is accepted only when the ENTIRE resulting
+| curriculum demand can still be allocated through qualified
+| professors.
+|
+|--------------------------------------------------------------------------
+*/
+
+const calculateMaximumSchedulableSections = ({
+    curriculum,
+    professors,
+    qualificationsBySubject,
+    programId,
+    programName
+}) => {
+
+    const activeYears =
+        getActiveYearLevels(
+            curriculum
+        );
+
+    if (
+        activeYears.length === 0
+    ) {
+
+        return {
+
+            maxSchedulableSections:
+                0,
+
+            maxBalancedSections:
+                0,
+
+            estimatedStudentCapacity:
+                0,
+
+            studentsPerSection:
+                DEFAULT_STUDENTS_PER_SECTION,
+
+            sectionsByYearLevel:
+                {},
+
+            studentsByYearLevel:
+                {},
+
+            balancedSectionsByYearLevel:
+                {},
+
+            totalWeeklyTeachingHours:
+                0,
+
+            simulationFeasible:
+                false,
+
+            simulationStatus:
+                "NO_ACTIVE_YEAR_LEVELS"
+
+        };
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CHECK WHETHER ANY SECTION IS POSSIBLE
+    |--------------------------------------------------------------------------
+    */
+
+    const sectionCounts =
+        new Map();
+
+    for (
+        const year
+        of activeYears
+    ) {
+
+        sectionCounts.set(
+            year.normalizedYearLevel,
+            0
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | GREEDY MAXIMUM SECTION SIMULATION
+    |--------------------------------------------------------------------------
+    |
+    | The next section is tested for every year.
+    |
+    | We choose the candidate with the lowest remaining slack first.
+    |
+    | This prevents the simulator from blindly filling the easiest
+    | year while starving highly qualified-subject-dependent years.
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    let totalSections = 0;
+
+    let simulationStoppedBecauseOfCapacity =
+        false;
+
+    while (
+        totalSections <
+        MAX_SIMULATION_SECTIONS
+    ) {
+
+        const candidates = [];
+
+        for (
+            const year
+            of activeYears
+        ) {
+
+            const yearKey =
+                year.normalizedYearLevel;
+
+            const current =
+                sectionCounts.get(
+                    yearKey
+                ) || 0;
+
+            const candidateCounts =
+                new Map(
+                    sectionCounts
+                );
+
+            candidateCounts.set(
+                yearKey,
+                current + 1
+            );
+
+            const test =
+                testSimulatedSectionCounts({
+
+                    curriculum,
+
+                    professors,
+
+                    qualificationsBySubject,
+
+                    sectionCounts:
+                        candidateCounts,
+
+                    programId,
+
+                    programName
+
+                });
+
+            if (
+                !test.feasible
+            ) {
+
+                continue;
+            }
+
+            const candidateAllocation =
+                test.allocation;
+
+            const remainingCapacity =
+                candidateAllocation
+
+                    ? Math.max(
+                        0,
+                        candidateAllocation
+                            .allocatedHours
+                        -
+                        candidateAllocation
+                            .requiredHours
+                    )
+
+                    : Number.MAX_SAFE_INTEGER;
+
+            candidates.push({
+
+                yearKey,
+
+                test,
+
+                remainingCapacity
+
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | NO MORE FEASIBLE SECTION
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            candidates.length === 0
+        ) {
+
+            simulationStoppedBecauseOfCapacity =
+                true;
+
+            break;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CHOOSE BEST CANDIDATE
+        |--------------------------------------------------------------------------
+        |
+        | Priority:
+        |
+        | 1. Smallest remaining capacity
+        | 2. Lower current section count
+        | 3. Lower year level
+        |
+        |--------------------------------------------------------------------------
+        */
+
+        candidates.sort(
+            (
+                a,
+                b
+            ) => {
+
+                if (
+                    a.remainingCapacity !==
+                    b.remainingCapacity
+                ) {
+
+                    return (
+                        a.remainingCapacity -
+                        b.remainingCapacity
+                    );
+                }
+
+                const aCount =
+                    sectionCounts.get(
+                        a.yearKey
+                    ) || 0;
+
+                const bCount =
+                    sectionCounts.get(
+                        b.yearKey
+                    ) || 0;
+
+                if (
+                    aCount !==
+                    bCount
+                ) {
+
+                    return (
+                        aCount -
+                        bCount
+                    );
+                }
+
+                return a.yearKey
+                    .localeCompare(
+                        b.yearKey
+                    );
+            }
+        );
+
+
+        const selected =
+            candidates[0];
+
+        sectionCounts.set(
+            selected.yearKey,
+            (
+                sectionCounts.get(
+                    selected.yearKey
+                ) || 0
+            ) + 1
+        );
+
+        totalSections++;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BALANCED SECTION SIMULATION
+    |--------------------------------------------------------------------------
+    |
+    | This calculates how many sections EACH active year can have if all
+    | active year levels receive the same number of sections.
+    |
+    | Example:
+    |
+    | 4 years
+    | 10 balanced sections
+    |
+    | = 40 sections total
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    let low = 0;
+
+    let high =
+        Math.max(
+            0,
+            Math.floor(
+                totalSections /
+                Math.max(
+                    1,
+                    activeYears.length
+                )
+            ) + 1
+        );
+
+    let balancedSections = 0;
+
+    while (
+        low <= high
+    ) {
+
+        const mid =
+            Math.floor(
+                (
+                    low +
+                    high
+                ) / 2
+            );
+
+        const testCounts =
+            new Map();
+
+        for (
+            const year
+            of activeYears
+        ) {
+
+            testCounts.set(
+                year.normalizedYearLevel,
+                mid
+            );
+        }
+
+        const test =
+            testSimulatedSectionCounts({
+
+                curriculum,
+
+                professors,
+
+                qualificationsBySubject,
+
+                sectionCounts:
+                    testCounts,
+
+                programId,
+
+                programName
+
+            });
+
+        if (
+            test.feasible
+        ) {
+
+            balancedSections =
+                mid;
+
+            low =
+                mid + 1;
+
+        } else {
+
+            high =
+                mid - 1;
+        }
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | BALANCED MAP
+    |--------------------------------------------------------------------------
+    */
+
+    const balancedSectionsByYearLevel =
+        {};
+
+    for (
+        const year
+        of activeYears
+    ) {
+
+        balancedSectionsByYearLevel[
+            year.normalizedYearLevel
+        ] =
+            balancedSections;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTUAL MAXIMUM MAP
+    |--------------------------------------------------------------------------
+    */
+
+    const sectionsByYearLevel =
+        {};
+
+    const studentsByYearLevel =
+        {};
+
+    let totalWeeklyTeachingHours = 0;
+
+    for (
+        const year
+        of activeYears
+    ) {
+
+        const count =
+            sectionCounts.get(
+                year.normalizedYearLevel
+            ) || 0;
+
+        sectionsByYearLevel[
+            year.normalizedYearLevel
+        ] = count;
+
+        studentsByYearLevel[
+            year.normalizedYearLevel
+        ] =
+            count *
+            DEFAULT_STUDENTS_PER_SECTION;
+
+        totalWeeklyTeachingHours +=
+            count *
+            year.weeklyHours;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | TOTAL STUDENT CAPACITY
+    |--------------------------------------------------------------------------
+    */
+
+    const estimatedStudentCapacity =
+        totalSections *
+        DEFAULT_STUDENTS_PER_SECTION;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | STATUS
+    |--------------------------------------------------------------------------
+    */
+
+    let simulationStatus =
+        "MAXIMUM_REACHED";
+
+    if (
+        totalSections === 0
+    ) {
+
+        simulationStatus =
+            "NO_SECTION_FEASIBLE";
+
+    } else if (
+        simulationStoppedBecauseOfCapacity
+    ) {
+
+        simulationStatus =
+            "CAPACITY_LIMIT_REACHED";
+    }
+
+
+    return {
+
+        maxSchedulableSections:
+            totalSections,
+
+        maxBalancedSections:
+            balancedSections,
+
+        estimatedStudentCapacity,
+
+        studentsPerSection:
+            DEFAULT_STUDENTS_PER_SECTION,
+
+        sectionsByYearLevel,
+
+        studentsByYearLevel,
+
+        balancedSectionsByYearLevel,
+
+        totalWeeklyTeachingHours:
+            totalWeeklyTeachingHours,
+
+        activeYearLevels:
+            activeYears.map(
+                year => ({
+
+                    yearLevel:
+                        year.yearLevel,
+
+                    normalizedYearLevel:
+                        year.normalizedYearLevel,
+
+                    subjects:
+                        year.subjectCount,
+
+                    weeklyHoursPerSection:
+                        year.weeklyHours
+
+                })
+            ),
+
+        simulationFeasible:
+            totalSections > 0,
+
+        simulationStatus
+
+    };
 };
 
 
@@ -2364,14 +2787,12 @@ const calculateProgramCapacity = ({
 
         };
 
-
     const safeCurriculum =
         Array.isArray(
             curriculum
         )
             ? curriculum
             : [];
-
 
     const safeProfessors =
         Array.isArray(
@@ -2383,7 +2804,11 @@ const calculateProgramCapacity = ({
 
     /*
     |--------------------------------------------------------------------------
-    | BUILD REQUIREMENTS
+    | CURRENT EXISTING SECTION REQUIREMENTS
+    |--------------------------------------------------------------------------
+    |
+    | KEEPING THIS EXACTLY FOR BACKWARD COMPATIBILITY.
+    |
     |--------------------------------------------------------------------------
     */
 
@@ -2396,10 +2821,8 @@ const calculateProgramCapacity = ({
             sectionsByYearLevel:
                 safeSections
                     .sectionsByYearLevel instanceof Map
-
                     ? safeSections
                         .sectionsByYearLevel
-
                     : new Map(),
 
             qualificationsBySubject,
@@ -2410,13 +2833,11 @@ const calculateProgramCapacity = ({
 
         });
 
-
     const activeRequirements =
         requirements.filter(
             requirement =>
                 requirement.requiredHours > 0
         );
-
 
     const totalRequiredHours =
         calculateRequiredHours(
@@ -2426,7 +2847,7 @@ const calculateProgramCapacity = ({
 
     /*
     |--------------------------------------------------------------------------
-    | TOTAL ACTIVE PROFESSOR CAPACITY
+    | PROFESSOR CAPACITY
     |--------------------------------------------------------------------------
     */
 
@@ -2446,13 +2867,6 @@ const calculateProgramCapacity = ({
             0
         );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | QUALIFIED PROFESSORS FOR PROGRAM
-    |--------------------------------------------------------------------------
-    */
-
     const qualifiedProfessors =
         safeProfessors.filter(
             professor =>
@@ -2465,7 +2879,6 @@ const calculateProgramCapacity = ({
                             )
                 )
         );
-
 
     const totalQualifiedProfessorCapacity =
         qualifiedProfessors.reduce(
@@ -2483,13 +2896,6 @@ const calculateProgramCapacity = ({
             0
         );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | MAX FLOW
-    |--------------------------------------------------------------------------
-    */
-
     const allocation =
         allocateProfessorHoursMaxFlow({
 
@@ -2500,13 +2906,6 @@ const calculateProgramCapacity = ({
 
         });
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | BOTTLENECKS
-    |--------------------------------------------------------------------------
-    */
-
     const subjectBottlenecks =
         calculateSubjectBottlenecks({
 
@@ -2514,13 +2913,6 @@ const calculateProgramCapacity = ({
                 allocation.requirementResults
 
         });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | HOURS-ONLY LOWER BOUND
-    |--------------------------------------------------------------------------
-    */
 
     const maxProfessorHours =
         qualifiedProfessors.length > 0
@@ -2539,7 +2931,6 @@ const calculateProgramCapacity = ({
 
             : 0;
 
-
     const hoursOnlyLowerBound =
         totalRequiredHours > 0 &&
         maxProfessorHours > 0
@@ -2554,13 +2945,36 @@ const calculateProgramCapacity = ({
 
     /*
     |--------------------------------------------------------------------------
+    | NEW SECTION SIMULATION
+    |--------------------------------------------------------------------------
+    */
+
+    const simulatedSections =
+        calculateMaximumSchedulableSections({
+
+            curriculum:
+                safeCurriculum,
+
+            professors:
+                safeProfessors,
+
+            qualificationsBySubject,
+
+            programId,
+
+            programName
+
+        });
+
+
+    /*
+    |--------------------------------------------------------------------------
     | STATUS
     |--------------------------------------------------------------------------
     */
 
     let status =
         "SUFFICIENT";
-
 
     if (
         safeSections.totalSections === 0
@@ -2592,12 +3006,6 @@ const calculateProgramCapacity = ({
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | PROFESSOR DETAILS
-    |--------------------------------------------------------------------------
-    */
-
     const professorDetails =
         calculateProfessorDetails({
 
@@ -2612,12 +3020,6 @@ const calculateProgramCapacity = ({
         });
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | YEAR LEVEL DEMAND
-    |--------------------------------------------------------------------------
-    */
-
     const yearLevelDemand =
         calculateYearLevelDemand({
 
@@ -2627,16 +3029,20 @@ const calculateProgramCapacity = ({
             sectionsByYearLevel:
                 safeSections
                     .sectionsByYearLevel instanceof Map
-
                     ? safeSections
                         .sectionsByYearLevel
-
                     : new Map()
 
         });
 
 
     return {
+
+        /*
+        |--------------------------------------------------------------------------
+        | EXISTING RETURN - PRESERVED
+        |--------------------------------------------------------------------------
+        */
 
         status,
 
@@ -2670,12 +3076,6 @@ const calculateProgramCapacity = ({
 
         allocationShortageHours:
             allocation.shortageHours,
-
-        /*
-        |--------------------------------------------------------------------------
-        | PROFESSOR COUNTS
-        |--------------------------------------------------------------------------
-        */
 
         professorsAvailable:
             safeProfessors.length,
@@ -2739,12 +3139,19 @@ const calculateProgramCapacity = ({
             Object.fromEntries(
                 safeSections
                     .sectionsByYearLevel instanceof Map
-
                     ? safeSections
                         .sectionsByYearLevel
-
                     : new Map()
-            )
+            ),
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | NEW RETURN
+        |--------------------------------------------------------------------------
+        */
+
+        simulatedSections
 
     };
 };
@@ -2796,14 +3203,7 @@ const checkProgram = async ({
         "----------------------------------------"
     );
 
-
     try {
-
-        /*
-        |--------------------------------------------------------------------------
-        | SECTIONS
-        |--------------------------------------------------------------------------
-        */
 
         const sections =
             await getProgramSections(
@@ -2812,12 +3212,79 @@ const checkProgram = async ({
             );
 
 
+        /*
+        |--------------------------------------------------------------------------
+        | CURRICULUM
+        |--------------------------------------------------------------------------
+        */
+
+        const curriculum =
+            Array.isArray(
+                preloadedCurriculum
+            )
+                ? preloadedCurriculum
+                : await getProgramCurriculum(
+                    program.id,
+                    academicTerm
+                );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PROFESSOR DATA
+        |--------------------------------------------------------------------------
+        */
+
+        const qualificationData =
+            preloadedProfessorData ||
+            await getProfessorQualifications(
+                curriculum
+            );
+
+        const professors =
+            qualificationData.professors || [];
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | IMPORTANT
+        |--------------------------------------------------------------------------
+        |
+        | Even when existing section count is ZERO, we still run the
+        | simulation.
+        |
+        |--------------------------------------------------------------------------
+        */
+
         if (
             sections.totalSections === 0
         ) {
 
+            const simulatedSections =
+                calculateMaximumSchedulableSections({
+
+                    curriculum,
+
+                    professors,
+
+                    qualificationsBySubject:
+                        qualificationData
+                            .qualificationsBySubject,
+
+                    programId:
+                        program.id,
+
+                    programName:
+                        program.name
+
+                });
+
+
             console.log(
-                `[CAPACITY] ${program.name} | NO SECTIONS`
+                `[CAPACITY] ${program.name} | ` +
+                `Existing sections: 0 | ` +
+                `Simulated maximum: ` +
+                `${simulatedSections.maxSchedulableSections}`
             );
 
 
@@ -2836,7 +3303,7 @@ const checkProgram = async ({
                     true,
 
                 reason:
-                    "No sections found for this program in the selected academic term.",
+                    "No existing sections found. Professor capacity simulation was still performed.",
 
                 failureType:
                     null,
@@ -2861,16 +3328,34 @@ const checkProgram = async ({
                         0,
 
                     subjectsAnalyzed:
-                        0,
+                        curriculum.length,
 
                     activeSubjects:
-                        0,
+                        curriculum.filter(
+                            subject =>
+                                getSubjectWeeklyHours(
+                                    subject
+                                ).totalHours > 0
+                        ).length,
 
                     requiredTeachingHours:
                         0,
 
                     availableProfessorCapacity:
-                        0,
+                        professors.reduce(
+                            (
+                                total,
+                                professor
+                            ) =>
+                                total +
+                                Math.max(
+                                    0,
+                                    num(
+                                        professor.maxWeeklyHours
+                                    )
+                                ),
+                            0
+                        ),
 
                     totalQualifiedProfessorCapacity:
                         0,
@@ -2882,10 +3367,11 @@ const checkProgram = async ({
                         0,
 
                     professorsAvailable:
-                        0,
+                        professors.length,
 
                     qualifiedProfessorsAvailable:
-                        0,
+                        qualificationData
+                            .qualifiedProfessorCount,
 
                     hoursOnlyLowerBound:
                         0,
@@ -2924,7 +3410,9 @@ const checkProgram = async ({
                         [],
 
                     sectionsByYearLevel:
-                        {}
+                        {},
+
+                    simulatedSections
 
                 }
 
@@ -2934,44 +3422,7 @@ const checkProgram = async ({
 
         /*
         |--------------------------------------------------------------------------
-        | CURRICULUM
-        |--------------------------------------------------------------------------
-        */
-
-        const curriculum =
-            Array.isArray(
-                preloadedCurriculum
-            )
-
-                ? preloadedCurriculum
-
-                : await getProgramCurriculum(
-                    program.id,
-                    academicTerm
-                );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | PROFESSOR DATA
-        |--------------------------------------------------------------------------
-        */
-
-        const qualificationData =
-            preloadedProfessorData ||
-
-            await getProfessorQualifications(
-                curriculum
-            );
-
-
-        const professors =
-            qualificationData.professors || [];
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | CALCULATE
+        | NORMAL CAPACITY CHECK
         |--------------------------------------------------------------------------
         */
 
@@ -3002,30 +3453,27 @@ const checkProgram = async ({
             });
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | LOG
-        |--------------------------------------------------------------------------
-        */
-
         console.log(
             `\n[CAPACITY RESULT] ${program.name}`
         );
 
         console.log(
-            `Semester: ${professorCapacity.semester}`
+            `Existing Sections: ${professorCapacity.sectionCount}`
         );
 
         console.log(
-            `Sections: ${professorCapacity.sectionCount}`
+            `Simulated Maximum Sections: ` +
+            `${professorCapacity.simulatedSections.maxSchedulableSections}`
         );
 
         console.log(
-            `Subjects analyzed: ${professorCapacity.subjectsAnalyzed}`
+            `Simulated Student Capacity: ` +
+            `${professorCapacity.simulatedSections.estimatedStudentCapacity}`
         );
 
         console.log(
-            `Active subjects: ${professorCapacity.activeSubjects}`
+            `Balanced Sections/Year: ` +
+            `${professorCapacity.simulatedSections.maxBalancedSections}`
         );
 
         console.log(
@@ -3041,7 +3489,7 @@ const checkProgram = async ({
         );
 
         console.log(
-            `Actually allocatable qualified capacity: ${professorCapacity.allocatableQualifiedCapacity}`
+            `Actually allocatable capacity: ${professorCapacity.allocatableQualifiedCapacity}`
         );
 
         console.log(
@@ -3057,11 +3505,7 @@ const checkProgram = async ({
         );
 
         console.log(
-            `Hours-only lower bound: ${professorCapacity.hoursOnlyLowerBound}`
-        );
-
-        console.log(
-            `Professors used by capacity allocation: ${professorCapacity.professorsUsedByCapacityAllocation}`
+            `Professors used: ${professorCapacity.professorsUsedByCapacityAllocation}`
         );
 
         console.log(
@@ -3081,12 +3525,6 @@ const checkProgram = async ({
         );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | YEAR LEVEL LOG
-        |--------------------------------------------------------------------------
-        */
-
         if (
             professorCapacity.yearLevelDemand.length > 0
         ) {
@@ -3094,7 +3532,6 @@ const checkProgram = async ({
             console.log(
                 "[YEAR LEVEL DEMAND]"
             );
-
 
             for (
                 const year
@@ -3115,34 +3552,38 @@ const checkProgram = async ({
 
         /*
         |--------------------------------------------------------------------------
-        | BOTTLENECK LOG
+        | NEW SIMULATION LOG
         |--------------------------------------------------------------------------
         */
 
-        if (
-            professorCapacity.subjectBottlenecks.length > 0
-        ) {
+        console.log(
+            "\n[SECTION SIMULATION]"
+        );
 
-            console.log(
-                "[SUBJECT BOTTLENECKS]"
-            );
+        console.log(
+            `Maximum schedulable sections: ` +
+            `${professorCapacity.simulatedSections.maxSchedulableSections}`
+        );
 
+        console.log(
+            `Maximum balanced sections/year: ` +
+            `${professorCapacity.simulatedSections.maxBalancedSections}`
+        );
 
-            for (
-                const bottleneck
-                of professorCapacity.subjectBottlenecks
-            ) {
+        console.log(
+            `Students per section: ` +
+            `${professorCapacity.simulatedSections.studentsPerSection}`
+        );
 
-                console.log(
-                    `  ${bottleneck.subjectCode} | ` +
-                    `${bottleneck.subjectName} | ` +
-                    `Required: ${bottleneck.requiredHours} | ` +
-                    `Allocated: ${bottleneck.allocatedHours} | ` +
-                    `Shortage: ${bottleneck.capacityShortage} | ` +
-                    `Qualified: ${bottleneck.qualifiedProfessorCount}`
-                );
-            }
-        }
+        console.log(
+            `Estimated student capacity: ` +
+            `${professorCapacity.simulatedSections.estimatedStudentCapacity}`
+        );
+
+        console.log(
+            `Simulation status: ` +
+            `${professorCapacity.simulatedSections.simulationStatus}`
+        );
 
 
         const passed =
@@ -3195,7 +3636,6 @@ const checkProgram = async ({
             error
         );
 
-
         return {
 
             programId:
@@ -3241,7 +3681,6 @@ const buildUniversityRequirements = ({
 
     const requirements = [];
 
-
     for (
         const data
         of programData
@@ -3267,12 +3706,10 @@ const buildUniversityRequirements = ({
 
             });
 
-
         requirements.push(
             ...requirementsForProgram
         );
     }
-
 
     return requirements;
 };
@@ -3280,15 +3717,100 @@ const buildUniversityRequirements = ({
 
 /*
 |--------------------------------------------------------------------------
-| CHECK UNIVERSITY CAPACITY
+| UNIVERSITY SECTION SIMULATION
 |--------------------------------------------------------------------------
 |
-| IMPORTANT:
+| This is intentionally separate from the existing global professor
+| capacity result.
 |
-| Argument is ONLY academicTermId.
+| It calculates the sum of each program's independent simulation.
 |
-| checkUniversityCapacity(1)
+| This means:
 |
+|   BSCS maximum = X
+|   BSIT maximum = Y
+|
+| are independent program capacities.
+|
+| For actual simultaneous university scheduling, use globalAllocation.
+|
+|--------------------------------------------------------------------------
+*/
+
+const buildProgramSimulationSummary = results => {
+
+    return results.map(
+        result => {
+
+            const simulation =
+                result
+                    ?.professorCapacity
+                    ?.simulatedSections;
+
+            return {
+
+                programId:
+                    result.programId,
+
+                programName:
+                    result.programName,
+
+                existingSections:
+                    num(
+                        result.sectionCount
+                    ),
+
+                maxSchedulableSections:
+                    num(
+                        simulation
+                            ?.maxSchedulableSections
+                    ),
+
+                maxBalancedSections:
+                    num(
+                        simulation
+                            ?.maxBalancedSections
+                    ),
+
+                studentsPerSection:
+                    num(
+                        simulation
+                            ?.studentsPerSection
+                    ) ||
+                    DEFAULT_STUDENTS_PER_SECTION,
+
+                estimatedStudentCapacity:
+                    num(
+                        simulation
+                            ?.estimatedStudentCapacity
+                    ),
+
+                sectionsByYearLevel:
+                    simulation
+                        ?.sectionsByYearLevel || {},
+
+                studentsByYearLevel:
+                    simulation
+                        ?.studentsByYearLevel || {},
+
+                balancedSectionsByYearLevel:
+                    simulation
+                        ?.balancedSectionsByYearLevel || {},
+
+                simulationStatus:
+                    simulation
+                        ?.simulationStatus ||
+                    "NOT_AVAILABLE"
+
+            };
+        }
+    );
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| CHECK UNIVERSITY CAPACITY
 |--------------------------------------------------------------------------
 */
 
@@ -3298,7 +3820,6 @@ const checkUniversityCapacity = async academicTermId => {
         positiveInt(
             academicTermId
         );
-
 
     if (
         termId <= 0
@@ -3310,23 +3831,15 @@ const checkUniversityCapacity = async academicTermId => {
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | ACADEMIC TERM
-    |--------------------------------------------------------------------------
-    */
-
     const academicTerm =
         await getAcademicTerm(
             termId
         );
 
-
     const normalizedSemester =
         normalizeSemester(
             academicTerm.semester
         );
-
 
     if (
         !normalizedSemester
@@ -3337,12 +3850,6 @@ const checkUniversityCapacity = async academicTermId => {
         );
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | PROGRAMS
-    |--------------------------------------------------------------------------
-    */
 
     const programs =
         await getPrograms();
@@ -3381,18 +3888,21 @@ const checkUniversityCapacity = async academicTermId => {
     );
 
     console.log(
-        "Calculation: MAX-FLOW + CURRICULUM + SECTIONS + PROFESSOR QUALIFICATIONS"
+        "Existing sections are NOT used for simulation."
+    );
+
+    console.log(
+        `Simulation students/section: ${DEFAULT_STUDENTS_PER_SECTION}`
     );
 
 
     /*
     |--------------------------------------------------------------------------
-    | LOAD ALL PROGRAM DATA
+    | LOAD PROGRAM DATA
     |--------------------------------------------------------------------------
     */
 
     const programData = [];
-
 
     for (
         const program
@@ -3405,13 +3915,11 @@ const checkUniversityCapacity = async academicTermId => {
                 termId
             );
 
-
         const curriculum =
             await getProgramCurriculum(
                 program.id,
                 academicTerm
             );
-
 
         programData.push({
 
@@ -3431,12 +3939,11 @@ const checkUniversityCapacity = async academicTermId => {
 
     /*
     |--------------------------------------------------------------------------
-    | ALL CURRICULUM SUBJECTS
+    | ALL SUBJECTS
     |--------------------------------------------------------------------------
     */
 
     const allSubjects = [];
-
 
     for (
         const data
@@ -3451,18 +3958,7 @@ const checkUniversityCapacity = async academicTermId => {
 
     /*
     |--------------------------------------------------------------------------
-    | GLOBAL PROFESSOR QUALIFICATIONS
-    |--------------------------------------------------------------------------
-    |
-    | PROFESSORS ARE LOADED ONCE.
-    |
-    | Only:
-    |
-    |   users.role = professor
-    |   users.status = active
-    |
-    | are included.
-    |
+    | GLOBAL PROFESSOR DATA
     |--------------------------------------------------------------------------
     */
 
@@ -3471,16 +3967,9 @@ const checkUniversityCapacity = async academicTermId => {
             allSubjects
         );
 
-
     const globalProfessors =
         globalQualificationData.professors || [];
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL PROFESSOR DEBUG
-    |--------------------------------------------------------------------------
-    */
 
     const globalQualifiedForAnything =
         globalProfessors.filter(
@@ -3500,18 +3989,17 @@ const checkUniversityCapacity = async academicTermId => {
     );
 
     console.log(
-        `Active professors qualified for at least one selected subject: ${globalQualifiedForAnything.length}`
+        `Qualified active professors: ${globalQualifiedForAnything.length}`
     );
 
 
     /*
     |--------------------------------------------------------------------------
-    | INDIVIDUAL PROGRAM RESULTS
+    | PROGRAM RESULTS
     |--------------------------------------------------------------------------
     */
 
     const results = [];
-
 
     for (
         let index = 0;
@@ -3522,12 +4010,10 @@ const checkUniversityCapacity = async academicTermId => {
         const program =
             programs[index];
 
-
         console.log(
             `\n[PROGRAM ${index + 1}/${programs.length}] ` +
             `${program.name}`
         );
-
 
         const data =
             programData.find(
@@ -3535,7 +4021,6 @@ const checkUniversityCapacity = async academicTermId => {
                     item.programId ===
                     program.id
             );
-
 
         const result =
             await checkProgram({
@@ -3555,7 +4040,6 @@ const checkUniversityCapacity = async academicTermId => {
 
             });
 
-
         results.push(
             result
         );
@@ -3564,7 +4048,7 @@ const checkUniversityCapacity = async academicTermId => {
 
     /*
     |--------------------------------------------------------------------------
-    | GLOBAL REQUIREMENTS
+    | UNIVERSITY REQUIREMENTS
     |--------------------------------------------------------------------------
     */
 
@@ -3579,13 +4063,11 @@ const checkUniversityCapacity = async academicTermId => {
 
         });
 
-
     const activeUniversityRequirements =
         universityRequirements.filter(
             requirement =>
                 requirement.requiredHours > 0
         );
-
 
     const totalUniversityRequiredHours =
         calculateRequiredHours(
@@ -3596,18 +4078,6 @@ const checkUniversityCapacity = async academicTermId => {
     /*
     |--------------------------------------------------------------------------
     | GLOBAL MAX FLOW
-    |--------------------------------------------------------------------------
-    |
-    | EVERY ACTIVE PROFESSOR APPEARS ONLY ONCE.
-    |
-    | Their weekly capacity is shared between:
-    |
-    | BSCS
-    | BSIT
-    | BSN
-    | BSIE
-    | etc.
-    |
     |--------------------------------------------------------------------------
     */
 
@@ -3622,12 +4092,6 @@ const checkUniversityCapacity = async academicTermId => {
 
         });
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL BOTTLENECKS
-    |--------------------------------------------------------------------------
-    */
 
     const globalBottlenecks =
         calculateSubjectBottlenecks({
@@ -3661,12 +4125,6 @@ const checkUniversityCapacity = async academicTermId => {
             0
         );
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL QUALIFIED PROFESSORS
-    |--------------------------------------------------------------------------
-    */
 
     const globalActiveRequirements =
         activeUniversityRequirements;
@@ -3703,12 +4161,6 @@ const checkUniversityCapacity = async academicTermId => {
         );
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL HOURS-ONLY LOWER BOUND
-    |--------------------------------------------------------------------------
-    */
-
     const maxGlobalProfessorHours =
         globalQualifiedProfessors.length > 0
 
@@ -3741,7 +4193,7 @@ const checkUniversityCapacity = async academicTermId => {
 
     /*
     |--------------------------------------------------------------------------
-    | UNIVERSITY STATUS
+    | RESULT GROUPS
     |--------------------------------------------------------------------------
     */
 
@@ -3751,14 +4203,12 @@ const checkUniversityCapacity = async academicTermId => {
                 result.skipped === true
         );
 
-
     const failedProgramChecks =
         results.filter(
             result =>
                 result.passed === false &&
                 result.skipped === false
         );
-
 
     const passed =
         results.filter(
@@ -3768,15 +4218,8 @@ const checkUniversityCapacity = async academicTermId => {
         );
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | GLOBAL CAPACITY
-    |--------------------------------------------------------------------------
-    */
-
     const globalCapacityPassed =
         globalAllocation.feasible;
-
 
     const universityPassed =
         failedProgramChecks.length === 0 &&
@@ -3785,7 +4228,7 @@ const checkUniversityCapacity = async academicTermId => {
 
     /*
     |--------------------------------------------------------------------------
-    | PROGRAM-SCOPED SUMMARY
+    | PROGRAM SUMMARY
     |--------------------------------------------------------------------------
     */
 
@@ -3839,7 +4282,170 @@ const checkUniversityCapacity = async academicTermId => {
 
     /*
     |--------------------------------------------------------------------------
-    | GLOBAL LOG
+    | EXISTING PROGRAM PROFESSOR CAPACITY
+    |--------------------------------------------------------------------------
+    */
+
+    const programProfessorCapacity =
+        results.map(
+            result => {
+
+                const capacity =
+                    result?.professorCapacity || {};
+
+                const totalProfessors =
+                    num(
+                        capacity.professorsAvailable
+                    );
+
+                const qualifiedProfessors =
+                    num(
+                        capacity.qualifiedProfessorsAvailable
+                    );
+
+                const professorsUsed =
+                    num(
+                        capacity.professorsUsedByCapacityAllocation
+                    );
+
+                const professorsNeeded =
+                    num(
+                        capacity.hoursOnlyLowerBound
+                    );
+
+                const professorShortage =
+                    Math.max(
+                        0,
+                        num(
+                            capacity.professorShortage
+                        )
+                    );
+
+                const allocationFeasible =
+                    capacity.allocationFeasible === true;
+
+                return {
+
+                    programId:
+                        result.programId,
+
+                    programName:
+                        result.programName,
+
+                    sectionCount:
+                        num(
+                            result.sectionCount
+                        ),
+
+                    totalProfessors,
+
+                    qualifiedProfessors,
+
+                    professorsUsed,
+
+                    professorsNeeded,
+
+                    professorShortage,
+
+                    requiredTeachingHours:
+                        num(
+                            capacity.requiredTeachingHours
+                        ),
+
+                    allocatableQualifiedCapacity:
+                        num(
+                            capacity.allocatableQualifiedCapacity
+                        ),
+
+                    allocationShortageHours:
+                        num(
+                            capacity.allocationShortageHours
+                        ),
+
+                    allocationFeasible,
+
+                    status:
+                        allocationFeasible
+                            ? "SUFFICIENT"
+                            : "INSUFFICIENT",
+
+                    subjectBottlenecks:
+                        capacity.subjectBottlenecks || [],
+
+                    subjectBottleneckCount:
+                        Array.isArray(
+                            capacity.subjectBottlenecks
+                        )
+                            ? capacity
+                                .subjectBottlenecks
+                                .length
+                            : 0
+
+                };
+
+            }
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEW PROGRAM SECTION SIMULATION SUMMARY
+    |--------------------------------------------------------------------------
+    */
+
+    const programSectionSimulation =
+        buildProgramSimulationSummary(
+            results
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEW TOTAL SIMULATED SECTION SUMMARY
+    |--------------------------------------------------------------------------
+    |
+    | NOTE:
+    |
+    | This is the sum of INDEPENDENT program simulations.
+    |
+    | It should NOT be interpreted as the number of sections that all
+    | programs can simultaneously schedule using the exact same professor
+    | pool.
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    const totalSimulatedSections =
+        programSectionSimulation.reduce(
+            (
+                total,
+                item
+            ) =>
+                total +
+                num(
+                    item.maxSchedulableSections
+                ),
+            0
+        );
+
+
+    const totalSimulatedStudentCapacity =
+        programSectionSimulation.reduce(
+            (
+                total,
+                item
+            ) =>
+                total +
+                num(
+                    item.estimatedStudentCapacity
+                ),
+            0
+        );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOG
     |--------------------------------------------------------------------------
     */
 
@@ -3868,7 +4474,7 @@ const checkUniversityCapacity = async academicTermId => {
     );
 
     console.log(
-        `Globally qualified active professors: ${globalQualifiedProfessors.length}`
+        `Globally qualified professors: ${globalQualifiedProfessors.length}`
     );
 
     console.log(
@@ -3896,7 +4502,7 @@ const checkUniversityCapacity = async academicTermId => {
     );
 
     console.log(
-        `Professors used by global capacity allocation: ${globalAllocation.professorsUsed}`
+        `Professors used: ${globalAllocation.professorsUsed}`
     );
 
     console.log(
@@ -3904,58 +4510,98 @@ const checkUniversityCapacity = async academicTermId => {
     );
 
     console.log(
-        `Global subject bottlenecks: ${globalBottlenecks.length}`
-    );
-
-    console.log(
-        `Program checks failed: ${failedProgramChecks.length}`
-    );
-
-    console.log(
-        `University capacity status: ${
-            universityPassed
-                ? "SUFFICIENT"
-                : "INSUFFICIENT"
-        }`
+        `Global bottlenecks: ${globalBottlenecks.length}`
     );
 
 
     /*
     |--------------------------------------------------------------------------
-    | GLOBAL BOTTLENECK LOG
+    | SECTION SIMULATION LOG
     |--------------------------------------------------------------------------
     */
 
-    if (
-        globalBottlenecks.length > 0
+    console.log(
+        "\n========================================"
+    );
+
+    console.log(
+        "SIMULATED SECTION CAPACITY"
+    );
+
+    console.log(
+        "========================================"
+    );
+
+    console.log(
+        `Students per section: ${DEFAULT_STUDENTS_PER_SECTION}`
+    );
+
+    console.log(
+        `Total independent simulated sections: ${totalSimulatedSections}`
+    );
+
+    console.log(
+        `Total independent simulated student capacity: ${totalSimulatedStudentCapacity}`
+    );
+
+
+    for (
+        const item
+        of programSectionSimulation
     ) {
 
         console.log(
-            "\nGLOBAL SUBJECT BOTTLENECKS"
+            `${item.programName} | ` +
+            `Existing: ${item.existingSections} | ` +
+            `Can Create: ${item.maxSchedulableSections} sections | ` +
+            `Students: ${item.estimatedStudentCapacity}`
         );
 
-
-        for (
-            const bottleneck
-            of globalBottlenecks
-        ) {
-
-            console.log(
-                `- ${bottleneck.programName} | ` +
-                `${bottleneck.subjectCode} | ` +
-                `${bottleneck.subjectName} | ` +
-                `Required: ${bottleneck.requiredHours} | ` +
-                `Allocated: ${bottleneck.allocatedHours} | ` +
-                `Shortage: ${bottleneck.capacityShortage} | ` +
-                `Qualified: ${bottleneck.qualifiedProfessorCount}`
-            );
-        }
+        console.log(
+            `  By year:`,
+            item.sectionsByYearLevel
+        );
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | FAILED PROGRAM LOG
+    | PROGRAM PROFESSOR LOG
+    |--------------------------------------------------------------------------
+    */
+
+    console.log(
+        "\n========================================"
+    );
+
+    console.log(
+        "PROGRAM PROFESSOR CAPACITY SUMMARY"
+    );
+
+    console.log(
+        "========================================"
+    );
+
+    for (
+        const programCapacity
+        of programProfessorCapacity
+    ) {
+
+        console.log(
+            `${programCapacity.programName} | ` +
+            `Total: ${programCapacity.totalProfessors} | ` +
+            `Qualified: ${programCapacity.qualifiedProfessors} | ` +
+            `Needed: ${programCapacity.professorsNeeded} | ` +
+            `Used: ${programCapacity.professorsUsed} | ` +
+            `Shortage: ${programCapacity.professorShortage} | ` +
+            `Status: ${programCapacity.status}`
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | FAILED LOG
     |--------------------------------------------------------------------------
     */
 
@@ -3967,7 +4613,6 @@ const checkUniversityCapacity = async academicTermId => {
             "\nFAILED PROGRAM CHECKS"
         );
 
-
         for (
             const result
             of failedProgramChecks
@@ -3978,11 +4623,9 @@ const checkUniversityCapacity = async academicTermId => {
                 `(${result.programId})`
             );
 
-
             console.log(
                 `  Reason: ${result.reason}`
             );
-
 
             if (
                 result.professorCapacity
@@ -4002,21 +4645,6 @@ const checkUniversityCapacity = async academicTermId => {
                     `  Shortage hours: ` +
                     `${result.professorCapacity.allocationShortageHours}`
                 );
-
-                console.log(
-                    `  Active professors: ` +
-                    `${result.professorCapacity.professorsAvailable}`
-                );
-
-                console.log(
-                    `  Qualified professors: ` +
-                    `${result.professorCapacity.qualifiedProfessorsAvailable}`
-                );
-
-                console.log(
-                    `  Subject bottlenecks: ` +
-                    `${result.professorCapacity.subjectBottlenecks.length}`
-                );
             }
         }
     }
@@ -4025,6 +4653,15 @@ const checkUniversityCapacity = async academicTermId => {
     /*
     |--------------------------------------------------------------------------
     | RETURN
+    |--------------------------------------------------------------------------
+    |
+    | EXISTING RETURN STRUCTURE IS PRESERVED.
+    |
+    | NEW FIELDS ARE ADDED:
+    |
+    |   programSectionSimulation
+    |   simulatedSectionSummary
+    |
     |--------------------------------------------------------------------------
     */
 
@@ -4055,12 +4692,6 @@ const checkUniversityCapacity = async academicTermId => {
             failedProgramChecks.length,
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | PROGRAM SUMMARY
-        |--------------------------------------------------------------------------
-        */
-
         professorSummary: {
 
             semester:
@@ -4073,25 +4704,49 @@ const checkUniversityCapacity = async academicTermId => {
             totalProgramProfessorShortage,
 
             note:
-                "Program-scoped professor capacities may contain the same active professor multiple times. Use globalProfessorSummary for university-wide capacity."
+                "Program-scoped professor capacities may contain the same active professor multiple times. Use programProfessorCapacity for program-level modal data and globalProfessorSummary for university-wide capacity."
 
         },
 
 
+        programProfessorCapacity,
+
+
         /*
         |--------------------------------------------------------------------------
-        | GLOBAL SUMMARY
+        | NEW
         |--------------------------------------------------------------------------
         */
+
+        programSectionSimulation,
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | NEW
+        |--------------------------------------------------------------------------
+        */
+
+        simulatedSectionSummary: {
+
+            studentsPerSection:
+                DEFAULT_STUDENTS_PER_SECTION,
+
+            totalSimulatedSections,
+
+            totalSimulatedStudentCapacity,
+
+            note:
+                "Simulated sections are calculated independently per program using curriculum, active professor capacity, and professor qualifications. Existing sections and student_sections are not used to determine this value."
+
+        },
+
 
         globalProfessorSummary: {
 
             semester:
                 normalizedSemester,
 
-            /*
-             * THIS IS NOW THE ACTUAL ACTIVE PROFESSOR COUNT.
-             */
             uniqueProfessors:
                 globalProfessors.length,
 
@@ -4131,12 +4786,6 @@ const checkUniversityCapacity = async academicTermId => {
         },
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | GLOBAL ALLOCATION
-        |--------------------------------------------------------------------------
-        */
-
         globalAllocation: {
 
             requiredHours:
@@ -4163,30 +4812,12 @@ const checkUniversityCapacity = async academicTermId => {
         },
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | GLOBAL BOTTLENECKS
-        |--------------------------------------------------------------------------
-        */
-
         globalSubjectBottlenecks:
             globalBottlenecks,
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | PROGRAM RESULTS
-        |--------------------------------------------------------------------------
-        */
-
         results,
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | FAILED
-        |--------------------------------------------------------------------------
-        */
 
         failed:
             failedProgramChecks.map(
@@ -4214,12 +4845,6 @@ const checkUniversityCapacity = async academicTermId => {
             ),
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | SKIPPED
-        |--------------------------------------------------------------------------
-        */
-
         skipped:
             skipped.map(
                 result => ({
@@ -4243,12 +4868,6 @@ const checkUniversityCapacity = async academicTermId => {
             ),
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | PASSED
-        |--------------------------------------------------------------------------
-        */
-
         passed:
             passed.map(
                 result => ({
@@ -4269,19 +4888,13 @@ const checkUniversityCapacity = async academicTermId => {
             ),
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | FINAL MESSAGE
-        |--------------------------------------------------------------------------
-        */
-
         message:
             universityPassed
 
                 ? skipped.length > 0
 
                     ? `University professor capacity is sufficient for ${normalizedSemester}. ` +
-                      `${skipped.length} program(s) had no sections and were skipped.`
+                      `${skipped.length} program(s) had no existing sections, but section simulation was performed.`
 
                     : `University professor capacity is sufficient for ${normalizedSemester}.`
 
@@ -4305,14 +4918,6 @@ const checkUniversityCapacity = async academicTermId => {
 module.exports = {
 
     checkUniversityCapacity,
-
-    /*
-     * Backward compatibility.
-     *
-     * Existing code can still call:
-     *
-     * checkEnrollmentCapacity(academicTermId)
-     */
 
     checkEnrollmentCapacity:
         checkUniversityCapacity,

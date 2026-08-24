@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
 import "../../../styles/Enrollment.css";
+import { API_BASE_URL } from "../../../config";
 
 
 const Enrollment = (props) => {
@@ -25,8 +26,7 @@ const Enrollment = (props) => {
 
             const token = localStorage.getItem("student_token");
 
-            const response = await fetch(
-                "http://localhost:3000/api/auth/getSubjects",
+            const response = await fetch(`${API_BASE_URL}/api/auth/getSubjects`,
                 {
                     headers:{
                         Authorization:`Bearer ${token}`
@@ -61,8 +61,7 @@ const Enrollment = (props) => {
 
             const token = localStorage.getItem("student_token");
 
-            const response = await fetch(
-                `http://localhost:3000/api/auth/admin/getSectionById/${subjectId}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/getSectionById/${subjectId}`,
                 {
                     headers:{
                         Authorization:`Bearer ${token}`

@@ -12,7 +12,7 @@ const getAcademicTerm = async () => {
 const getActiveAcademicTerm = async () => {
     const [rows] = await db.query(`
         select * from academic_terms
-        where status = "active";
+        where status = 'active';
         `);
 
         return rows[0];

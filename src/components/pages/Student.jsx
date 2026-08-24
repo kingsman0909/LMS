@@ -15,6 +15,7 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import { Navigate } from 'react-router-dom';
 import { useLocation } from "react-router-dom";
 import Protect from '../auth/ProtectedRoutes';
+import { API_BASE_URL } from "../../config";
 
 
 const Student = (props) => {
@@ -43,8 +44,7 @@ const Student = (props) => {
         try {
         const token = localStorage.getItem(`${props.role}_token`);
 
-        const response = await fetch(
-            'http://localhost:3000/api/auth/getAcademicTerm',
+        const response = await fetch(`${API_BASE_URL}/api/auth/getAcademicTerm`,
             {
                 method: 'GET',
                 headers: {
@@ -70,8 +70,7 @@ const Student = (props) => {
     try {
         const token = localStorage.getItem(`${props.role}_token`);
 
-        const response = await fetch(
-            'http://localhost:3000/api/auth/announcements',
+        const response = await fetch(`${API_BASE_URL}/api/auth/announcements`,
             {
                 method: 'GET',
                 headers: {
@@ -131,7 +130,7 @@ useEffect(() => {
       const getMe = async () => {
           const token = localStorage.getItem(`${props.role}_token`);
 
-          const response = await fetch("http://localhost:3000/api/auth/me", {
+          const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
               headers: {
                   Authorization: `Bearer ${token}`
               }

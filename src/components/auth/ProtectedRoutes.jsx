@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config";
 
 const ProtectedRoutes = (props) => {
     const [loading, setLoading] = useState(true);
@@ -20,8 +21,7 @@ const ProtectedRoutes = (props) => {
                 
             }
 
-            const response = await fetch(
-            "http://localhost:3000/api/auth/me",
+            const response = await fetch(`${API_BASE_URL}/api/auth/me`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`

@@ -1,7 +1,8 @@
 import "./styles/allSubjects.css";
 import { useState, useEffect, useMemo } from "react";
+import { API_BASE_URL } from "../../../config";
 
-const AllSubjects = () => {
+const AllSubjects = ({ academicTermId }) => {
     const [subjects, setSubjects] = useState([]);
     const [programList, setProgramList] = useState([]);
 
@@ -13,6 +14,21 @@ const AllSubjects = () => {
     const [programFilter, setProgramFilter] = useState("all");
     const [semesterFilter, setSemesterFilter] = useState("all");
     const [yearFilter, setYearFilter] = useState("all");
+
+    /*
+    |--------------------------------------------------------------------------
+    | UNIVERSITY CAPACITY
+    |--------------------------------------------------------------------------
+    */
+
+    const [capacityLoading, setCapacityLoading] =
+        useState(false);
+
+    const [capacityResult, setCapacityResult] =
+        useState(null);
+
+    const [showCapacityModal, setShowCapacityModal] =
+        useState(false);
 
     /*
     |--------------------------------------------------------------------------
@@ -30,7 +46,8 @@ const AllSubjects = () => {
         programs: []
     };
 
-    const [subject, setSubject] = useState(EMPTY_SUBJECT);
+    const [subject, setSubject] =
+        useState(EMPTY_SUBJECT);
 
     /*
     |--------------------------------------------------------------------------
@@ -47,15 +64,6 @@ const AllSubjects = () => {
     |--------------------------------------------------------------------------
     | GENERIC LIST PARSER
     |--------------------------------------------------------------------------
-    |
-    | Handles:
-    |
-    | "1,2,3"
-    | ["1", "2", "3"]
-    | [1, 2, 3]
-    | "BSCS, BSIT"
-    | null
-    |
     */
 
     const parseList = (value) => {
@@ -120,15 +128,6 @@ const AllSubjects = () => {
     |--------------------------------------------------------------------------
     | NORMALIZE YEAR
     |--------------------------------------------------------------------------
-    |
-    | Supports:
-    |
-    | 1
-    | "1"
-    | "1st"
-    | "1st Year"
-    | "First Year"
-    |
     */
 
     const normalizeYear = (value) => {
@@ -183,16 +182,6 @@ const AllSubjects = () => {
     |--------------------------------------------------------------------------
     | NORMALIZE SEMESTER
     |--------------------------------------------------------------------------
-    |
-    | Supports:
-    |
-    | "1st Semester"
-    | "1st Sem"
-    | "First Semester"
-    | "1"
-    | "2nd Semester"
-    | etc.
-    |
     */
 
     const normalizeSemester = (value) => {
@@ -238,21 +227,9 @@ const AllSubjects = () => {
     |--------------------------------------------------------------------------
     | NORMALIZE SUBJECT
     |--------------------------------------------------------------------------
-    |
-    | IMPORTANT:
-    | Backend may return different field formats depending
-    | on the SQL query.
-    |
-    | We normalize everything here before the UI uses it.
-    |
     */
 
     const normalizeSubject = (raw) => {
-        /*
-        |----------------------------------------------------------------------
-        | PROGRAM IDS
-        |----------------------------------------------------------------------
-        */
 
         const programIds = [
             ...parseList(raw.program_ids),
@@ -261,24 +238,14 @@ const AllSubjects = () => {
             .map(normalizeId)
             .filter(Boolean);
 
-        /*
-        |----------------------------------------------------------------------
-        | PROGRAM NAMES
-        |----------------------------------------------------------------------
-        */
-
         const programNames = [
             ...parseList(raw.program_names),
             ...parseList(raw.program_name)
         ]
-            .map((value) => String(value).trim())
+            .map((value) =>
+                String(value).trim()
+            )
             .filter(Boolean);
-
-        /*
-        |----------------------------------------------------------------------
-        | YEAR LEVELS
-        |----------------------------------------------------------------------
-        */
 
         const yearLevels = [
             ...parseList(raw.year_levels),
@@ -289,24 +256,12 @@ const AllSubjects = () => {
             .map(normalizeYear)
             .filter(Boolean);
 
-        /*
-        |----------------------------------------------------------------------
-        | SEMESTERS
-        |----------------------------------------------------------------------
-        */
-
         const semesters = [
             ...parseList(raw.semesters),
             ...parseList(raw.semester)
         ]
             .map(normalizeSemester)
             .filter(Boolean);
-
-        /*
-        |----------------------------------------------------------------------
-        | REMOVE DUPLICATES
-        |----------------------------------------------------------------------
-        */
 
         const uniqueProgramIds = [
             ...new Set(programIds)
@@ -324,25 +279,11 @@ const AllSubjects = () => {
             ...new Set(semesters)
         ];
 
-        /*
-        |----------------------------------------------------------------------
-        | UNITS
-        |----------------------------------------------------------------------
-        */
-
         const lectureUnits =
             Number(raw.lecture_units) || 0;
 
         const labUnits =
             Number(raw.lab_units) || 0;
-
-        /*
-        | IMPORTANT:
-        | Total units always comes from:
-        |
-        | lecture + lab
-        |
-        */
 
         const totalUnits =
             lectureUnits + labUnits;
@@ -350,15 +291,26 @@ const AllSubjects = () => {
         return {
             ...raw,
 
-            program_ids: uniqueProgramIds,
-            program_names: uniqueProgramNames,
+            program_ids:
+                uniqueProgramIds,
 
-            year_levels: uniqueYears,
-            semesters: uniqueSemesters,
+            program_names:
+                uniqueProgramNames,
 
-            lecture_units: lectureUnits,
-            lab_units: labUnits,
-            units: totalUnits,
+            year_levels:
+                uniqueYears,
+
+            semesters:
+                uniqueSemesters,
+
+            lecture_units:
+                lectureUnits,
+
+            lab_units:
+                labUnits,
+
+            units:
+                totalUnits,
 
             program_count:
                 Number(
@@ -377,12 +329,14 @@ const AllSubjects = () => {
     */
 
     const getPrograms = async () => {
-        try {
-            const response = await fetch(
-                "http://localhost:3000/api/auth/getPrograms"
-            );
 
-            const data = await response.json();
+        try {
+
+            const response =
+                await fetch(`${API_BASE_URL}/api/auth/getPrograms`);
+
+            const data =
+                await response.json();
 
             if (!response.ok) {
                 throw new Error(
@@ -394,11 +348,14 @@ const AllSubjects = () => {
             setProgramList(
                 data.programs || []
             );
+
         } catch (err) {
+
             console.error(
                 "Error getting programs:",
                 err
             );
+
         }
     };
 
@@ -409,7 +366,9 @@ const AllSubjects = () => {
     */
 
     const fetchSubjects = async () => {
+
         try {
+
             setLoading(true);
 
             const token =
@@ -417,21 +376,23 @@ const AllSubjects = () => {
                     "admin_token"
                 );
 
-            const response = await fetch(
-                "http://localhost:3000/api/auth/getSubjects",
-                {
-                    method: "GET",
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
-                }
-            );
+            const response =
+                await fetch(`${API_BASE_URL}/api/auth/getSubjects`,
+                    {
+                        method: "GET",
 
+                        headers: {
+                            Authorization:
+                                `Bearer ${token}`
+                        }
+                    }
+                );
+            
             const data =
                 await response.json();
 
             if (!response.ok) {
+
                 throw new Error(
                     data.message ||
                     "Failed to fetch subjects"
@@ -442,12 +403,6 @@ const AllSubjects = () => {
                 "RAW SUBJECTS FROM API:",
                 data.subjects
             );
-
-            /*
-            |----------------------------------------------------------------------
-            | NORMALIZE HERE
-            |----------------------------------------------------------------------
-            */
 
             const normalizedSubjects =
                 (data.subjects || [])
@@ -463,14 +418,128 @@ const AllSubjects = () => {
             );
 
         } catch (error) {
+
             console.error(
                 "Error fetching subjects:",
                 error
             );
+
         } finally {
+
             setLoading(false);
+
         }
     };
+
+    /*
+    |--------------------------------------------------------------------------
+    | CHECK UNIVERSITY CAPACITY
+    |--------------------------------------------------------------------------
+    */
+
+    const checkUniversityCapacity =
+        async () => {
+
+            const termId =
+                Number(
+                    academicTermId
+                );
+
+            if (
+                !Number.isInteger(termId) ||
+                termId <= 0
+            ) {
+
+                alert(
+                    "A valid academic term is required."
+                );
+
+                return;
+            }
+
+            try {
+
+                setCapacityLoading(
+                    true
+                );
+
+                setShowCapacityModal(
+                    true
+                );
+
+                setCapacityResult(
+                    null
+                );
+
+                const token =
+                    localStorage.getItem(
+                        "admin_token"
+                    );
+
+                const response =
+                    await fetch(`${API_BASE_URL}/api/auth/admin/checkUniversityCapacity?academicTermId=${encodeURIComponent(
+                            termId
+                        )}`,
+                        {
+                            method: "GET",
+
+                            headers: {
+                                Authorization:
+                                    `Bearer ${token}`
+                            }
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.message ||
+                        "Failed to check university capacity."
+                    );
+                }
+
+                console.log(
+                    "UNIVERSITY CAPACITY RESULT:",
+                    data
+                );
+
+                const result =
+                    data.result ||
+                    data.capacity ||
+                    data;
+
+                setCapacityResult(
+                    result
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "University capacity error:",
+                    error
+                );
+
+                setCapacityResult({
+                    passed: false,
+
+                    message:
+                        error.message ||
+                        "Failed to check university capacity.",
+
+                    error: true
+                });
+
+            } finally {
+
+                setCapacityLoading(
+                    false
+                );
+
+            }
+        };
 
     /*
     |--------------------------------------------------------------------------
@@ -478,123 +547,102 @@ const AllSubjects = () => {
     |--------------------------------------------------------------------------
     */
 
-    const filteredSubjects = useMemo(() => {
-        const searchValue =
-            search
-                .trim()
-                .toLowerCase();
+    const filteredSubjects =
+        useMemo(() => {
 
-        return subjects.filter(
-            (sub) => {
+            const searchValue =
+                search
+                    .trim()
+                    .toLowerCase();
 
-                /*
-                |--------------------------------------------------------------
-                | SEARCH
-                |--------------------------------------------------------------
-                */
+            return subjects.filter(
+                (sub) => {
 
-                const matchesSearch =
-                    !searchValue ||
-                    String(
-                        sub.subject_code || ""
-                    )
-                        .toLowerCase()
-                        .includes(
-                            searchValue
-                        ) ||
-                    String(
-                        sub.subject_name || ""
-                    )
-                        .toLowerCase()
-                        .includes(
-                            searchValue
-                        ) ||
-                    sub.program_names.some(
-                        (program) =>
-                            String(
-                                program
-                            )
-                                .toLowerCase()
-                                .includes(
-                                    searchValue
+                    const matchesSearch =
+                        !searchValue ||
+                        String(
+                            sub.subject_code || ""
+                        )
+                            .toLowerCase()
+                            .includes(
+                                searchValue
+                            ) ||
+                        String(
+                            sub.subject_name || ""
+                        )
+                            .toLowerCase()
+                            .includes(
+                                searchValue
+                            ) ||
+                        sub.program_names.some(
+                            (program) =>
+                                String(
+                                    program
                                 )
+                                    .toLowerCase()
+                                    .includes(
+                                        searchValue
+                                    )
+                        );
+
+                    const selectedProgramId =
+                        normalizeId(
+                            programFilter
+                        );
+
+                    const matchesProgram =
+                        programFilter ===
+                            "all" ||
+                        sub.program_ids.some(
+                            (id) =>
+                                normalizeId(
+                                    id
+                                ) ===
+                                selectedProgramId
+                        );
+
+                    const matchesSemester =
+                        semesterFilter ===
+                            "all" ||
+                        sub.semesters.some(
+                            (semester) =>
+                                normalizeSemester(
+                                    semester
+                                ) ===
+                                normalizeSemester(
+                                    semesterFilter
+                                )
+                        );
+
+                    const matchesYear =
+                        yearFilter ===
+                            "all" ||
+                        sub.year_levels.some(
+                            (year) =>
+                                normalizeYear(
+                                    year
+                                ) ===
+                                normalizeYear(
+                                    yearFilter
+                                )
+                        );
+
+                    return (
+                        matchesSearch &&
+                        matchesProgram &&
+                        matchesSemester &&
+                        matchesYear
                     );
+                }
+            );
 
-                /*
-                |--------------------------------------------------------------
-                | PROGRAM
-                |--------------------------------------------------------------
-                */
-
-                const selectedProgramId =
-                    normalizeId(
-                        programFilter
-                    );
-
-                const matchesProgram =
-                    programFilter ===
-                        "all" ||
-                    sub.program_ids.some(
-                        (id) =>
-                            normalizeId(
-                                id
-                            ) ===
-                            selectedProgramId
-                    );
-
-                /*
-                |--------------------------------------------------------------
-                | SEMESTER
-                |--------------------------------------------------------------
-                */
-
-                const matchesSemester =
-                    semesterFilter ===
-                        "all" ||
-                    sub.semesters.some(
-                        (semester) =>
-                            normalizeSemester(
-                                semester
-                            ) ===
-                            normalizeSemester(
-                                semesterFilter
-                            )
-                    );
-
-                /*
-                |--------------------------------------------------------------
-                | YEAR
-                |--------------------------------------------------------------
-                */
-
-                const matchesYear =
-                    yearFilter ===
-                        "all" ||
-                    sub.year_levels.some(
-                        (year) =>
-                            normalizeYear(
-                                year
-                            ) ===
-                            normalizeYear(
-                                yearFilter
-                            )
-                    );
-
-                return (
-                    matchesSearch &&
-                    matchesProgram &&
-                    matchesSemester &&
-                    matchesYear
-                );
-            }
-        );
-    }, [
-        subjects,
-        search,
-        programFilter,
-        semesterFilter,
-        yearFilter
-    ]);
+        }, [
+            subjects,
+            search,
+            programFilter,
+            semesterFilter,
+            yearFilter
+        ]);
 
     /*
     |--------------------------------------------------------------------------
@@ -602,32 +650,39 @@ const AllSubjects = () => {
     |--------------------------------------------------------------------------
     */
 
-    const availableYears = useMemo(() => {
-        const years =
-            new Set();
+    const availableYears =
+        useMemo(() => {
 
-        subjects.forEach(
-            (sub) => {
-                sub.year_levels.forEach(
-                    (year) => {
-                        years.add(
-                            normalizeYear(
-                                year
-                            )
-                        );
-                    }
-                );
-            }
-        );
+            const years =
+                new Set();
 
-        return Array.from(years)
-            .filter(Boolean)
-            .sort(
-                (a, b) =>
-                    Number(a) -
-                    Number(b)
+            subjects.forEach(
+                (sub) => {
+
+                    sub.year_levels.forEach(
+                        (year) => {
+
+                            years.add(
+                                normalizeYear(
+                                    year
+                                )
+                            );
+
+                        }
+                    );
+
+                }
             );
-    }, [subjects]);
+
+            return Array.from(years)
+                .filter(Boolean)
+                .sort(
+                    (a, b) =>
+                        Number(a) -
+                        Number(b)
+                );
+
+        }, [subjects]);
 
     /*
     |--------------------------------------------------------------------------
@@ -643,6 +698,7 @@ const AllSubjects = () => {
 
             subjects.forEach(
                 (sub) => {
+
                     sub.semesters.forEach(
                         (semester) => {
 
@@ -654,20 +710,18 @@ const AllSubjects = () => {
                             if (
                                 normalized
                             ) {
+
                                 semesters.add(
                                     normalized
                                 );
+
                             }
+
                         }
                     );
+
                 }
             );
-
-            /*
-            |--------------------------------------------------------------
-            | DISPLAY LABELS
-            |--------------------------------------------------------------
-            */
 
             const order = {
                 "1": 1,
@@ -692,9 +746,11 @@ const AllSubjects = () => {
     */
 
     const formatYear = (year) => {
+
         switch (
             normalizeYear(year)
         ) {
+
             case "1":
                 return "1st Year";
 
@@ -712,27 +768,28 @@ const AllSubjects = () => {
         }
     };
 
-    const formatSemester = (
-        semester
-    ) => {
-        switch (
-            normalizeSemester(
-                semester
-            )
-        ) {
-            case "1":
-                return "1st Semester";
+    const formatSemester =
+        (semester) => {
 
-            case "2":
-                return "2nd Semester";
+            switch (
+                normalizeSemester(
+                    semester
+                )
+            ) {
 
-            case "summer":
-                return "Summer";
+                case "1":
+                    return "1st Semester";
 
-            default:
-                return semester;
-        }
-    };
+                case "2":
+                    return "2nd Semester";
+
+                case "summer":
+                    return "Summer";
+
+                default:
+                    return semester;
+            }
+        };
 
     /*
     |--------------------------------------------------------------------------
@@ -741,21 +798,17 @@ const AllSubjects = () => {
     */
 
     const handleChange = (e) => {
+
         const {
             name,
             value
         } = e.target;
 
-        /*
-        |----------------------------------------------------------------------
-        | LECTURE
-        |----------------------------------------------------------------------
-        */
-
         if (
             name ===
             "lecture_units"
         ) {
+
             const lectureUnits =
                 Math.max(
                     0,
@@ -772,28 +825,26 @@ const AllSubjects = () => {
 
                     return {
                         ...prev,
+
                         lecture_units:
                             lectureUnits,
+
                         units:
                             lectureUnits +
                             labUnits
                     };
+
                 }
             );
 
             return;
         }
 
-        /*
-        |----------------------------------------------------------------------
-        | LAB
-        |----------------------------------------------------------------------
-        */
-
         if (
             name ===
             "lab_units"
         ) {
+
             const labUnits =
                 Math.max(
                     0,
@@ -810,23 +861,20 @@ const AllSubjects = () => {
 
                     return {
                         ...prev,
+
                         lab_units:
                             labUnits,
+
                         units:
                             lectureUnits +
                             labUnits
                     };
+
                 }
             );
 
             return;
         }
-
-        /*
-        |----------------------------------------------------------------------
-        | OTHER FIELDS
-        |----------------------------------------------------------------------
-        */
 
         setSubject(
             (prev) => ({
@@ -842,26 +890,29 @@ const AllSubjects = () => {
     |--------------------------------------------------------------------------
     */
 
-    const createSubject = async (
-        e
-    ) => {
+    const createSubject = async (e) => {
+
         e.preventDefault();
 
         if (
             !subject.subject_code.trim()
         ) {
+
             alert(
                 "Please enter a subject code."
             );
+
             return;
         }
 
         if (
             !subject.subject_name.trim()
         ) {
+
             alert(
                 "Please enter a subject name."
             );
+
             return;
         }
 
@@ -869,9 +920,11 @@ const AllSubjects = () => {
             subject.programs.length ===
             0
         ) {
+
             alert(
                 "Please select at least one program."
             );
+
             return;
         }
 
@@ -891,15 +944,19 @@ const AllSubjects = () => {
 
         const payload = {
             ...subject,
+
             lecture_units:
                 lectureUnits,
+
             lab_units:
                 labUnits,
+
             units:
                 totalUnits
         };
 
         try {
+
             setSaving(true);
 
             const token =
@@ -908,16 +965,18 @@ const AllSubjects = () => {
                 );
 
             const response =
-                await fetch(
-                    "http://localhost:3000/api/auth/admin/createSubject",
+                await fetch(`${API_BASE_URL}/api/auth/admin/createSubject`,
                     {
                         method: "POST",
+
                         headers: {
                             "Content-Type":
                                 "application/json",
+
                             Authorization:
                                 `Bearer ${token}`
                         },
+
                         body:
                             JSON.stringify(
                                 payload
@@ -929,6 +988,7 @@ const AllSubjects = () => {
                 await response.json();
 
             if (!response.ok) {
+
                 throw new Error(
                     data.message ||
                     "Failed to create subject"
@@ -940,7 +1000,9 @@ const AllSubjects = () => {
                 "Subject successfully added!"
             );
 
-            setShowModal(false);
+            setShowModal(
+                false
+            );
 
             setSubject({
                 ...EMPTY_SUBJECT,
@@ -950,11 +1012,15 @@ const AllSubjects = () => {
             await fetchSubjects();
 
         } catch (error) {
+
             alert(
                 `Error in creating subject: ${error.message}`
             );
+
         } finally {
+
             setSaving(false);
+
         }
     };
 
@@ -964,137 +1030,124 @@ const AllSubjects = () => {
     |--------------------------------------------------------------------------
     */
 
-    const handleDelete = async (
-        subjectCode
-    ) => {
+    const handleDelete =
+        async (subjectCode) => {
 
-        const confirmed =
-            window.confirm(
-                `Are you sure you want to delete "${subjectCode}"?`
-            );
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            const token =
-                localStorage.getItem(
-                    "admin_token"
+            const confirmed =
+                window.confirm(
+                    `Are you sure you want to delete "${subjectCode}"?`
                 );
 
-            /*
-            |----------------------------------------------------------------------
-            | IMPORTANT
-            |----------------------------------------------------------------------
-            |
-            | Since backend may return one aggregated row,
-            | use its actual ID.
-            |
-            */
-
-            const matchingSubjects =
-                subjects.filter(
-                    (sub) =>
-                        String(
-                            sub.subject_code
-                        )
-                            .trim()
-                            .toUpperCase() ===
-                        String(
-                            subjectCode
-                        )
-                            .trim()
-                            .toUpperCase()
-                );
-
-            const ids =
-                matchingSubjects
-                    .map(
-                        (sub) =>
-                            sub.id
-                    )
-                    .filter(Boolean);
-
-            if (
-                ids.length ===
-                0
-            ) {
-                alert(
-                    "No subject record found."
-                );
+            if (!confirmed) {
                 return;
             }
 
-            /*
-            |----------------------------------------------------------------------
-            | Remove duplicate IDs
-            |----------------------------------------------------------------------
-            */
+            try {
 
-            const uniqueIds =
-                [
-                    ...new Set(
-                        ids
-                    )
-                ];
-
-            for (
-                const id of uniqueIds
-            ) {
-
-                const response =
-                    await fetch(
-                        `http://localhost:3000/api/auth/admin/${id}/deleteSubject`,
-                        {
-                            method:
-                                "DELETE",
-                            headers: {
-                                "Content-Type":
-                                    "application/json",
-                                Authorization:
-                                    `Bearer ${token}`
-                            }
-                        }
+                const token =
+                    localStorage.getItem(
+                        "admin_token"
                     );
+
+                const matchingSubjects =
+                    subjects.filter(
+                        (sub) =>
+                            String(
+                                sub.subject_code
+                            )
+                                .trim()
+                                .toUpperCase() ===
+                            String(
+                                subjectCode
+                            )
+                                .trim()
+                                .toUpperCase()
+                    );
+
+                const ids =
+                    matchingSubjects
+                        .map(
+                            (sub) =>
+                                sub.id
+                        )
+                        .filter(Boolean);
 
                 if (
-                    !response.ok
+                    ids.length ===
+                    0
                 ) {
 
-                    const data =
-                        await response
-                            .json()
-                            .catch(
-                                () =>
-                                    ({})
-                            );
-
-                    throw new Error(
-                        data.message ||
-                        `Failed to delete subject ID ${id}`
+                    alert(
+                        "No subject record found."
                     );
+
+                    return;
                 }
+
+                const uniqueIds =
+                    [
+                        ...new Set(
+                            ids
+                        )
+                    ];
+
+                for (
+                    const id of uniqueIds
+                ) {
+
+                    const response =
+                        await fetch(`${API_BASE_URL}/api/auth/admin/${id}/deleteSubject`,
+                            {
+                                method:
+                                    "DELETE",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json",
+
+                                    Authorization:
+                                        `Bearer ${token}`
+                                }
+                            }
+                        );
+
+                    if (
+                        !response.ok
+                    ) {
+
+                        const data =
+                            await response
+                                .json()
+                                .catch(
+                                    () =>
+                                        ({})
+                                );
+
+                        throw new Error(
+                            data.message ||
+                            `Failed to delete subject ID ${id}`
+                        );
+                    }
+                }
+
+                alert(
+                    `${subjectCode} deleted successfully.`
+                );
+
+                await fetchSubjects();
+
+            } catch (err) {
+
+                console.error(
+                    "Delete subject error:",
+                    err
+                );
+
+                alert(
+                    err.message
+                );
             }
-
-            alert(
-                `${subjectCode} deleted successfully.`
-            );
-
-            await fetchSubjects();
-
-        } catch (err) {
-
-            console.error(
-                "Delete subject error:",
-                err
-            );
-
-            alert(
-                err.message
-            );
-        }
-    };
+        };
 
     /*
     |--------------------------------------------------------------------------
@@ -1103,10 +1156,12 @@ const AllSubjects = () => {
     */
 
     const clearFilters = () => {
+
         setSearch("");
         setProgramFilter("all");
         setSemesterFilter("all");
         setYearFilter("all");
+
     };
 
     const hasFilters =
@@ -1122,12 +1177,14 @@ const AllSubjects = () => {
     */
 
     const openAddModal = () => {
+
         setSubject({
             ...EMPTY_SUBJECT,
             programs: []
         });
 
         setShowModal(true);
+
     };
 
     /*
@@ -1150,6 +1207,7 @@ const AllSubjects = () => {
                     </div>
 
                     <div>
+
                         <h2>
                             Subjects
                         </h2>
@@ -1158,11 +1216,44 @@ const AllSubjects = () => {
                             Manage and organize your
                             academic subjects
                         </p>
+
                     </div>
 
                 </div>
 
                 <div className="subjects-header-actions">
+
+                    {/* UNIVERSITY CAPACITY */}
+
+                    <button
+                        type="button"
+                        className="capacity-check-button"
+                        onClick={
+                            checkUniversityCapacity
+                        }
+                        disabled={
+                            capacityLoading
+                        }
+                    >
+
+                        {capacityLoading ? (
+                            <>
+                                <span className="button-spinner"></span>
+                                Checking...
+                            </>
+                        ) : (
+                            <>
+                                <span>
+                                    ⚡
+                                </span>
+
+                                Check University Capacity
+                            </>
+                        )}
+
+                    </button>
+
+                    {/* REFRESH */}
 
                     <button
                         type="button"
@@ -1174,11 +1265,16 @@ const AllSubjects = () => {
                             loading
                         }
                     >
+
                         ↻
+
                         <span>
                             Refresh
                         </span>
+
                     </button>
+
+                    {/* ADD */}
 
                     <button
                         type="button"
@@ -1187,11 +1283,13 @@ const AllSubjects = () => {
                             openAddModal
                         }
                     >
+
                         <span>
                             +
                         </span>
 
                         Add Subject
+
                     </button>
 
                 </div>
@@ -1209,6 +1307,7 @@ const AllSubjects = () => {
                     </div>
 
                     <div>
+
                         <span>
                             Total Subjects
                         </span>
@@ -1218,6 +1317,7 @@ const AllSubjects = () => {
                                 subjects.length
                             }
                         </strong>
+
                     </div>
 
                 </div>
@@ -1229,6 +1329,7 @@ const AllSubjects = () => {
                     </div>
 
                     <div>
+
                         <span>
                             Showing
                         </span>
@@ -1238,6 +1339,7 @@ const AllSubjects = () => {
                                 filteredSubjects.length
                             }
                         </strong>
+
                     </div>
 
                 </div>
@@ -1249,6 +1351,7 @@ const AllSubjects = () => {
                     </div>
 
                     <div>
+
                         <span>
                             Programs
                         </span>
@@ -1258,6 +1361,7 @@ const AllSubjects = () => {
                                 programList.length
                             }
                         </strong>
+
                     </div>
 
                 </div>
@@ -1288,6 +1392,7 @@ const AllSubjects = () => {
                     />
 
                     {search && (
+
                         <button
                             type="button"
                             className="clear-search"
@@ -1297,6 +1402,7 @@ const AllSubjects = () => {
                         >
                             ×
                         </button>
+
                     )}
 
                 </div>
@@ -1322,6 +1428,7 @@ const AllSubjects = () => {
 
                         {programList.map(
                             (program) => (
+
                                 <option
                                     key={
                                         program.id
@@ -1336,6 +1443,7 @@ const AllSubjects = () => {
                                         program.program_name
                                     }
                                 </option>
+
                             )
                         )}
 
@@ -1364,6 +1472,7 @@ const AllSubjects = () => {
 
                         {availableYears.map(
                             (year) => (
+
                                 <option
                                     key={
                                         year
@@ -1378,6 +1487,7 @@ const AllSubjects = () => {
                                         )
                                     }
                                 </option>
+
                             )
                         )}
 
@@ -1408,6 +1518,7 @@ const AllSubjects = () => {
                             (
                                 semester
                             ) => (
+
                                 <option
                                     key={
                                         semester
@@ -1422,6 +1533,7 @@ const AllSubjects = () => {
                                         )
                                     }
                                 </option>
+
                             )
                         )}
 
@@ -1430,6 +1542,7 @@ const AllSubjects = () => {
                 </div>
 
                 {hasFilters && (
+
                     <button
                         type="button"
                         className="clear-filters-button"
@@ -1439,6 +1552,7 @@ const AllSubjects = () => {
                     >
                         Clear
                     </button>
+
                 )}
 
             </div>
@@ -1471,9 +1585,11 @@ const AllSubjects = () => {
                     </div>
 
                     {hasFilters && (
+
                         <div className="active-filter-label">
                             Filters active
                         </div>
+
                     )}
 
                 </div>
@@ -1509,6 +1625,7 @@ const AllSubjects = () => {
                         </p>
 
                         {hasFilters && (
+
                             <button
                                 type="button"
                                 onClick={
@@ -1518,6 +1635,7 @@ const AllSubjects = () => {
                             >
                                 Clear Filters
                             </button>
+
                         )}
 
                     </div>
@@ -1531,6 +1649,7 @@ const AllSubjects = () => {
                             <thead>
 
                                 <tr>
+
                                     <th>
                                         #
                                     </th>
@@ -1558,6 +1677,7 @@ const AllSubjects = () => {
                                     <th>
                                         Action
                                     </th>
+
                                 </tr>
 
                             </thead>
@@ -1591,6 +1711,7 @@ const AllSubjects = () => {
                                             0;
 
                                         return (
+
                                             <tr
                                                 key={
                                                     sub.id ||
@@ -1626,11 +1747,13 @@ const AllSubjects = () => {
                                                         </strong>
 
                                                         {sub.description && (
+
                                                             <small>
                                                                 {
                                                                     sub.description
                                                                 }
                                                             </small>
+
                                                         )}
 
                                                     </div>
@@ -1658,10 +1781,12 @@ const AllSubjects = () => {
 
                                                         {yearLevels.length >
                                                         0 ? (
+
                                                             yearLevels.map(
                                                                 (
                                                                     year
                                                                 ) => (
+
                                                                     <span
                                                                         className="year-tag"
                                                                         key={
@@ -1674,12 +1799,16 @@ const AllSubjects = () => {
                                                                             )
                                                                         }
                                                                     </span>
+
                                                                 )
                                                             )
+
                                                         ) : (
+
                                                             <span className="muted">
                                                                 —
                                                             </span>
+
                                                         )}
 
                                                     </div>
@@ -1694,10 +1823,12 @@ const AllSubjects = () => {
 
                                                         {semesters.length >
                                                         0 ? (
+
                                                             semesters.map(
                                                                 (
                                                                     semester
                                                                 ) => (
+
                                                                     <span
                                                                         className="semester-tag"
                                                                         key={
@@ -1710,12 +1841,16 @@ const AllSubjects = () => {
                                                                             )
                                                                         }
                                                                     </span>
+
                                                                 )
                                                             )
+
                                                         ) : (
+
                                                             <span className="muted">
                                                                 —
                                                             </span>
+
                                                         )}
 
                                                     </div>
@@ -1739,6 +1874,7 @@ const AllSubjects = () => {
                                                                     (
                                                                         program
                                                                     ) => (
+
                                                                         <span
                                                                             className="program-badge"
                                                                             key={
@@ -1749,23 +1885,29 @@ const AllSubjects = () => {
                                                                                 program
                                                                             }
                                                                         </span>
+
                                                                     )
                                                                 )}
 
                                                             {programNames.length >
                                                                 3 && (
+
                                                                 <span className="program-more">
+
                                                                     +
                                                                     {
                                                                         programNames.length -
                                                                         3
                                                                     }
+
                                                                 </span>
+
                                                             )}
 
                                                         </div>
 
                                                         <small>
+
                                                             {
                                                                 programCount
                                                             }{" "}
@@ -1776,6 +1918,7 @@ const AllSubjects = () => {
                                                                     ? "s"
                                                                     : ""
                                                             }
+
                                                         </small>
 
                                                     </div>
@@ -1814,7 +1957,9 @@ const AllSubjects = () => {
                                                 </td>
 
                                             </tr>
+
                                         );
+
                                     }
                                 )}
 
@@ -1828,7 +1973,9 @@ const AllSubjects = () => {
 
             </div>
 
-            {/* ADD SUBJECT MODAL */}
+            {/* ==================================================================
+                ADD SUBJECT MODAL
+            ================================================================== */}
 
             {showModal && (
 
@@ -1841,9 +1988,11 @@ const AllSubjects = () => {
                                 e.currentTarget &&
                             !saving
                         ) {
+
                             setShowModal(
                                 false
                             );
+
                         }
 
                     }}
@@ -1867,6 +2016,7 @@ const AllSubjects = () => {
                                 </div>
 
                                 <div>
+
                                     <h2>
                                         Add Subject
                                     </h2>
@@ -1876,6 +2026,7 @@ const AllSubjects = () => {
                                         academic
                                         subject
                                     </p>
+
                                 </div>
 
                             </div>
@@ -2159,6 +2310,7 @@ const AllSubjects = () => {
                                                 );
 
                                             return (
+
                                                 <label
                                                     key={
                                                         program.id
@@ -2198,21 +2350,29 @@ const AllSubjects = () => {
                                                                                 programId
                                                                             )
                                                                         ) {
+
                                                                             return prev;
+
                                                                         }
 
                                                                         return {
+
                                                                             ...prev,
+
                                                                             programs:
                                                                                 [
                                                                                     ...prev.programs,
                                                                                     programId
                                                                                 ]
+
                                                                         };
+
                                                                     }
 
                                                                     return {
+
                                                                         ...prev,
+
                                                                         programs:
                                                                             prev.programs.filter(
                                                                                 (
@@ -2221,7 +2381,9 @@ const AllSubjects = () => {
                                                                                     id !==
                                                                                     programId
                                                                             )
+
                                                                     };
+
                                                                 }
                                                             );
 
@@ -2239,7 +2401,9 @@ const AllSubjects = () => {
                                                     </span>
 
                                                 </label>
+
                                             );
+
                                         }
                                     )}
 
@@ -2277,12 +2441,19 @@ const AllSubjects = () => {
                             >
 
                                 {saving ? (
+
                                     <>
+
                                         <span className="button-spinner"></span>
+
                                         Saving...
+
                                     </>
+
                                 ) : (
+
                                     "Save Subject"
+
                                 )}
 
                             </button>
@@ -2290,6 +2461,648 @@ const AllSubjects = () => {
                         </div>
 
                     </form>
+
+                </div>
+
+            )}
+
+            {/* ==================================================================
+                UNIVERSITY CAPACITY MODAL
+            ================================================================== */}
+
+            {showCapacityModal && (
+
+                <div
+                    className="subject-modal-overlay"
+                    onMouseDown={(e) => {
+
+                        if (
+                            e.target ===
+                                e.currentTarget &&
+                            !capacityLoading
+                        ) {
+
+                            setShowCapacityModal(
+                                false
+                            );
+
+                        }
+
+                    }}
+                >
+
+                    <div
+                        className="subject-modal capacity-modal"
+                        onMouseDown={(e) =>
+                            e.stopPropagation()
+                        }
+                    >
+
+                        {/* HEADER */}
+
+                        <div className="modal-header">
+
+                            <div>
+
+                                <div className="modal-icon">
+                                    ⚡
+                                </div>
+
+                                <div>
+
+                                    <h2>
+                                        University Capacity
+                                    </h2>
+
+                                    <p>
+                                        Professor capacity
+                                        analysis
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                className="modal-close"
+                                disabled={
+                                    capacityLoading
+                                }
+                                onClick={() =>
+                                    setShowCapacityModal(
+                                        false
+                                    )
+                                }
+                            >
+                                ×
+                            </button>
+
+                        </div>
+
+                        {/* BODY */}
+
+                        <div className="modal-body">
+
+                            {capacityLoading ? (
+
+                                <div className="subjects-loading">
+
+                                    <div className="loading-spinner"></div>
+
+                                    <p>
+                                        Checking university
+                                        professor capacity...
+                                    </p>
+
+                                    <small>
+                                        Analyzing programs,
+                                        sections,
+                                        curriculum and
+                                        professor qualifications.
+                                    </small>
+
+                                </div>
+
+                            ) : capacityResult ? (
+
+                                <>
+
+                                    {/* STATUS */}
+
+                                    <div
+                                        className={
+                                            capacityResult.passed
+                                                ? "capacity-status success"
+                                                : "capacity-status danger"
+                                        }
+                                    >
+
+                                        <div className="capacity-status-icon">
+
+                                            {
+                                                capacityResult.passed
+                                                    ? "✓"
+                                                    : "!"
+                                            }
+
+                                        </div>
+
+                                        <div>
+
+                                            <strong>
+                                                {
+                                                    capacityResult.passed
+                                                        ? "SUFFICIENT"
+                                                        : "INSUFFICIENT"
+                                                }
+                                            </strong>
+
+                                            <p>
+                                                {
+                                                    capacityResult.message ||
+                                                    (
+                                                        capacityResult.passed
+                                                            ? "University professor capacity is sufficient."
+                                                            : "University professor capacity is insufficient."
+                                                    )
+                                                }
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                    {/* GLOBAL SUMMARY */}
+
+                                    {
+                                        capacityResult
+                                            .globalProfessorSummary && (
+
+                                            <div className="capacity-summary">
+
+                                                <h3>
+                                                    Global Professor Summary
+                                                </h3>
+
+                                                <div className="capacity-grid">
+
+                                                    <div className="capacity-item">
+
+                                                        <span>
+                                                            Active Professors
+                                                        </span>
+
+                                                        <strong>
+                                                            {
+                                                                capacityResult
+                                                                    .globalProfessorSummary
+                                                                    .uniqueProfessors
+                                                            }
+                                                        </strong>
+
+                                                    </div>
+
+                                                    <div className="capacity-item">
+
+                                                        <span>
+                                                            Qualified Professors
+                                                        </span>
+
+                                                        <strong>
+                                                            {
+                                                                capacityResult
+                                                                    .globalProfessorSummary
+                                                                    .globallyQualifiedProfessors
+                                                            }
+                                                        </strong>
+
+                                                    </div>
+
+                                                    <div className="capacity-item">
+
+                                                        <span>
+                                                            Required Hours
+                                                        </span>
+
+                                                        <strong>
+                                                            {
+                                                                capacityResult
+                                                                    .globalProfessorSummary
+                                                                    .totalRequiredTeachingHours
+                                                            }
+                                                        </strong>
+
+                                                    </div>
+
+                                                    <div className="capacity-item">
+
+                                                        <span>
+                                                            Professor Capacity
+                                                        </span>
+
+                                                        <strong>
+                                                            {
+                                                                capacityResult
+                                                                    .globalProfessorSummary
+                                                                    .totalProfessorCapacity
+                                                            }
+                                                        </strong>
+
+                                                    </div>
+
+                                                    <div className="capacity-item">
+
+                                                        <span>
+                                                            Allocatable Capacity
+                                                        </span>
+
+                                                        <strong>
+                                                            {
+                                                                capacityResult
+                                                                    .globalProfessorSummary
+                                                                    .allocatableQualifiedCapacity
+                                                            }
+                                                        </strong>
+
+                                                    </div>
+
+                                                    <div className="capacity-item">
+
+                                                        <span>
+                                                            Shortage Hours
+                                                        </span>
+
+                                                        <strong
+                                                            className={
+                                                                Number(
+                                                                    capacityResult
+                                                                        .globalProfessorSummary
+                                                                        .shortageHours
+                                                                ) > 0
+                                                                    ? "danger-text"
+                                                                    : "success-text"
+                                                            }
+                                                        >
+                                                            {
+                                                                capacityResult
+                                                                    .globalProfessorSummary
+                                                                    .shortageHours
+                                                            }
+                                                        </strong>
+
+                                                    </div>
+
+                                                    <div className="capacity-item">
+
+                                                        <span>
+                                                            Professors Used
+                                                        </span>
+
+                                                        <strong>
+                                                            {
+                                                                capacityResult
+                                                                    .globalProfessorSummary
+                                                                    .professorsUsedByCapacityAllocation
+                                                            }
+                                                        </strong>
+
+                                                    </div>
+
+                                                    <div className="capacity-item">
+
+                                                        <span>
+                                                            Subject Bottlenecks
+                                                        </span>
+
+                                                        <strong
+                                                            className={
+                                                                Number(
+                                                                    capacityResult
+                                                                        .globalProfessorSummary
+                                                                        .subjectBottlenecks
+                                                                ) > 0
+                                                                    ? "danger-text"
+                                                                    : "success-text"
+                                                            }
+                                                        >
+                                                            {
+                                                                capacityResult
+                                                                    .globalProfessorSummary
+                                                                    .subjectBottlenecks
+                                                            }
+                                                        </strong>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                        )
+                                    }
+
+                                    {/* PROGRAM SUMMARY */}
+
+                                    <div className="capacity-program-summary">
+
+                                        <h3>
+                                            Program Results
+                                        </h3>
+
+                                        <div className="capacity-grid">
+
+                                            <div className="capacity-item">
+
+                                                <span>
+                                                    Total Programs
+                                                </span>
+
+                                                <strong>
+                                                    {
+                                                        capacityResult
+                                                            .totalPrograms
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div className="capacity-item">
+
+                                                <span>
+                                                    Checked Programs
+                                                </span>
+
+                                                <strong>
+                                                    {
+                                                        capacityResult
+                                                            .checkedPrograms
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div className="capacity-item">
+
+                                                <span>
+                                                    Passed
+                                                </span>
+
+                                                <strong className="success-text">
+                                                    {
+                                                        capacityResult
+                                                            .passedPrograms
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div className="capacity-item">
+
+                                                <span>
+                                                    Failed
+                                                </span>
+
+                                                <strong
+                                                    className={
+                                                        capacityResult
+                                                            .failedPrograms > 0
+                                                            ? "danger-text"
+                                                            : "success-text"
+                                                    }
+                                                >
+                                                    {
+                                                        capacityResult
+                                                            .failedPrograms
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div className="capacity-item">
+
+                                                <span>
+                                                    Skipped
+                                                </span>
+
+                                                <strong>
+                                                    {
+                                                        capacityResult
+                                                            .skippedPrograms
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    {/* BOTTLENECKS */}
+
+                                    {
+                                        Array.isArray(
+                                            capacityResult
+                                                .globalSubjectBottlenecks
+                                        ) &&
+                                        capacityResult
+                                            .globalSubjectBottlenecks
+                                            .length > 0 && (
+
+                                            <div className="capacity-bottlenecks">
+
+                                                <h3>
+                                                    Subject Bottlenecks
+                                                </h3>
+
+                                                <div className="bottleneck-list">
+
+                                                    {
+                                                        capacityResult
+                                                            .globalSubjectBottlenecks
+                                                            .map(
+                                                                (
+                                                                    bottleneck,
+                                                                    index
+                                                                ) => (
+
+                                                                    <div
+                                                                        className="bottleneck-item"
+                                                                        key={
+                                                                            `${bottleneck.programId || "program"}-${bottleneck.subjectCode || "subject"}-${index}`
+                                                                        }
+                                                                    >
+
+                                                                        <div>
+
+                                                                            <strong>
+                                                                                {
+                                                                                    bottleneck.subjectCode
+                                                                                }
+                                                                            </strong>
+
+                                                                            <span>
+                                                                                {
+                                                                                    bottleneck.subjectName
+                                                                                }
+                                                                            </span>
+
+                                                                        </div>
+
+                                                                        <div className="bottleneck-values">
+
+                                                                            <span>
+                                                                                Required:
+                                                                                {" "}
+                                                                                {
+                                                                                    bottleneck.requiredHours
+                                                                                }
+                                                                            </span>
+
+                                                                            <span>
+                                                                                Allocated:
+                                                                                {" "}
+                                                                                {
+                                                                                    bottleneck.allocatedHours
+                                                                                }
+                                                                            </span>
+
+                                                                            <span className="danger-text">
+                                                                                Shortage:
+                                                                                {" "}
+                                                                                {
+                                                                                    bottleneck.capacityShortage
+                                                                                }
+                                                                            </span>
+
+                                                                            <span>
+                                                                                Qualified:
+                                                                                {" "}
+                                                                                {
+                                                                                    bottleneck.qualifiedProfessorCount
+                                                                                }
+                                                                            </span>
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )
+                                                            )
+
+                                                    }
+
+                                                </div>
+
+                                            </div>
+
+                                        )
+                                    }
+
+                                    {/* FAILED PROGRAMS */}
+
+                                    {
+                                        Array.isArray(
+                                            capacityResult.failed
+                                        ) &&
+                                        capacityResult
+                                            .failed
+                                            .length > 0 && (
+
+                                            <div className="capacity-bottlenecks">
+
+                                                <h3>
+                                                    Failed Programs
+                                                </h3>
+
+                                                <div className="bottleneck-list">
+
+                                                    {
+                                                        capacityResult
+                                                            .failed
+                                                            .map(
+                                                                (
+                                                                    failed,
+                                                                    index
+                                                                ) => (
+
+                                                                    <div
+                                                                        className="bottleneck-item"
+                                                                        key={
+                                                                            `${failed.programId}-${index}`
+                                                                        }
+                                                                    >
+
+                                                                        <div>
+
+                                                                            <strong>
+                                                                                {
+                                                                                    failed.programName
+                                                                                }
+                                                                            </strong>
+
+                                                                            <span>
+                                                                                Program ID:
+                                                                                {" "}
+                                                                                {
+                                                                                    failed.programId
+                                                                                }
+                                                                            </span>
+
+                                                                        </div>
+
+                                                                        <div className="bottleneck-values">
+
+                                                                            <span className="danger-text">
+                                                                                {
+                                                                                    failed.reason
+                                                                                }
+                                                                            </span>
+
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                )
+                                                            )
+
+                                                    }
+
+                                                </div>
+
+                                            </div>
+
+                                        )
+                                    }
+
+                                </>
+
+                            ) : (
+
+                                <div className="subjects-empty">
+
+                                    <div className="empty-icon">
+                                        ⚡
+                                    </div>
+
+                                    <h3>
+                                        No result
+                                    </h3>
+
+                                    <p>
+                                        University capacity
+                                        check did not return
+                                        a result.
+                                    </p>
+
+                                </div>
+
+                            )}
+
+                        </div>
+
+                        {/* FOOTER */}
+
+                        <div className="modal-footer">
+
+                            <button
+                                type="button"
+                                className="cancel-button"
+                                disabled={
+                                    capacityLoading
+                                }
+                                onClick={() =>
+                                    setShowCapacityModal(
+                                        false
+                                    )
+                                }
+                            >
+                                Close
+                            </button>
+
+                        </div>
+
+                    </div>
 
                 </div>
 

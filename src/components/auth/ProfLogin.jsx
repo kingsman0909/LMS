@@ -2,6 +2,7 @@ import React from 'react'
 import '../../styles/Landing.css';
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from "../../config";
 
 const Prof = (props) => {
 
@@ -13,8 +14,7 @@ const Prof = (props) => {
         e.preventDefault();
          try {
 
-        const response = await fetch(
-            "http://localhost:3000/api/auth/login/prof",
+        const response = await fetch(`${API_BASE_URL}/api/auth/login/prof`,
             {
                 method: "POST",
                 headers:{
@@ -34,8 +34,7 @@ const Prof = (props) => {
         if(response.ok){
           localStorage.setItem(`${data.user.role}_token`,data.token);
 
-          const response = await fetch(
-          "http://localhost:3000/api/auth/me",
+          const response = await fetch(`${API_BASE_URL}/api/auth/me`,
           {
               headers: {
                   Authorization: `Bearer ${data.token}`

@@ -1,6 +1,8 @@
 import React from 'react'
 import { useState } from 'react';
 import '../../../styles/Profesor.css';
+import { API_BASE_URL } from "../../../config";
+
 import {
 FaBook,
 FaUsers,
@@ -62,8 +64,7 @@ const createAnnouncement = async (e) => {
     try {
         const token = localStorage.getItem('professor_token');
         setLoading(true);
-        const response = await fetch(
-            "http://localhost:3000/api/auth/createAnnouncement",
+        const response = await fetch(`${API_BASE_URL}/api/auth/createAnnouncement`,
             {
                 method: "POST",
                 headers: {
