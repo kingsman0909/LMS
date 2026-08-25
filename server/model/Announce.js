@@ -15,8 +15,13 @@ const getAnnouncementsByRole = async (role) => {
     ORDER BY a.created_at DESC
 `, [role]);
     return rows;
-    console.log(rows);
 };
+
+const getAllAnnouncement = async () => {
+    const [rows] = await db.query(`
+        SELECT * FROM announcements`)
+        return rows;
+}
 
 const createAnnouncement = async (announce) => {
     const sql = `
@@ -35,5 +40,6 @@ const createAnnouncement = async (announce) => {
 
 module.exports = {
     getAnnouncementsByRole,
-    createAnnouncement
+    createAnnouncement,
+    getAllAnnouncement
 };

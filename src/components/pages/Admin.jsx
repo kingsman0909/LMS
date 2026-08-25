@@ -12,6 +12,7 @@ import Announcements from './AdminPage/Announcements';
 import Schedule from './AdminPage/Schedule';
 import Dashboard from './AdminPage/Dashboard';
 import Curriculum from './AdminPage/Curriculum';
+import Enrollment from './AdminPage/Enrollment';
 
 import {
     HiMenu,
@@ -158,7 +159,9 @@ const Admin = ({role}) => {
     "/admin/professors": 4,
     "/admin/allSubjects": 5,
     "/admin/schedules": 6,
-    "/admin/curriculum": 7
+    "/admin/curriculum": 7,
+    "/admin/announcements": 8,
+    "/admin/enrollments": 9
   };
 
   
@@ -192,6 +195,9 @@ const Admin = ({role}) => {
         break;
     case 8:
         navigate('/admin/announcements');
+        break;
+    case 9:
+        navigate('/admin/enrollments');
         break;
       default:
         alert("Error in navigating page!");
@@ -391,6 +397,7 @@ const Admin = ({role}) => {
                 <Route path='/schedules' element={<Schedule />} />
                 <Route path='/professors' element={<AllProfessor />} />
                 <Route path='/announcements' element={<Announcements />} />
+                <Route path='/enrollments' element={<Enrollment term={academicTerm} />} />
                 <Route path='/curriculum' element={<Curriculum />} />
                 <Route path='/' element={<Dashboard term={academicTerm} handlePage={handlePage}/>} />
             </Routes>

@@ -76,12 +76,26 @@ const announcement = async (req, res) => {
     try {
         const role = req.user.role;
 
-        const announcements =
+        
+        if(role !== 'admin'){
+            const announcements =
             await Announcement.getAnnouncementsByRole(role);
+            
+            res.status(200).json({
+                announcements
+            });
 
-        res.status(200).json({
-            announcements
-        });
+        }
+        else{
+            const announcements =
+            await Announcement.getAllAnnouncement();
+            
+            res.status(200).json({
+                announcements
+            });
+        }
+        
+        
 
     } catch (error) {
         console.error(error);
@@ -1218,7 +1232,65 @@ const OptimalScheduler =  async (req, res) => {
 };
 
 
+const getCurrentlyEnrolledStudents = async (req, res) => {
 
+    try {
+
+        const {
+            academicTermId,
+            programId,
+            yearLevel,
+            page = 1,
+            limit = 50
+        } = req.query;
+
+
+        if (!academicTermId) {
+            return res.status(400).json({
+                success: false,
+                message: "academicTermId is required"
+            });
+        }
+
+
+        if (!programId) {
+            return res.status(400).json({
+                success: false,
+                message: "programId is required"
+            });
+        }
+
+
+        const result =
+            await Student.getCurrentlyEnrolledStudents(
+                Number(academicTermId),
+                Number(programId),
+                yearLevel
+                    ? Number(yearLevel)
+                    : null,
+                Number(page),
+                Number(limit)
+            );
+
+
+        res.json({
+            success: true,
+            result
+        });
+
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+
+    }
+
+};
 
 module.exports = {
     login,
@@ -1235,6 +1307,7 @@ module.exports = {
     getEnrollmentCapacities,
     loginProf,
     announcement,
+    getCurrentlyEnrolledStudents,
     createAnnounce,
     getCourses,
     loginAdmin,

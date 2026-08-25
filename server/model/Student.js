@@ -293,6 +293,207 @@ const getProfStudents = async (
 
     return rows;
 };
+
+const getCurrentlyEnrolledStudents = async (
+    academicTermId,
+    programId,
+    yearLevel = null,
+    page = 1,
+    limit = 50
+) => {
+
+    // Safety
+    page = Math.max(1, Number(page) || 1);
+    limit = Math.max(1, Number(limit) || 50);
+
+    const offset = (page - 1) * limit;
+
+
+    // =========================================
+    // CONDITIONS
+    // =========================================
+
+    const conditions = [
+        `se.status = 'approved'`,
+        `sec.academic_term_id = ?`,
+        `sec.program_id = ?`,
+        `u.role = 'student'`
+    ];
+
+    const baseParams = [
+        academicTermId,
+        programId
+    ];
+
+
+    // YEAR FILTER
+    if (
+        yearLevel !== null &&
+        yearLevel !== undefined &&
+        yearLevel !== ""
+    ) {
+
+        conditions.push(
+            `st.year_level = ?`
+        );
+
+        baseParams.push(
+            Number(yearLevel)
+        );
+    }
+
+
+    const whereClause =
+        conditions.join("\nAND ");
+
+
+    // =========================================
+    // GET STUDENTS
+    // =========================================
+
+    const [rows] = await db.query(`
+        SELECT
+
+            -- PROGRAM
+            p.id AS program_id,
+            p.program_code,
+            p.program_name,
+            p.description,
+
+            -- STUDENT
+            st.id AS student_id,
+            st.student_id AS school_student_id,
+            st.firstname,
+            st.middlename,
+            st.lastname,
+            st.course,
+            st.year_level,
+
+            -- ENROLLMENT
+            se.id AS enrollment_id,
+            se.status AS enrollment_status,
+
+            -- SECTION
+            sec.id AS section_id,
+            sec.section_name
+
+        FROM student_enrollments se
+
+        INNER JOIN student st
+            ON st.id = se.student_id
+
+        INNER JOIN users u
+            ON u.id = st.user_id
+
+        INNER JOIN sections sec
+            ON sec.id = se.section_id
+
+        INNER JOIN programs p
+            ON p.id = sec.program_id
+
+        WHERE ${whereClause}
+
+        ORDER BY
+            st.lastname,
+            st.firstname
+
+        LIMIT ? OFFSET ?
+
+    `, [
+        ...baseParams,
+        limit,
+        offset
+    ]);
+
+
+    // =========================================
+    // PROGRAM DETAILS
+    // =========================================
+
+    const program = rows.length > 0
+        ? {
+            id: rows[0].program_id,
+            program_code: rows[0].program_code,
+            program_name: rows[0].program_name,
+            description: rows[0].description
+        }
+        : null;
+
+
+    // =========================================
+    // TOTAL STUDENTS
+    // =========================================
+
+    const [[countResult]] = await db.query(`
+        SELECT COUNT(*) AS total
+
+        FROM student_enrollments se
+
+        INNER JOIN student st
+            ON st.id = se.student_id
+
+        INNER JOIN users u
+            ON u.id = st.user_id
+
+        INNER JOIN sections sec
+            ON sec.id = se.section_id
+
+        WHERE ${whereClause}
+
+    `, baseParams);
+
+
+    const total =
+        Number(countResult.total);
+
+
+    // =========================================
+    // FORMAT STUDENTS
+    // =========================================
+
+    const students = rows.map(row => ({
+
+        enrollment_id: row.enrollment_id,
+
+        student_id: row.student_id,
+        school_student_id: row.school_student_id,
+
+        firstname: row.firstname,
+        middlename: row.middlename,
+        lastname: row.lastname,
+
+        course: row.course,
+        year_level: row.year_level,
+
+        section: {
+            id: row.section_id,
+            section_name: row.section_name
+        },
+
+        enrollment_status:
+            row.enrollment_status
+
+    }));
+
+
+    return {
+
+        program,
+
+        students,
+
+        total,
+
+        page,
+
+        limit,
+
+        hasMore:
+            offset + students.length < total
+
+    };
+};
+
 module.exports = {
 
     getProfStudents,
@@ -304,6 +505,7 @@ module.exports = {
 
     getStudentWithUser,
     getAllStudent,
-    getTotalStudents
+    getTotalStudents,
+    getCurrentlyEnrolledStudents
 
 };

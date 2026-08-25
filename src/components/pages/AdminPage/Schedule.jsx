@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./styles/Schedule.css";
 import { API_BASE_URL } from "../../../config";
+import Loading from "../LoadingComponent/Loading";
 
 const AdminSchedule = () => {
 
@@ -34,6 +35,9 @@ const AdminSchedule = () => {
     // =========================
 
     const [showGenerateModal, setShowGenerateModal] = useState(false);
+    const [generateLoading, setGenerateLoading] = useState(false);
+
+    const [loadText, setLoadText] = useState("");
 
     const [selectedProgram, setSelectedProgram] = useState("");
 
@@ -624,6 +628,10 @@ const AdminSchedule = () => {
                 return;
             }
 
+            setLoadText("Schedule")
+            setGenerateLoading(true);
+            setShowGenerateModal(false);
+
             try {
 
                 const token =
@@ -669,7 +677,15 @@ const AdminSchedule = () => {
 
                             })
                         }
-                    );
+                    );                
+                    
+                    
+                
+                
+                setGenerateLoading(false);
+
+
+                
 
                 const data =
                     await response.json();
@@ -692,8 +708,7 @@ const AdminSchedule = () => {
                     "Schedule generated successfully."
                 );
 
-                setShowGenerateModal(false);
-
+                
                 await getSections();
                 await getSchedules();
 
@@ -710,6 +725,7 @@ const AdminSchedule = () => {
                 );
             }
         };
+
 
 
     // =========================
@@ -808,7 +824,10 @@ const AdminSchedule = () => {
     // =====================================================
 
     return (
-
+        <>
+        {generateLoading && 
+            <Loading text={loadText} setGenerateLoading = {setGenerateLoading}/>
+        }
         <div className="schedule-page">
 
             {/* ================= HEADER ================= */}
@@ -2251,6 +2270,7 @@ const AdminSchedule = () => {
                 )}
 
         </div>
+        </>
     );
 };
 
