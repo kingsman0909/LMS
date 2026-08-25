@@ -7,8 +7,13 @@ const authRoutes = require("./routes/auth");
 
 const app = express();
 
+const isDevelopment = process.env.DEVELOPMENT === "true";
+const isDebugger = process.env.DEBUGGER === "true";
+
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: isDebugger || isDevelopment
+        ? true
+        : process.env.CLIENT_URL,
     credentials: true
 }));
 

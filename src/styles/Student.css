@@ -49,6 +49,7 @@
     box-shadow: 0 0 10px gray;
 
     z-index: 1000;
+
 }
 
 
@@ -66,6 +67,7 @@
 .h-left {
     gap: 50px;
     min-width: 0;
+
 }
 
 .student h1 {

@@ -150,6 +150,7 @@
     position: absolute;
     width: 350px;
     height: 70vh;
+    max-height: 500px;
     align-items: center;
     gap: 40px;
     color: white;
