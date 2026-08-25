@@ -7,7 +7,12 @@
 
 .applicants-header-right{
     display: flex;
-    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.a-h-btn{
+    display: flex;
     gap: 10px;
 }
 .approveAll{
@@ -362,7 +367,12 @@
         grid-template-columns: 1fr 1fr;
     }
 
+    .applicants-header-right{
+        flex-direction: column;
+    }
+
 }
+
 
 
 

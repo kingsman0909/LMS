@@ -1,3 +1,7 @@
+html {
+  scroll-behavior: smooth;
+}
+
 .curriculum-page {
     min-height: 100%;
     padding: 28px;

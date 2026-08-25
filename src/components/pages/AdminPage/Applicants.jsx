@@ -385,8 +385,11 @@ useEffect(() => {
                 </div>
                 
                 <div className="applicants-header-right">
-                    <button onClick={approveAllApplicants} className="approveAll">Approve All</button>
-                    <button onClick={SimulateStudents} className="capacityBtn">Check Capacity</button>
+                    <div className='a-h-btn'>
+                        <button onClick={approveAllApplicants} className="approveAll">Approve All</button>
+                        <button onClick={SimulateStudents} className="capacityBtn">Check Capacity</button>
+                    </div>
+
                     <div className="applicant-count">
                     
                     {activeTab === "students"

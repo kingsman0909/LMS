@@ -97,6 +97,13 @@ const getSubjectsForCurriculum = async (
 };
 
 
+const scrollToSection = (id) => {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+};
+
 // =====================================================
 // GET CURRICULUM
 // programId + yearLevel + semester
@@ -476,6 +483,7 @@ export default function Curriculum() {
         programId
     ) => {
 
+        scrollToSection("program_page");
         setSelectedProgramId(
             programId
         );
@@ -1010,6 +1018,7 @@ export default function Curriculum() {
 
                                 type="button"
 
+
                                 className={`program-card ${
                                     Number(
                                         selectedProgramId
@@ -1028,7 +1037,7 @@ export default function Curriculum() {
                                 }
                             >
 
-                                <div className="program-code">
+                                <div className="program-code" >
                                     {program.program_code}
                                 </div>
 
@@ -1286,7 +1295,7 @@ export default function Curriculum() {
 
                 {/* SUBJECT TABLE */}
 
-                <div className="subjects-card">
+                <div className="subjects-card" id="program_page">
 
                     <div className="subjects-card-header">
 
