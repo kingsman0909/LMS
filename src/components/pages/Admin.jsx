@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from "react-router-dom";
 
 import '../../styles/Admin.css';
@@ -42,6 +42,8 @@ const Admin = ({role}) => {
     const [academicTerm, setAcademicTerm] = useState([]);
     const [programs, setPrograms] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
+
+    
 
     const navigate = useNavigate();
 
@@ -215,7 +217,7 @@ const Admin = ({role}) => {
 
                 <div className="admin-header-left">
 
-                    <div className="admin-logo">
+                    <div className="admin-logo" onClick={()=> navigate("/admin/")}>
                         LMS
                     </div>
 
@@ -361,7 +363,7 @@ const Admin = ({role}) => {
 
         <div className='admin-content'>
             {/* ================= NAVBAR ================= */}
-            <div className={`admin-nav-wrapper ${openMenu ? "":"close"}`}>
+            <div className={`admin-nav-wrapper ${openMenu ? "":"close"}`} >
                 <div className={`admin-nav ${openMenu ? "":"close"}`}>
                     <h2>A.Y {academicTerm.school_year}<br></br>{academicTerm.semester}</h2>
                 <LineSidebar 

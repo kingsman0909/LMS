@@ -1225,34 +1225,7 @@ const AllSubjects = ({ academicTermId }) => {
 
                     {/* UNIVERSITY CAPACITY */}
 
-                    <button
-                        type="button"
-                        className="capacity-check-button"
-                        onClick={
-                            checkUniversityCapacity
-                        }
-                        disabled={
-                            capacityLoading
-                        }
-                    >
-
-                        {capacityLoading ? (
-                            <>
-                                <span className="button-spinner"></span>
-                                Checking...
-                            </>
-                        ) : (
-                            <>
-                                <span>
-                                    ⚡
-                                </span>
-
-                                Check University Capacity
-                            </>
-                        )}
-
-                    </button>
-
+                    
                     {/* REFRESH */}
 
                     <button

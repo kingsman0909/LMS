@@ -410,6 +410,7 @@
 
 /*              NAVIGATION BAR  */
 
+
 .admin-nav-wrapper{
     width: 250px;
     height: 100vh;
@@ -439,8 +440,12 @@
 
 .admin-content{
     display: flex;
-    padding-top: 80px;
+    margin-top: 72px;
     padding-inline: 40px;
+    box-sizing: border-box;
+    height: calc(100% - 160px);
+    max-height: fit-content;
+    min-height: fit-content;
 }
 
 @media screen and (max-width: 768px) {
@@ -449,5 +454,17 @@
     }
     .admin-title{
         display: none;
+    }
+}
+
+@media screen and (max-width: 400px) {
+    .admin-profile-button{
+        span{
+            display: none;
+        }
+    }
+
+    .admin-notification-box{
+        width: 250px;
     }
 }

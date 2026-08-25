@@ -1227,3 +1227,14 @@ tbody tr:hover {
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 400px) {
+    .subjects-title-icon{
+        height: fit-content;
+        border-radius: 5px;
+    }
+
+    .subjects-header button{
+        font-size: 12px;
+    }
+}
