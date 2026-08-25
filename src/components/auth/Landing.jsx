@@ -11,22 +11,19 @@ const Landing = (props) => {
     const[user, setUser] = useState(null);
     const navigate = useNavigate();
     
-
     function login(name){
         setUser(name);
         setLogin(true);
     }
     
-
     function loginProf(e){
         e.preventDefault();
-        //authentication
         navigate("/profesor")
     }
   return (
     <div className='landing'>
-        {log && user === 'student' && <Student  setLogin={setLogin}/>}
-        {log && user === 'profesor' && <Prof loginUser={loginProf} setLogin={setLogin} />}
+        {log && user === 'student' && <Student  setLogin={setLogin} isProduction={props.isProduction}/>}
+        {log && user === 'profesor' && <Prof loginUser={loginProf} setLogin={setLogin} isProduction={props.isProduction}/>}
         <button className='enrol-btn' onClick={()=>{navigate('/enrolment')}}>Apply Now</button>
        <div className='landing-container' style={log ? {filter: "blur(6px)"} : {}}>
         <div className='LMS-box'>

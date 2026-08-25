@@ -15,10 +15,20 @@ const Curriculum = require("../model/Curriculum");
 
 
 
-const loginUser = async ({ username, password }, allowedRole) => {
+const loginUser = async ({ username, password }, allowedRole, isProduction) => {
 
-    const result = await User.findByUsername(username);
+    let result;
 
+    console.log("logging in as ", username, "Production: ",isProduction, allowedRole);
+
+    if(isProduction === "true" || isProduction === undefined){
+        result = await User.findByUsername(username);
+    }
+    if(isProduction === "false"){
+        result = await User.loginTest(allowedRole);
+    }
+
+    console.log(result)
     if (!result) {
         throw new Error("User not found");
     }
@@ -30,10 +40,12 @@ const loginUser = async ({ username, password }, allowedRole) => {
     }
 
     // Temporary password check
-    if (password !== user.password) {
+    if (password !== user.password && isProduction === "true") {
+        console.log("password error")
         throw new Error("Wrong password");
     }
 
+    console.log("creating token")
     const jwt = require("jsonwebtoken");
 
     const { password: pass, ...userData } = user;

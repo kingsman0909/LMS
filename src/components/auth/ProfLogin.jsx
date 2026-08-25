@@ -11,10 +11,16 @@ const Prof = (props) => {
   const [password,setPassword] = useState("");
 
   const loginProf = async (e) => {
+        
         e.preventDefault();
+        if(props.isProduction === undefined || props.isProduction === null){
+          alert("production boolean might be null or undefined")
+          return
+        }
+        
          try {
 
-        const response = await fetch(`${API_BASE_URL}/api/auth/login/prof`,
+        const response = await fetch(`${API_BASE_URL}/api/auth/login/prof?isProduction=${props.isProduction}`,
             {
                 method: "POST",
                 headers:{
@@ -63,9 +69,9 @@ const Prof = (props) => {
       <h2>Profesor</h2>
       <div className='l-input'>
         <label>username</label>
-        <input type='text' placeholder='username' value={username} onChange={(e)=>setUsername(e.target.value)} required/>
+        <input type='text' placeholder='username' value={username} onChange={(e)=>setUsername(e.target.value)} required={props.isProduction === "true"}/>
         <label>password</label>
-        <input type='password' placeholder='password' value={password} onChange={(e)=>setPassword(e.target.value)} required />
+        <input type='password' placeholder='password' value={password} onChange={(e)=>setPassword(e.target.value)} required={props.isProduction === "true"} />
       </div>
       <button type='submit'>Login</button>
     </form>

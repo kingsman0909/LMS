@@ -11,7 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from "../../config";
 
-const AdminLogin = () => {
+const AdminLogin = (props) => {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -22,17 +22,20 @@ const AdminLogin = () => {
 
     const navigate = useNavigate();
 
-
     const handleLogin = async (e) => {
-
         e.preventDefault();
+
+        if(props.isProduction === undefined){
+            alert("error is Production is undefined or null");
+            return;
+        }
 
         setError('');
         setLoading(true);
 
         try {
 
-            const response = await fetch(`${API_BASE_URL}/api/auth/admin/login`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/login?isProduction=${props.isProduction}`,
                 {
                     method: 'POST',
 
@@ -199,7 +202,7 @@ const AdminLogin = () => {
                                     setUsername(e.target.value)
                                 }
 
-                                required
+                                required={props.isProduction === "true"}
 
                             />
 
@@ -240,7 +243,7 @@ const AdminLogin = () => {
                                     setPassword(e.target.value)
                                 }
 
-                                required
+                                required={props.isProduction === "true"}
 
                             />
 
