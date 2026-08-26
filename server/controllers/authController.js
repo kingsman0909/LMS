@@ -13,8 +13,7 @@ const login = async (req, res) => {
 
     try {
 
-        const isProduction = req.query.isProduction;
-        const result = await authService.loginUser(req.body, "student", isProduction);
+        const result = await authService.loginUser(req.body, "student");
 
         res.json(result);
 
@@ -30,9 +29,7 @@ const login = async (req, res) => {
 const loginAdmin = async (req, res) => {
    
     try {
-
-        const isProduction = req.query.isProduction;
-        const result = await authService.loginUser(req.body, "admin", isProduction);
+        const result = await authService.loginUser(req.body, "admin");
 
         res.json(result);
 
@@ -50,8 +47,7 @@ const loginProf = async (req, res) => {
    
 
     try {
-        const isProduction = req.query.isProduction;
-        const result = await authService.loginUser(req.body, "professor", isProduction);
+        const result = await authService.loginUser(req.body, "professor");
         res.json(result);
 
     } catch(error) {

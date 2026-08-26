@@ -25,17 +25,12 @@ const AdminLogin = (props) => {
     const handleLogin = async (e) => {
         e.preventDefault();
 
-        if(props.isProduction === undefined){
-            alert("error is Production is undefined or null");
-            return;
-        }
-
         setError('');
         setLoading(true);
 
         try {
 
-            const response = await fetch(`${API_BASE_URL}/api/auth/admin/login?isProduction=${props.isProduction}`,
+            const response = await fetch(`${API_BASE_URL}/api/auth/admin/login`,
                 {
                     method: 'POST',
 
@@ -202,7 +197,7 @@ const AdminLogin = (props) => {
                                     setUsername(e.target.value)
                                 }
 
-                                required={props.isProduction === "true"}
+                                required
 
                             />
 
@@ -243,7 +238,7 @@ const AdminLogin = (props) => {
                                     setPassword(e.target.value)
                                 }
 
-                                required={props.isProduction === "true"}
+                                required
 
                             />
 

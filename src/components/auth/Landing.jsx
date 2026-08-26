@@ -22,8 +22,8 @@ const Landing = (props) => {
     }
   return (
     <div className='landing'>
-        {log && user === 'student' && <Student  setLogin={setLogin} isProduction={props.isProduction}/>}
-        {log && user === 'profesor' && <Prof loginUser={loginProf} setLogin={setLogin} isProduction={props.isProduction}/>}
+        {log && user === 'student' && <Student  setLogin={setLogin}/>}
+        {log && user === 'profesor' && <Prof loginUser={loginProf} setLogin={setLogin}/>}
         <button className='enrol-btn' onClick={()=>{navigate('/enrolment')}}>Apply Now</button>
        <div className='landing-container' style={log ? {filter: "blur(6px)"} : {}}>
         <div className='LMS-box'>

@@ -1,69 +1,7 @@
 const db = require("../config/db");
-
-const loginTest = async (role) => {
-
-    console.log("logintest")
-    const [userRows] = await db.query(
-        `
-        SELECT *
-        FROM users
-        WHERE role = ?
-        limit 1
-        `,
-        [role]
-    );
-
-    const user = userRows[0];
-
-    if (!user) {
-        return null;
-    }
-
-    let profile = null;
-
-    if (role === 'student') {
-
-        const [studentRows] = await db.query(
-            `
-            SELECT *
-            FROM student
-            WHERE user_id = ?
-            `,
-            [user.id]
-        );
-
-        profile = studentRows[0];
-
-    } else if (role === 'professor') {
-
-        const [professorRows] = await db.query(
-            `
-            SELECT *
-            FROM profesor
-            WHERE user_id = ?
-            `,
-            [user.id]
-        );
-
-        profile = professorRows[0];
-    }
-
-    else if (role === "admin"){
-        profile = {
-            name: "admin",
-            role: "admin"
-        };
-    }
-
-    console.log(user, profile)
-    return {
-        user,
-        profile
-    };
-}
 // Find user by username
 const findByUsername = async (username) => {
-
+    console.log("logging in")
     const [userRows] = await db.query(
         `
         SELECT *
@@ -74,7 +12,7 @@ const findByUsername = async (username) => {
     );
 
     const user = userRows[0];
-
+    console.log("user: ", user)
     if (!user) {
         return null;
     }
@@ -191,8 +129,6 @@ const findById = async (userId) => {
 
 
 module.exports = {
-
-    loginTest,
 
     findByUsername,
 

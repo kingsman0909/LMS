@@ -15,20 +15,12 @@ const Curriculum = require("../model/Curriculum");
 
 
 
-const loginUser = async ({ username, password }, allowedRole, isProduction) => {
+const loginUser = async ({ username, password }, allowedRole) => {
+       
+    
+    const result = await User.findByUsername(username);
+    
 
-    let result;
-
-    console.log("logging in as ", username, "Production: ",isProduction, allowedRole);
-
-    if(isProduction === "true" || isProduction === undefined){
-        result = await User.findByUsername(username);
-    }
-    if(isProduction === "false"){
-        result = await User.loginTest(allowedRole);
-    }
-
-    console.log(result)
     if (!result) {
         throw new Error("User not found");
     }

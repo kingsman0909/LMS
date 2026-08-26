@@ -12,13 +12,14 @@ import AdminLogin from './components/pages/AdminLogin';
 function App() {
 
   const isProduction = import.meta.env.PRODUCTION === "true";
+
   return (
     <Routes>
-            <Route path="/" element={<Landing isProduction={isProduction}/>} />
-            <Route path='/student/*' element={<Protect allowedRole={"student"} isProduction={isProduction}><Student role="student"/></Protect>} />
-            <Route path='/profesor/*' element={<Protect allowedRole={"professor"} isProduction={isProduction}><Profesor role="professor"/></Protect>} />
-            <Route path='/admin/login' element={<AdminLogin isProduction={isProduction}/>} />
-            <Route path='/admin/*' element={<Protect allowedRole={"admin"} isProduction={isProduction}><Admin role="admin"/></Protect>} />
+            <Route path="/" element={<Landing />} />
+            <Route path='/student/*' element={<Protect allowedRole={"student"} ><Student role="student"/></Protect>} />
+            <Route path='/profesor/*' element={<Protect allowedRole={"professor"} ><Profesor role="professor"/></Protect>} />
+            <Route path='/admin/login' element={<AdminLogin />} />
+            <Route path='/admin/*' element={<Protect allowedRole={"admin"} ><Admin role="admin"/></Protect>} />
             <Route path='/enrolment' element={<Enrol />}></Route>
     </Routes>
   )
