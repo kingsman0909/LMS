@@ -2,15 +2,15 @@ name: Aiven Wake Up
 
 on:
   schedule:
-    - cron: "17 */6 * * *"
-  workflow_dispatch:
+    - cron: "*/5 * * * *"
 
 jobs:
   wakeup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Fetch Programs
+      - name: Wake up Render
         run: |
-          curl --fail --silent --show-error \
-          "https://lms-8r47.onrender.com/api/auth/getPrograms"
+          curl --fail --show-error \
+            -w "\nHTTP STATUS: %{http_code}\n" \
+            "https://lms-8r47.onrender.com/api/auth/getPrograms"
