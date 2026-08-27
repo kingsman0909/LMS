@@ -211,6 +211,7 @@ const Admin = ({role}) => {
 
         <div className="admin-dashboard">
 
+
             {/* ================= HEADER ================= */}
 
             <header className="admin-header">
@@ -360,8 +361,8 @@ const Admin = ({role}) => {
 
                 </div>
             </header>
+        <section>
 
-        <div className='admin-content'>
             {/* ================= NAVBAR ================= */}
             <div className={`admin-nav-wrapper ${openMenu ? "":"close"}`} >
                 <div className={`admin-nav ${openMenu ? "":"close"}`}>
@@ -378,11 +379,11 @@ const Admin = ({role}) => {
                     proximityRadius={100}
                     maxShift={30}
                     falloff="smooth"
-                    markerLength={60}
-                    markerGap={0}
+                    markerLength={0}
+                    markerGap={20}
                     tickScale={0.5}
                     scaleTick
-                    itemGap={20}
+                    itemGap={13}
                     fontSize={1.1}
                     smoothing={100}
                     defaultActive={ind}
@@ -390,6 +391,7 @@ const Admin = ({role}) => {
                         />
                 </div>
             </div>
+        <div className='admin-content'>
 
             <Routes>
                 <Route path='/applicants' element={<Applicant />}></Route>
@@ -404,8 +406,9 @@ const Admin = ({role}) => {
                 <Route path='/' element={<Dashboard term={academicTerm} handlePage={handlePage}/>} />
             </Routes>
         </div>
-
+        </section>
         </div>
+    
 
     );
 };

@@ -703,26 +703,29 @@ const AdminSchedule = () => {
                     );
                 }
 
-                alert(
+                if(!generateLoading){
+                    alert(
                     data.message ||
                     "Schedule generated successfully."
                 );
-
+                }
                 
                 await getSections();
                 await getSchedules();
 
             } catch (error) {
-
+                setGenerateLoading(false);
                 console.error(
                     "Generate schedule error:",
                     error
                 );
 
-                alert(
+                if(!generateLoading){
+                    alert(
                     error.message ||
                     "Something went wrong while generating schedule."
-                );
+                );  
+                }
             }
         };
 
@@ -826,7 +829,7 @@ const AdminSchedule = () => {
     return (
         <>
         {generateLoading && 
-            <Loading text={loadText} setGenerateLoading = {setGenerateLoading}/>
+            <Loading text={"Loading "+loadText} setGenerateLoading = {setGenerateLoading}/>
         }
         <div className="schedule-page">
 

@@ -1,6 +1,5 @@
 .subjects-container{
     width:100%;
-    padding:30px;
     box-sizing:border-box;
 }
 
@@ -134,7 +133,7 @@ tbody td button:last-child:hover{
     max-width:100%;
     height: 90vh;
     overflow: auto;
-    background:white;
+    background:white ;
     padding:30px;
 
     border-radius:15px;
@@ -288,6 +287,8 @@ tbody td button:last-child:hover{
     background: #f3f4f6;
 }
 
+
+
 .program-option input[type="checkbox"] {
     width: 16px;
     height: 16px;
@@ -332,7 +333,6 @@ tbody td button:last-child:hover{
 .subjects-page {
     width: 100%;
     min-height: 100%;
-    padding: 28px;
     box-sizing: border-box;
     color: #172033;
 }
@@ -390,7 +390,7 @@ tbody td button:last-child:hover{
 .add-subject-button {
     height: 43px;
     border: none;
-    border-radius: 11px;
+    border-radius: 6px !important;
     padding: 0 17px;
     font-weight: 650;
     cursor: pointer;
@@ -440,7 +440,7 @@ tbody td button:last-child:hover{
 
 .stat-card {
     min-height: 88px;
-    background: white;
+    background: red;
     border: 1px solid #e9edf3;
     border-radius: 15px;
     padding: 17px;
@@ -481,7 +481,7 @@ tbody td button:last-child:hover{
 .subject-filter-card {
     background: white;
     border: 1px solid #e9edf3;
-    border-radius: 15px;
+    border-radius: 6px;
     padding: 14px;
     display: flex;
     align-items: center;
@@ -573,7 +573,7 @@ tbody td button:last-child:hover{
 .subjects-table-card {
     background: white;
     border: 1px solid #e9edf3;
-    border-radius: 16px;
+    border-radius: 6px;
     overflow: hidden;
     box-shadow: 0 4px 18px rgba(25, 45, 70, 0.045);
 }
@@ -892,7 +892,7 @@ tbody tr:hover {
     max-height: 90vh;
     overflow-y: auto;
     background: white;
-    border-radius: 20px;
+    border-radius: 6px;
     box-shadow: 0 25px 70px rgba(10, 30, 55, 0.2);
 }
 

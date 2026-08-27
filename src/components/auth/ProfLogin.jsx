@@ -9,11 +9,11 @@ const Prof = (props) => {
   const navigate = useNavigate();
   const [username,setUsername] = useState("");
   const [password,setPassword] = useState("");
-
+  const [loading, setLoading] = useState(false);
   const loginProf = async (e) => {
         
         e.preventDefault();
-        
+        setLoading(true);
          try {
 
         const response = await fetch(`${API_BASE_URL}/api/auth/login/prof`,
@@ -53,9 +53,12 @@ const Prof = (props) => {
         }
 
     } catch(error){
-
+        setLoading(false);
         alert("Connection error!")
 
+    }
+    finally{
+      setLoading(false);
     }
   }
 
@@ -69,7 +72,13 @@ const Prof = (props) => {
         <label>password</label>
         <input type='password' placeholder='password' value={password} onChange={(e)=>setPassword(e.target.value)} required/>
       </div>
-      <button type='submit'>Login</button>
+      <button type='submit' disabled={loading} className={`${loading ? 'loading':''}`}>
+        {
+          loading ? 
+          <span>Loading</span> :
+          <span>Login</span>
+        }
+      </button>
     </form>
   )
 }

@@ -9,7 +9,7 @@
   --item-gap: 20px;
   --font-size: 1.1rem;
   --smoothing: 100ms;
-
+  
   position: relative;
   display: flex;
   justify-content: flex-start;
@@ -25,6 +25,7 @@
   padding: 1rem 0;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--item-gap);
   height: fit-content;
 }
@@ -51,8 +52,14 @@
   font-size: var(--font-size);
   line-height: 1.2;
   color: color-mix(in srgb, var(--accent-color) calc(var(--effect, 0) * 100%), var(--text-color));
-  transform: translateX(calc(var(--effect, 0) * var(--max-shift)));
-}
+transform: translateX(
+    calc(
+      var(--effect, 0) *
+       var(--max-shift)
+    )
+  );}
+
+
 
 .line-sidebar__index {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

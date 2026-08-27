@@ -61,11 +61,9 @@
 
 @keyframes load {
     from{
-        opacity: 0;
         transform: translateY(40px);
     }
     to{
-        opacity: 1;
         transform: translateY(0px);
     }
 }
@@ -73,6 +71,7 @@
 .landing-container h4{
     letter-spacing: 0.5;
     font-weight: lighter;
+    animation: fade-in 0.5s ease;
 }
 .landing-container h1{
     font-size: 65px;
@@ -84,23 +83,12 @@
 
 .LMS-box{
     padding-inline: 20px;
-    position: relative;
     overflow: hidden;
     border-radius: 10px;
     border: 1px solid rgba(248, 247, 247, 0.5);
-    z-index: 1;
+    backdrop-filter: blur(6px);
 }
-.LMS-box::before{
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    backdrop-filter: blur(4px);
-    z-index: -1;
-}
+
 
 
 .user-btn{
@@ -109,41 +97,35 @@
 }
 
 .user-btn button{
-    border: none;
     height: 40px;
     width: 100px;
     font-size: 18px;
     font-weight: lighter;
     border-radius: 5px;
     cursor: pointer;
-    transition: all 0.5s ease;
 }
 
 .stud-btn{
+    border: none;
     background-color: var(--primary-dark);
     color: black;
     box-shadow: 0 0 2px green;
 }
 
+.stud-btn:hover{
+    opacity: 0.8;
+}
+
 .prof-btn{
-    position: relative;
     overflow: hidden;
     background-color: transparent;
     color: var(--text-color-w);
-    box-shadow: 0 0 2px white;
+    border: 1px solid rgba(248, 247, 247, 0.5);
+    background-color: blur(6px);
 }
-.prof-btn::before{
-    content: "";
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    position: absolute;
-    background: transparent;
-    backdrop-filter: blur(4px);
-    z-index: -1;
+.prof-btn:hover{
+    border-color: white;
 }
-
 
     .login{
     display: flex;
@@ -267,6 +249,8 @@
     transition: all 0.2s ease;
 }
 
+
+
 .login button:hover{
     box-shadow: 0 0 5px var(--primary-dark);
 }
@@ -283,10 +267,63 @@
 }
 
 .prof button:hover{
-    box-shadow: 0 0 20px var(--primary-dark);
+    box-shadow: 0 0 5px var(--primary-dark);
+}
+
+.prof button.loading{
+    span::after{
+        content: "";
+        animation: loading 1s linear infinite;
+    }
+
+    cursor:wait;
+}
+.prof button.loading:hover {
+    box-shadow: none;
 }
 
 
+
+.login button.loading{
+    span::after{
+        content: "";
+        animation: loading 1s linear infinite;
+    }
+
+    cursor:wait;
+}
+
+.login button.loading:hover {
+    box-shadow: none;
+}
+
+
+@keyframes fade-in{
+    from{
+        opacity: 0;
+    }
+    to{
+        opacity: 1;
+    }
+}
+
+@keyframes loading {
+    0%{
+        content: "";
+    }
+    25%{
+        content: ".";
+    }
+    50%{
+        content: "..";
+    }
+    75%{
+        content: "...";
+    }
+    100%{
+        content: "";
+    }
+}
 
 @keyframes fadeIn {
     from{

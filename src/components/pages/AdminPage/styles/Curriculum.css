@@ -6,7 +6,6 @@ html {
     min-height: 100%;
     padding: 28px;
     color: black;
-    background: white;
     border-radius: 20px;
     width: 100%;
 }
@@ -38,9 +37,9 @@ html {
 ========================================================= */
 
 .program-panel {
-    background: #ffffff;
     border: 1px solid #e6ebe8;
-    border-radius: 16px;
+    background: white;
+    border-radius: var(--radius);
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -132,7 +131,7 @@ html {
 .curriculum-workspace {
     background: #ffffff;
     border: 1px solid #e6ebe8;
-    border-radius: 16px;
+    border-radius: var(--radius);
     overflow: hidden;
 }
 

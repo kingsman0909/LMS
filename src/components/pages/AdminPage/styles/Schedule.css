@@ -79,6 +79,10 @@
 }
 
 
+.schedule-header button{
+    border-radius: 6px !important;
+}
+
 /* STATISTICS */
 
 .schedule-stats {
@@ -95,7 +99,7 @@
     background: white;
 
     border: 1px solid #e4e8e5;
-    border-radius: 12px;
+    border-radius: 6px !important;
 
     padding: 20px;
 }
@@ -132,7 +136,7 @@
     background: white;
 
     border: 1px solid #e4e8e5;
-    border-radius: 12px;
+    border-radius: 6px !important;
 
     overflow: hidden;
 }

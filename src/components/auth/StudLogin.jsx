@@ -8,10 +8,11 @@ const Stud = (props) => {
   const navigate = useNavigate();
   const [username,setUsername] = useState("");
   const [password,setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const loginStudent = async (e) => {
         e.preventDefault();
-        
+        setLoading(true);
          try {
 
 
@@ -50,11 +51,15 @@ const Stud = (props) => {
         else {
           alert("Invalid credentials!")
         }
-
+        
     } catch(error){
 
+        setLoading(false);
         alert("Connection error!")
 
+    }
+    finally{
+      setLoading(false);
     }
 
     }
@@ -68,7 +73,12 @@ const Stud = (props) => {
         <label>Password</label>
         <input type='password' placeholder='password' value={password} onChange={(e)=>setPassword(e.target.value)} required />
       </div>
-      <button type='submit'>Login</button>
+      <button type='submit' className = {`${loading ? "loading": "notloading"}`} disabled={loading}>
+        {loading ? 
+          <span>Loading</span> :
+          <span>Login</span>
+        }
+      </button>
     </form>
   )
 }

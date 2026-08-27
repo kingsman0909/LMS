@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config";
+import Loading from '../pages/LoadingComponent/Loading'
 
 const ProtectedRoutes = (props) => {
     const [loading, setLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
-
+    const token = localStorage.getItem(`${props.allowedRole}_token`);
     useEffect(()=>{
-        
+
         try{
             const verify = async ()=>{
-            const token = localStorage.getItem(`${props.allowedRole}_token`);
+            
 
             console.log(props.allowedRole, "Logging in");
             if(!token){
@@ -51,8 +52,10 @@ const ProtectedRoutes = (props) => {
 
     }, [props.allowedRole]);
 
-    if(loading){
-        return <p>Loading</p>
+
+    if(loading && token){
+        console.log("loading", props.allowedRole)
+        return <Loading text={`Loading ${props.allowedRole}`}/>
     }
 
     if(!authenticated){
@@ -61,6 +64,7 @@ const ProtectedRoutes = (props) => {
         }
         return <Navigate to='/'/>
     }
+
 
     return props.children;
     

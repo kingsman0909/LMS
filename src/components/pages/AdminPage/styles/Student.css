@@ -1,7 +1,6 @@
 .student-dashboard {
     width: 100%;
     min-height: 100%;
-    padding: 30px;
     color: #111;
 }
 
@@ -50,7 +49,7 @@
 
 .student-stat-card {
     background: var(--text);
-    border-radius: 14px;
+    border-radius: var(--radius);
     padding: 22px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
@@ -70,7 +69,7 @@
 
 .student-content {
     background: var(--text);
-    border-radius: 14px;
+    border-radius: var(--radius);
     padding: 20px;
 }
 
@@ -105,6 +104,7 @@
     overflow-x: auto;
     width: 100%;
     box-sizing: border-box;
+    border-radius: 20px;
 }
 
 .student-table-container table {

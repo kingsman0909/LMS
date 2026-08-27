@@ -298,9 +298,9 @@ const Enrollment = (props) => {
 
             <div className="enrollment-header">
 
-                <h2>
-                    Subject Enrollment
-                </h2>
+                <h1>
+                    Enrollment
+                </h1>
 
 
                 <p>

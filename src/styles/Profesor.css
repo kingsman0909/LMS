@@ -103,9 +103,11 @@ color: var(--text);
 }
 
 .prof-content{
-  padding-inline: 10px;
+  padding-inline: 20px;
   padding-top: 20px;
   flex: 1;
+  height: calc(100vh - 72px);
+  overflow: auto;
 }
 
 .prof-wrapper{
@@ -134,13 +136,11 @@ color: var(--text);
   height: 100vh;
   position: fixed;
   top: calc(0-72px);
-  background-color: rgb(45, 46, 45);
+  background-color: var(--sidebarBg);
   left: 0;
   transition: all 0.5s;
   
-  .menu-info{
-    margin-top: 100px;
-  }
+
 }
 
 

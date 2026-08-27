@@ -39,8 +39,8 @@
         width: 30px;
         height: 30px;
         border-radius: 50%;
-        border: 4px solid rgb(91, 112, 231);
-        border-top-color: blue;
+        border: 4px solid rgb(71, 109, 214);
+        border-top-color: rgb(105, 157, 253);
         animation: spin 1.5s linear infinite;
     }
 

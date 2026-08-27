@@ -237,11 +237,11 @@ useEffect(() => {
               proximityRadius={100}
               maxShift={30}
               falloff="smooth"
-              markerLength={60}
-              markerGap={0}
+              markerLength={0}
+              markerGap={20}
               tickScale={0.5}
               scaleTick
-              itemGap={20}
+              itemGap={13}
               fontSize={1.1}
               smoothing={100}
               defaultActive={ind}

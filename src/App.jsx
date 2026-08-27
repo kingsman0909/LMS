@@ -11,8 +11,6 @@ import AdminLogin from './components/pages/AdminLogin';
 
 function App() {
 
-  const isProduction = import.meta.env.PRODUCTION === "true";
-
   return (
     <Routes>
             <Route path="/" element={<Landing />} />

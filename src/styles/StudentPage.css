@@ -714,6 +714,7 @@
     background: #ffffff;
     border: 1px solid #e8e8e8;
     border-radius: 14px;
+
 }
 
 
@@ -724,14 +725,21 @@
 .schedule-table {
     display: grid;
 
-    /*
-       1 time column
-       + 6 day columns
-    */
     grid-template-columns:
-        90px
+        100px
         repeat(7, minmax(150px, 1fr));
-    min-width: 1000px;
+
+    grid-template-rows:
+        52px
+        repeat(15, 50px);
+
+    position: relative;
+
+    width: 100%;
+
+    min-width: 1150px;
+
+    box-sizing: border-box;
 }
 
 
@@ -741,10 +749,12 @@
 
 .s-schedule-header {
     min-height: 52px;
+
     display: flex;
+
     align-items: center;
     justify-content: center;
-    
+
     padding: 0 12px;
 
     font-size: 13px;
@@ -754,9 +764,17 @@
 
     border-bottom: 1px solid black;
     border-left: 1px solid black;
+
     color: black;
+
     box-sizing: border-box;
 
+    z-index: 10;
+}
+
+
+.s-schedule-header.time-column {
+    border-left: none;
 }
 
 .s-schedule-header.time-column {
@@ -770,9 +788,11 @@
 ========================= */
 
 .schedule-time-cell {
-    height: 200px;
+    width: 100px;
+    height: 50px;
 
     display: flex;
+
     justify-content: center;
     align-items: flex-start;
 
@@ -788,6 +808,8 @@
     border-bottom: 1px solid black;
 
     box-sizing: border-box;
+
+    z-index: 3;
 }
 
 
@@ -796,9 +818,7 @@
 ========================= */
 
 .schedule-cell {
-    height: 200px;
-
-    position: relative;
+    height: 50px;
 
     border-left: 1px solid black;
     border-bottom: 1px solid black;
@@ -806,36 +826,31 @@
     background: #ffffff;
 
     box-sizing: border-box;
-    
+
+    min-width: 0;
 }
 
-
-/* subtle hover */
 
 .schedule-cell:hover {
     background: #fafafa;
 }
-
 
 /* =========================
    CLASS BLOCK
 ========================= */
 
 .class-block {
-    position: absolute;
-
-    top: 5px;
-    left: 5px;
-    right: 5px;
-    bottom: 5px;
+    margin: 0;
 
     padding: 10px;
 
-    border-radius: 9px;
-    
     background: #f0fff0;
 
-    border-left: 4px solid rgb(50, 231, 50);
+    border-left: 1px solid black;
+    border-bottom: 1px solid black;
+
+    position: relative;
+    z-index: 20;
 
     display: flex;
     flex-direction: column;
@@ -844,13 +859,11 @@
 
     box-sizing: border-box;
 }
-
-
 /* =========================
    CLASS TYPE
 ========================= */
 
-.class-block .class-type {
+.class-block .class-lec {
     align-self: flex-start;
 
     margin-bottom: 4px;
@@ -868,6 +881,23 @@
     color: #168b16;
 }
 
+.class-block .class-lab {
+    align-self: flex-start;
+
+    margin-bottom: 4px;
+
+    padding: 3px 7px;
+
+    border-radius: 5px;
+
+    font-size: 9px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    background: #e6ffe6;
+    color: #1a4297;
+}
 
 /* =========================
    SUBJECT CODE
@@ -977,6 +1007,12 @@
     color: white;
     font-size: 13px;
 }
+
+
+/* ========
+BILLING PAGE
+=======*/
+
 
 .billing-page {
     width: 100%;

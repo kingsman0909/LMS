@@ -798,92 +798,38 @@ const AllSubjects = ({ academicTermId }) => {
     */
 
     const handleChange = (e) => {
+    const { name, value } = e.target;
 
-        const {
-            name,
-            value
-        } = e.target;
+    if (name === "lecture_units" || name === "lab_units") {
 
-        if (
-            name ===
-            "lecture_units"
-        ) {
+        const cleanValue = value.replace(/^0+(?=\d)/, "");
 
+        setSubject((prev) => {
             const lectureUnits =
-                Math.max(
-                    0,
-                    Number(value) || 0
-                );
-
-            setSubject(
-                (prev) => {
-
-                    const labUnits =
-                        Number(
-                            prev.lab_units
-                        ) || 0;
-
-                    return {
-                        ...prev,
-
-                        lecture_units:
-                            lectureUnits,
-
-                        units:
-                            lectureUnits +
-                            labUnits
-                    };
-
-                }
-            );
-
-            return;
-        }
-
-        if (
-            name ===
-            "lab_units"
-        ) {
+                name === "lecture_units"
+                    ? Number(cleanValue) || 0
+                    : Number(prev.lecture_units) || 0;
 
             const labUnits =
-                Math.max(
-                    0,
-                    Number(value) || 0
-                );
+                name === "lab_units"
+                    ? Number(cleanValue) || 0
+                    : Number(prev.lab_units) || 0;
 
-            setSubject(
-                (prev) => {
-
-                    const lectureUnits =
-                        Number(
-                            prev.lecture_units
-                        ) || 0;
-
-                    return {
-                        ...prev,
-
-                        lab_units:
-                            labUnits,
-
-                        units:
-                            lectureUnits +
-                            labUnits
-                    };
-
-                }
-            );
-
-            return;
-        }
-
-        setSubject(
-            (prev) => ({
+            return {
                 ...prev,
-                [name]: value
-            })
-        );
-    };
+                [name]: cleanValue,
+                units: lectureUnits + labUnits
+            };
+        });
 
+        return;
+    }
+
+    setSubject((prev) => ({
+        ...prev,
+        [name]: value
+    }));
+};
     /*
     |--------------------------------------------------------------------------
     | CREATE SUBJECT
@@ -2176,63 +2122,7 @@ const AllSubjects = ({ academicTermId }) => {
                                 </div>
 
                             </div>
-
-                            {/* UNIT SUMMARY */}
-
-                            <div className="unit-summary">
-
-                                <div className="unit-summary-item">
-
-                                    <span>
-                                        Lecture
-                                    </span>
-
-                                    <strong>
-                                        {
-                                            subject.lecture_units
-                                        }
-                                    </strong>
-
-                                </div>
-
-                                <span className="unit-plus">
-                                    +
-                                </span>
-
-                                <div className="unit-summary-item">
-
-                                    <span>
-                                        Laboratory
-                                    </span>
-
-                                    <strong>
-                                        {
-                                            subject.lab_units
-                                        }
-                                    </strong>
-
-                                </div>
-
-                                <span className="unit-equals">
-                                    =
-                                </span>
-
-                                <div className="unit-summary-item total">
-
-                                    <span>
-                                        Total
-                                    </span>
-
-                                    <strong>
-                                        {
-                                            subject.units
-                                        }
-                                    </strong>
-
-                                </div>
-
-                            </div>
-
+                            
                             {/* PROGRAMS */}
 
                             <div className="program-selection">
