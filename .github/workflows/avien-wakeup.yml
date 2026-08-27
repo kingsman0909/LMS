@@ -1,6 +1,8 @@
-name: Aiven Wake Up Test
+name: Aiven Wake Up
 
 on:
+  schedule:
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 jobs:
@@ -8,15 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Fetch Programs every 10 seconds
+      - name: Fetch Programs
         run: |
-          for i in {1..12}; do
-            echo "Request #$i"
-
-            curl --fail --show-error \
-              -w "\nHTTP STATUS: %{http_code}\n" \
-              "https://lms-8r47.onrender.com/api/auth/getPrograms"
-
-            echo "Waiting 10 seconds..."
-            sleep 10
-          done
+          curl --fail --silent --show-error \
+          "https://lms-8r47.onrender.com/api/auth/getPrograms"
