@@ -1,0 +1,19 @@
+name: Aiven Wake Up
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  wakeup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Programs
+        run: |
+          echo "Calling getPrograms..."
+          
+          curl --fail --show-error \
+            -w "\nHTTP STATUS: %{http_code}\n" \
+            "https://lms-8r47.onrender.com/api/auth/getPrograms"
