@@ -35,9 +35,10 @@ const Student = (props) => {
     "/student": 0,
     "/student/PendingTask": 1,
     "/student/schedule": 2,
-    "/student/calendar": 3,
-    "/student/courses": 4,
-    "/student/enrollment": 5
+    "/student/billing": 3,
+    "/student/calendar": 4,
+    "/student/courses": 5,
+    "/student/enrollment": 6
   };
 
   const fetchTerm = async () => {

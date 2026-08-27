@@ -47,14 +47,12 @@ const findByUsername = async (username) => {
     }
 
     else if (user.role === "admin"){
-        const [adminRows] = await db.query(
-            `
-            SELECT * FROM admin
-            WHERE user_id = ?
-            `,[user.id]
-        );
-
-        profile = adminRows[0];
+        
+        profile = {
+            name: "admin",
+            role: "admin",
+            privilege: "admin access"
+        };
     }
 
     return {

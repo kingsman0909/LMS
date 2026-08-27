@@ -1208,27 +1208,6 @@ const SimulateStudents = async (req, res) => {
 
 
 
-const { runOptimizer } = require("../services/nodeWrapper");
-
-const OptimalScheduler =  async (req, res) => {
-    console.log("controller reached")
-    try {
-        const { programId, academicTermId } = req.body;
-
-        const result = await runOptimizer(programId, academicTermId);
-
-        res.json({
-            success: result.status === "ok",
-            result
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
 
 const getCurrentlyEnrolledStudents = async (req, res) => {
 
@@ -1293,7 +1272,6 @@ const getCurrentlyEnrolledStudents = async (req, res) => {
 module.exports = {
     login,
     me,
-    OptimalScheduler,
     SimulateStudents,
     getSubjectsForCurriculum,
     assignSubjectsToProfessor,
