@@ -15,7 +15,7 @@ const {loginProf, login, me, enroll,//this enroll is just a mistake it should be
      getSchedulesBySection, getStudentSubjects, getProfStudent,
      assignSubjectsToProfessor, SimulateStudents,
      getTotalStudents, getCurriculum, addCurriculum,
-     getCurrentlyEnrolledStudents,
+     getCurrentlyEnrolledStudents, getSingleProfessor,
      getSubjectsForCurriculum, deleteCurriculum, getCurriculumSubjects,
      announcement, createAnnounce } = require("../controllers/authController");
 const verifyToken = require("../middleware/authMiddleware");
@@ -41,6 +41,8 @@ router.delete("/admin/:id/deleteSubject", verifyToken, checkRole("admin"), delet
 router.delete("/admin/:id/deleteCurriculum", verifyToken, checkRole("admin"), deleteCurriculum);
 
 router.get("/student/getSchedule", verifyToken, checkRole("student"), getSchedulesBySection);
+
+router.get("/professor/getSingleProfessor", verifyToken, checkRole("professor"), getSingleProfessor);
 
 router.get("/admin/getCurrentlyEnrolledStudents", verifyToken, checkRole("admin"), getCurrentlyEnrolledStudents);
 router.get("/admin/SimulateStudents", verifyToken, checkRole("admin"), SimulateStudents);

@@ -7,6 +7,7 @@ const allPrograms = require('../model/Programs');
 const academic = require("../model/AcademicTerm");
 const checker = require("../services/capacityCheckerService");
 const Student = require("../model/Student");
+const professor = require("../model/Prof");
 
 const login = async (req, res) => {
    
@@ -187,6 +188,34 @@ const getCurriculumSubjects = async (req, res) => {
     }
 
 };
+
+const getSingleProfessor = async (req, res) => {
+    try{
+        const profId = req.query.profId;
+
+        if(!profId || profId === null || profId === undefined){
+            res.status(400).json({
+                message: "Professor ID is needed!"
+            })
+            return
+        }
+
+        const result = await professor.getSingleProfessor(profId);
+
+        if(result){
+            res.status(201).json({
+                result,
+                message: "successgul gettingSingleProfessor"
+            })
+        }
+    }
+    catch(err){
+        res.status(400).json({
+            message: err.message
+        })
+    }
+
+}
 
 const createSections = async (req, res) => {
  
@@ -882,6 +911,7 @@ const checkUniversityCapacity = async (
 };
 
 
+
 const getTotalStudents = async (req, res) => {
     try {
         const totalStudents = await Student.getTotalStudents();
@@ -1272,6 +1302,7 @@ const getCurrentlyEnrolledStudents = async (req, res) => {
 module.exports = {
     login,
     me,
+    getSingleProfessor,
     SimulateStudents,
     getSubjectsForCurriculum,
     assignSubjectsToProfessor,

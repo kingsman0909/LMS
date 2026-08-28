@@ -107,7 +107,6 @@ color: var(--text);
   padding-top: 20px;
   flex: 1;
   height: calc(100vh - 72px);
-  overflow: auto;
 }
 
 .prof-wrapper{

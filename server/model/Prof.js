@@ -70,6 +70,61 @@ const findByUsername = async (username) => {
 // GET ALL PROFESSORS
 // =========================================================
 
+const getSingleProfessor = async (id) => {
+    
+    const [rows] = await db.query(`
+            SELECT
+                p.id AS professor_id,
+                p.firstname,
+                p.middlename,
+                p.lastname,
+
+                d.id AS department_id,
+                d.department_code,
+                d.department_name,
+                d.description AS department_description,
+                d.status AS department_status,
+
+                COALESCE(
+                    (
+                        SELECT JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'id', s.id,
+                                'subject_code', s.subject_code,
+                                'subject_name', s.subject_name,
+                                'lecture_units', s.lecture_units,
+                                'lab_units', s.lab_units
+                            )
+                        )
+                        FROM professor_subjects ps
+                        INNER JOIN subjects s
+                            ON s.id = ps.subject_id
+                        WHERE ps.professor_id = p.id
+                    ),
+                    JSON_ARRAY()
+                ) AS assigned_subjects,
+
+                (
+                    SELECT COUNT(*)
+                    FROM professor_subjects ps
+                    WHERE ps.professor_id = p.id
+                ) AS assigned_subject_count
+
+            FROM profesor p
+
+            LEFT JOIN departments d
+                ON d.id = p.department_id
+
+            WHERE p.id = ?;
+        `, [id]);
+
+        if(rows.length === 0){
+            return null;
+        }
+
+        return rows[0];
+}
+
 const getProfessor = async () => {
 
     const [rows] = await db.query(
@@ -197,5 +252,6 @@ const assignSubjectsToProfessor = async (professorId, subjectIds) => {
 module.exports = {
     findByUsername,
     getProfessor,
-    assignSubjectsToProfessor
+    assignSubjectsToProfessor,
+    getSingleProfessor
 };

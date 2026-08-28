@@ -1,5 +1,5 @@
 import React from 'react'
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import '../../../styles/Profesor.css';
 import { API_BASE_URL } from "../../../config";
 
@@ -15,15 +15,16 @@ FaCheck
 } from "react-icons/fa";
 
 const ProfHome = (props) => {
+
   const stats = [
   {
   title:"Students",
-  value:124,
+  value:props?.students?.length ??0,
   icon:<FaUsers/>
   },
   {
   title:"Subjects",
-  value:6,
+  value:props?.data?.assigned_subjects.length ?? 0,
   icon:<FaBook/>
   },
   {
@@ -49,10 +50,8 @@ const ProfHome = (props) => {
     title: "",
     content: ""
   });
+  
 
-  
-  
-  
 const createAnnouncement = async (e) => {
     e.preventDefault();
     if(announcement.title === "" || announcement.content === ""){

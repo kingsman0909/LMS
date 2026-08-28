@@ -20,6 +20,65 @@ const navigate = useNavigate();
 const[user, setUser] = useState(null);
 const[loading, setLoading] = useState(false);
 const[academicTerm, setAcademicTerm] = useState([]);
+
+const[profData, setProfData] = useState();
+const[subjects, setSubjects] = useState([]);
+const[students, setStudents] = useState([]);
+
+
+const loadData = (data) => {
+    setProfData(data);
+    setSubjects(data.assigned_subjects);
+    console.log("subjects: ", data.assigned_subjects.length);
+}
+
+const getSingleProfessor = async () => {
+    if(!user || user === undefined || user === null){
+        console.log("No users yet!")
+        return
+    }
+
+    try{
+        const token = localStorage.getItem('professor_token');
+        if(!token){
+            console.log("no token found when getting professor data")
+            return
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/professor/getSingleProfessor?profId=${user.profile.id}`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if(response.ok){
+            console.log(data.result);
+            console.log(data.message);
+            loadData(data.result);
+        }
+        else{
+            alert("Error in backend in getting professor");
+        }
+
+    }
+    catch(err){
+        alert(`Error in Getting Professor Data ${err.message}`)
+    }
+}
+
+
+
+useEffect(()=>{
+    getSingleProfessor();
+}, [user])
+
+
 useEffect(() => {
             console.log("start");
 
@@ -67,6 +126,65 @@ useEffect(() => {
         alert(error.message);
     }
     };
+
+useEffect(() => {
+
+    const loadStudents = async () => {
+
+        const userId = user?.profile?.id;
+        const academicTermId = academicTerm?.id;
+
+        if (!userId || !academicTermId) {
+            return;
+        }
+
+        try {
+
+            setLoading(true);
+
+            const token =
+                localStorage.getItem(
+                    `${role}_token`
+                );
+
+            const response = await fetch(`${API_BASE_URL}/api/auth/profesor/getStudents?academicTermId=${academicTermId}&profId=${userId}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message);
+            }
+
+            console.log("Students:", data);
+
+            setStudents(data.students || []);
+
+        } catch (error) {
+
+            console.error(
+                "Failed to load students:",
+                error
+            );
+
+        } finally {
+
+            setLoading(false);
+        }
+    };
+
+    loadStudents();
+
+}, [
+    user?.profile,
+    academicTerm
+]);
 
 const logout = () => {
   localStorage.removeItem(`${role}_token`);
@@ -124,7 +242,7 @@ return (
     <div className="header-title">
 
         <h3>
-            Prof. {user?.profile.firstname+" "+user?.profile.lastname} 
+            Prof. {user?.profile.firstname+" "+user?.profile.lastname} | {profData?.department_code}
         </h3>
 
     </div>
@@ -182,7 +300,7 @@ return (
     </div>
     <div className="prof-content">
         <Routes>
-            <Route path="/" element={<Home user={user}/>} />
+            <Route path="/" element={<Home data={profData} students={students} user={user}/>} />
             <Route path='/students-demo' element={<StudentDemo user={user} academicTerm={academicTerm}/>} />
         </Routes>
     </div>
