@@ -36,9 +36,8 @@ const Student = (props) => {
     "/student/PendingTask": 1,
     "/student/schedule": 2,
     "/student/billing": 3,
-    "/student/calendar": 4,
-    "/student/courses": 5,
-    "/student/enrollment": 6
+    "/student/courses": 4,
+    "/student/enrollment": 5
   };
 
   const fetchTerm = async () => {
@@ -227,8 +226,17 @@ useEffect(() => {
                   <h2>A.Y {academicTerm.school_year}</h2>
                 </div>
               </div>
-            <LineSidebar className={`b-menu ${open ? "" : "closeBar"}`}
-              items={['Homepage', 'Pending Task', 'Schedule', 'Billing', 'Courses ', 'Enrollment']}
+            <LineSidebar
+              key={location.pathname}
+              className={`b-menu ${open ? "" : "closeBar"}`}
+              items={[
+                  'Homepage',
+                  'Pending Task',
+                  'Schedule',
+                  'Billing',
+                  'Courses',
+                  'Enrollment'
+              ]}
               accentColor="rgb(50, 231, 50)"
               textColor="#c4c4c4"
               markerColor="#6c6c6c"
@@ -246,7 +254,7 @@ useEffect(() => {
               smoothing={100}
               defaultActive={ind}
               onItemClick={(index, label) => handlePage(index, label)}
-            />
+          />
           </div>
         </div>
         

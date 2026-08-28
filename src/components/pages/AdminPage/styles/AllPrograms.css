@@ -94,12 +94,18 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    overflow-x: auto;
 
-    table{
+    /* horizontal scroll only */
+    overflow-x: auto;
+    overflow-y: visible;
+
+    table {
+        width: 100%;
+        height: auto;
         border-radius: var(--radius);
+        border-collapse: collapse;
     }
-    /* typo fix: thread -> thead */
+
     thead {
         padding-inline: 10px;
         background: var(--accent);
@@ -119,7 +125,6 @@
         color: red;
     }
 }
-
 /* =========================
    MOBILE
 ========================= */

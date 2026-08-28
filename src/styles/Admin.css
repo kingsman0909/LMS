@@ -20,6 +20,9 @@ section{
     display: flex;
     width: 100vw;
     height: 100vh;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 .admin-dashboard {
 
@@ -36,7 +39,9 @@ section{
         #080b0a;
     color: var(--admin-text);
     display: flex;
-
+    padding: 0;
+    margin: 0;
+    overflow: auto;
 }
 
 
@@ -443,13 +448,14 @@ section{
 
 .admin-content{
     flex: 1;
-    overflow: auto;
-    min-width: 0;
     margin-top: 72px;
     padding-top: 50px;
     padding-inline: 30px;
     color: white;
     box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 @media screen and (max-width: 768px) {
