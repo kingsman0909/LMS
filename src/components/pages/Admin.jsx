@@ -42,10 +42,42 @@ const Admin = ({role}) => {
     const [academicTerm, setAcademicTerm] = useState([]);
     const [programs, setPrograms] = useState([]);
     const [announcements, setAnnouncements] = useState([]);
-
+    const [totalStudents, setTotalStudents] = useState(0);
     
 
     const navigate = useNavigate();
+
+    const fetchTotalStudents = async () => {
+        try{
+            const token = localStorage.getItem("admin_token");
+            if(!token){
+                alert("Need a valid Token in getting total students")
+                return
+            }
+
+            const result = await fetch(`${API_BASE_URL}/api/auth/admin/getTotalStudents`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            )
+
+            const data = await result.json();
+
+            if(!result.ok){
+                alert("Error in backend getting total students")
+            }
+
+            setTotalStudents(data.totalStudents);
+
+            
+        }
+        catch(err){
+            alert(`Error in getting total students`)
+        }
+    }
 
     const fetchTerm = async () => {
         try {
@@ -102,6 +134,7 @@ const Admin = ({role}) => {
     useEffect(() => {
         fetchTerm();
         fetchPrograms();
+        fetchTotalStudents();
     }, []);
     
     const fetchPrograms = async () => {
@@ -403,7 +436,7 @@ const Admin = ({role}) => {
                 <Route path='/announcements' element={<Announcements />} />
                 <Route path='/enrollments' element={<Enrollment term={academicTerm} />} />
                 <Route path='/curriculum' element={<Curriculum />} />
-                <Route path='/' element={<Dashboard term={academicTerm} handlePage={handlePage}/>} />
+                <Route path='/' element={<Dashboard totalStudents={totalStudents} term={academicTerm} handlePage={handlePage}/>} />
             </Routes>
         </div>
         </section>

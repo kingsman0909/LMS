@@ -23,9 +23,9 @@ const AdminDashboard = (props) => {
     const [schedules, setSchedules] = useState([]);
     const [sections, setSections] = useState([]);
     const [scheduleGenerated, setScheduleGenerated] = useState(false);
+    const [totalStudent, setTotalStudent] = useState(0);
 
     const [dashboard, setDashboard] = useState({
-        totalStudents: 0,
         totalProfessors: 0,
         totalPrograms: 0,
         totalSections: 0,
@@ -47,6 +47,11 @@ const AdminDashboard = (props) => {
         recentApplications: [],
         alerts: [],
     });
+
+
+    useEffect(() => {
+        setTotalStudent(props?.totalStudents);
+    }, [props.totalStudents])
 
     const getSections = async () => {
 
@@ -182,7 +187,9 @@ const AdminDashboard = (props) => {
     useEffect(() => {
         getSections();
         getSchedules();
+        
     }, [props.term]);
+
 
     
     const {
@@ -332,7 +339,7 @@ const AdminDashboard = (props) => {
                     </div>
 
                     <div className="stat-value">
-                        {totalStudents.toLocaleString()}
+                        {totalStudent.toLocaleString()}
                     </div>
 
                     <div className="stat-label">
@@ -395,7 +402,7 @@ const AdminDashboard = (props) => {
                     </div>
 
                     <div className="stat-value">
-                        {totalSections}
+                        {pendingCount}
                     </div>
 
                     <div className="stat-label">

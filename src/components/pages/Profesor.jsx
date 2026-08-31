@@ -7,6 +7,8 @@ import {
 } from "react-icons/fa";
 import Home from './ProfesorPage/ProfHome';
 import StudentDemo from './ProfesorPage/ProfStudent-demo'
+import ProfAssignment from './ProfesorPage/ProfAssignment';
+
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { Navigate, useLocation } from 'react-router-dom';
 import LineSidebar from './animatedComponents/Sidebar';
@@ -213,7 +215,7 @@ const handlePage = (index, label) =>{
         navigate('/student/schedule');
         break;
       case 3:
-        navigate('/student/billing');
+        navigate('/profesor/assignments');
         break;
       case 4:
         navigate('/student/courses');
@@ -277,7 +279,7 @@ return (
                 </div>
               </div>
             <LineSidebar 
-                          items={['Homepage','My Students', 'Courses', 'Pending Task', 'Completed Task', 'Attendance ']}
+                          items={['Homepage','My Students', 'Courses', 'Assignments', 'Attendance ']}
                           accentColor="rgb(50, 231, 50)"
                           textColor="#c4c4c4"
                           markerColor="#6c6c6c"
@@ -302,6 +304,7 @@ return (
         <Routes>
             <Route path="/" element={<Home data={profData} students={students} user={user}/>} />
             <Route path='/students-demo' element={<StudentDemo user={user} academicTerm={academicTerm}/>} />
+            <Route path='/assignments' element={<ProfAssignment />} />
         </Routes>
     </div>
 </div>
