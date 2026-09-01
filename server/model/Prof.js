@@ -246,11 +246,63 @@ const assignSubjectsToProfessor = async (professorId, subjectIds) => {
     };
 };
 
+// =====================================================
+// GET PROFESSOR ASSIGNMENT OPTIONS
+//
+// Source of truth:
+// class_schedules
+//
+// Returns only subject + section combinations
+// currently taught by the professor for the
+// selected academic term.
+// =====================================================
 
+const getProfAssignmentOption = async (
+    professorId,
+    academicTermId
+) => {
+
+    const [rows] = await db.query(`
+        SELECT DISTINCT
+
+            cs.subject_id,
+            s.subject_code,
+            s.subject_name,
+
+            cs.section_id,
+            sec.section_name,
+
+            sec.program_id,
+            sec.year_level,
+
+            cs.academic_term_id
+
+        FROM class_schedules cs
+
+        INNER JOIN subjects s
+            ON s.id = cs.subject_id
+
+        INNER JOIN sections sec
+            ON sec.id = cs.section_id
+
+        WHERE cs.professor_id = ?
+          AND cs.academic_term_id = ?
+
+        ORDER BY
+            s.subject_code ASC,
+            sec.section_name ASC
+    `, [
+        professorId,
+        academicTermId
+    ]);
+
+    return rows;
+};
 
 
 module.exports = {
     findByUsername,
+    getProfAssignmentOption,
     getProfessor,
     assignSubjectsToProfessor,
     getSingleProfessor

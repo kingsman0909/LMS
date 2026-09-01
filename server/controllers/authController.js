@@ -8,6 +8,8 @@ const academic = require("../model/AcademicTerm");
 const checker = require("../services/capacityCheckerService");
 const Student = require("../model/Student");
 const professor = require("../model/Prof");
+const assignment = require("../model/Assignment");
+const cloudinary = require("../config/cloudinary");
 
 const login = async (req, res) => {
    
@@ -1299,9 +1301,699 @@ const getCurrentlyEnrolledStudents = async (req, res) => {
 
 };
 
+
+//========================
+//  ASSIGNMENT CONTROLLER
+//==========================
+
+const path = require("path");
+
+const createAssignment = async (req, res) => {
+    try {
+        const {
+            subject_id,
+            section_id,
+            title,
+            description,
+            points,
+            due_date
+        } = req.body;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get authenticated professor
+        |--------------------------------------------------------------------------
+        */
+
+        const professorId =
+            req.user?.profile?.id ||
+            req.user?.professor_id ||
+            req.user?.id;
+
+        if (!professorId) {
+            return res.status(401).json({
+                success: false,
+                message: "Professor authentication required."
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Validate uploaded file
+        |--------------------------------------------------------------------------
+        */
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "Assignment file is required."
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Original filename
+        |--------------------------------------------------------------------------
+        */
+
+        const originalFilename =
+            req.file.originalname;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Remove extension for Cloudinary public_id
+        |--------------------------------------------------------------------------
+        |
+        | Example:
+        | ACTIVITY1.1.pdf
+        |
+        | becomes:
+        | ACTIVITY1.1
+        |
+        */
+
+        const filenameWithoutExtension =
+            path.parse(
+                originalFilename
+            ).name;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Upload to Cloudinary
+        |--------------------------------------------------------------------------
+        */
+
+        console.log(
+            "Uploading assignment file to Cloudinary..."
+        );
+
+        const uploadResult =
+    await new Promise((resolve, reject) => {
+
+        const uploadStream =
+            cloudinary.uploader.upload_stream(
+                {
+                    folder: "lms/assignments",
+
+                    // IMPORTANT:
+                    // PDF should be uploaded as image
+                    resource_type: "image",
+
+                    // Keep original filename
+                    public_id:
+                        filenameWithoutExtension,
+
+                    use_filename: false,
+                    unique_filename: false
+                },
+
+                (error, result) => {
+                    if (error) {
+                        reject(error);
+                    } else {
+                        resolve(result);
+                    }
+                }
+            );
+
+        uploadStream.end(
+            req.file.buffer
+        );
+    });
+        /*
+        |--------------------------------------------------------------------------
+        | Cloudinary URL
+        |--------------------------------------------------------------------------
+        */
+
+        const cloudinaryUrl =
+            uploadResult.secure_url;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Store filename + URL in file_path
+        |--------------------------------------------------------------------------
+        |
+        | Database value:
+        |
+        | ACTIVITY1.1.pdf|https://res.cloudinary.com/...
+        |
+        | No additional database column required.
+        |
+        */
+
+        const filePath =
+            `${originalFilename}|${cloudinaryUrl}`;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Debug
+        |--------------------------------------------------------------------------
+        */
+
+        console.log(
+            "========================================"
+        );
+
+        console.log(
+            "Original filename:",
+            originalFilename
+        );
+
+        console.log(
+            "Filename without extension:",
+            filenameWithoutExtension
+        );
+
+        console.log(
+            "Cloudinary public ID:",
+            uploadResult.public_id
+        );
+
+        console.log(
+            "Cloudinary resource type:",
+            uploadResult.resource_type
+        );
+
+        console.log(
+            "Cloudinary format:",
+            uploadResult.format
+        );
+
+        console.log(
+            "Cloudinary URL:",
+            cloudinaryUrl
+        );
+
+        console.log(
+            "Database file_path:",
+            filePath
+        );
+
+        console.log(
+            "========================================"
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Create assignment
+        |--------------------------------------------------------------------------
+        */
+
+        const assignment =
+            await authService.createAssignmentService({
+                professor_id:
+                    professorId,
+
+                subject_id:
+                    subject_id,
+
+                section_id:
+                    section_id,
+
+                title:
+                    title,
+
+                description:
+                    description,
+
+                file_path:
+                    filePath,
+
+                points:
+                    points,
+
+                due_date:
+                    due_date
+            });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Success
+        |--------------------------------------------------------------------------
+        */
+
+        return res.status(201).json({
+            success: true,
+
+            message:
+                "Assignment created successfully.",
+
+            assignment
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Create assignment error:",
+            error
+        );
+
+        return res.status(400).json({
+            success: false,
+
+            message:
+                error.message ||
+                "Failed to create assignment."
+        });
+    }
+};
+
+
+// =====================================================
+// GET PROFESSOR ASSIGNMENT OPTIONS
+// =====================================================
+// Returns valid subject + section combinations
+// based on class_schedules.
+// =====================================================
+
+const getProfAssignmentOption = async (req, res) => {
+
+    try {
+
+        const {
+            profId,
+            academicTermId
+        } = req.query;
+
+
+        // ---------------------------------------------
+        // VALIDATION
+        // ---------------------------------------------
+
+        if (!profId || !academicTermId) {
+
+            return res.status(400).json({
+                success: false,
+                message: 'profId and academicTermId are required.'
+            });
+
+        }
+
+
+        // ---------------------------------------------
+        // GET ASSIGNMENT OPTIONS
+        // ---------------------------------------------
+
+        const assignmentOptions =
+            await professor.getProfAssignmentOption(
+                profId,
+                academicTermId
+            );
+
+
+        // ---------------------------------------------
+        // RESPONSE
+        // ---------------------------------------------
+
+        return res.status(200).json({
+
+            success: true,
+
+            assignmentOptions
+
+        });
+
+
+    } catch (error) {
+
+        console.error(
+            'Error getting professor assignment options:',
+            error
+        );
+
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                'Failed to get professor assignment options.',
+
+            error: error.message
+
+        });
+
+    }
+
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| UPDATE ASSIGNMENT
+|--------------------------------------------------------------------------
+*/
+const updateAssignment = async (req, res) => {
+    try {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get IDs
+        |--------------------------------------------------------------------------
+        */
+
+        const assignmentId = req.query.assignmentId;
+
+        const professorId =
+            req.user?.profile?.id ||
+            req.user?.professor_id ||
+            req.user?.id;
+
+        if (!assignmentId) {
+            return res.status(400).json({
+                success: false,
+                message: "Assignment ID is required."
+            });
+        }
+
+        if (!professorId) {
+            return res.status(401).json({
+                success: false,
+                message: "Professor authentication required."
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Prepare update data
+        |--------------------------------------------------------------------------
+        */
+
+        const updateData = {
+            ...req.body
+        };
+
+        /*
+        |--------------------------------------------------------------------------
+        | Upload new file if provided
+        |--------------------------------------------------------------------------
+        */
+
+        if (req.file) {
+
+            console.log(
+                "Uploading new assignment file to Cloudinary..."
+            );
+
+            const uploadResult = await new Promise(
+                (resolve, reject) => {
+
+                    const uploadStream =
+                        cloudinary.uploader.upload_stream(
+                            {
+                                folder: "lms/assignments",
+                                resource_type: "raw"
+                            },
+                            (error, result) => {
+
+                                if (error) {
+                                    reject(error);
+                                } else {
+                                    resolve(result);
+                                }
+
+                            }
+                        );
+
+                    uploadStream.end(req.file.buffer);
+                }
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Replace file_path with Cloudinary URL
+            |--------------------------------------------------------------------------
+            */
+
+            updateData.file_path =
+                uploadResult.secure_url;
+
+            console.log(
+                "New assignment file uploaded successfully:"
+            );
+
+            console.log(
+                updateData.file_path
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Update assignment
+        |--------------------------------------------------------------------------
+        */
+
+        const updatedAssignment =
+            await authService.updateAssignment(
+                assignmentId,
+                professorId,
+                updateData
+            );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Response
+        |--------------------------------------------------------------------------
+        */
+
+        return res.status(200).json({
+            success: true,
+            message: "Assignment updated successfully.",
+            assignment: updatedAssignment
+        });
+
+    } catch (err) {
+
+        console.error(
+            "Failed to update assignment:",
+            err
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                err.message ||
+                "Failed to update assignment."
+        });
+    }
+};
+
+
+
+
+const getAssignments = async (req, res) => {
+    try {
+
+        const profId = req.query.profId;
+
+        if(!profId){
+            return res.json({
+                success: false,
+                message: 'professor ID cannot be null'
+            })
+        }
+
+        const assignments =
+            await assignment.getAssignmentsByProfessor(profId);
+
+        if (!assignments) {
+            return res.status(404).json({
+                success: false,
+                message: "No assignments found."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            assignments
+        });
+
+    } catch (err) {
+
+        console.error(
+            "Failed to get all assignments:",
+            err
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to get all assignments in controller",
+            error: err.message
+        });
+    }
+};
+
+
+const deleteAssignment = async (req, res) => {
+
+    try {
+
+        const assignmentId =
+            req.query.assignId;
+
+        const professorId =
+            req.query.profId;
+
+        if (!assignmentId) {
+            return res.status(400).json({
+                success: false,
+                message: "Assignment ID is required."
+            });
+        }
+
+        if (!professorId) {
+            return res.status(401).json({
+                success: false,
+                message: "Professor authentication required."
+            });
+        }
+
+        await authService.deleteAssignment(
+            assignmentId,
+            professorId
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Assignment deleted successfully."
+        });
+
+    } catch (err) {
+
+        console.error(
+            "Failed to delete assignment:",
+            err
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                err.message ||
+                "Failed to delete assignment."
+        });
+    }
+};
+
+
+const toggleStatusAssignment = async (req, res) => {
+    try {
+
+        const assignmentId = req.query.assignId;
+        const { status } = req.body;
+
+        if (!assignmentId) {
+            return res.status(400).json({
+                success: false,
+                message: "Assignment ID is required."
+            });
+        }
+
+        if (!status) {
+            return res.status(400).json({
+                success: false,
+                message: "Status is required."
+            });
+        }
+
+        if (!["open", "closed"].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid assignment status."
+            });
+        }
+
+        const updated =
+            await assignment.updateAssignmentStatus(
+                assignmentId,
+                status
+            );
+
+        if (!updated) {
+            return res.status(404).json({
+                success: false,
+                message: "Assignment not found or status was not updated."
+            });
+        }
+
+        const updatedAssignment =
+            await assignment.getAssignmentById(
+                assignmentId
+            );
+
+        return res.status(200).json({
+            success: true,
+            message: "Assignment status updated successfully.",
+            assignment: updatedAssignment
+        });
+
+    } catch (err) {
+
+        console.error(
+            "Failed to update assignment status:",
+            err
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update assignment status.",
+            error: err.message
+        });
+    }
+};
+
+
+
+const getStudentAssignments = async (req, res) => {
+    try {
+        const section_id = req.query.sectionId;
+        const subject_id = req.query.subjectId;
+
+        // Section is required
+        if (!section_id) {
+            return res.status(400).json({
+                success: false,
+                message: "Section ID cannot be null"
+            });
+        }
+
+        const assignments =
+            await assignment.getStudentAssignments(
+                section_id,
+                subject_id || null
+            );
+
+        return res.status(200).json({
+            success: true,
+            message: "Successfully retrieved assignments",
+            assignments
+        });
+
+    } catch (err) {
+        console.error(
+            "Error getting student assignments:",
+            err
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Error in getting student assignments",
+            error: err.message
+        });
+    }
+};
+
+
 module.exports = {
     login,
     me,
+    getStudentAssignments,
+    toggleStatusAssignment,
+    deleteAssignment,
+    getAssignments,
+    createAssignment,
+    updateAssignment,
+    getProfAssignmentOption,
     getSingleProfessor,
     SimulateStudents,
     getSubjectsForCurriculum,

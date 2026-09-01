@@ -262,7 +262,7 @@ useEffect(() => {
         <div className='b-content'>
           <Routes>
                 <Route path="/" element={<Homepage announcement={announcement}/>} />
-                <Route path='/PendingTask' element={<Pendingtask />} />
+                <Route path='/PendingTask' element={<Pendingtask user={user} academicTerm={academicTerm} role={props?.role} section_id = {user?.profile?.section_id}/>} />
                 <Route path='/Schedule' element={<Schedule user={user} academicTerm={academicTerm}/>} />
                 <Route path="/billing" element={<Billing />} />
                 <Route path='/courses' element={<Courses user={user} academicTerm={academicTerm}/>} />

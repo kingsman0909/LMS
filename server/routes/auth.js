@@ -17,9 +17,14 @@ const {loginProf, login, me, enroll,//this enroll is just a mistake it should be
      getTotalStudents, getCurriculum, addCurriculum,
      getCurrentlyEnrolledStudents, getSingleProfessor,
      getSubjectsForCurriculum, deleteCurriculum, getCurriculumSubjects,
+     createAssignment, getProfAssignmentOption, getAssignments,
+     updateAssignment, deleteAssignment, toggleStatusAssignment,
+     getStudentAssignments,
      announcement, createAnnounce } = require("../controllers/authController");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/CheckRole");
+const uploadAssignmentFile = require("../middleware/uploadAssignmentFile");
+
 const { verify } = require("jsonwebtoken");
 
 
@@ -40,10 +45,31 @@ router.post("/admin/assignSubjectsToProfessor", verifyToken, checkRole("admin"),
 router.delete("/admin/:id/deleteSubject", verifyToken, checkRole("admin"), deleteSubject);
 router.delete("/admin/:id/deleteCurriculum", verifyToken, checkRole("admin"), deleteCurriculum);
 
+
+//student get
 router.get("/student/getSchedule", verifyToken, checkRole("student"), getSchedulesBySection);
+router.get("/student/getStudentAssignments", verifyToken, checkRole("student"), getStudentAssignments);
 
+//professor post
+router.post("/professor/createAssignment", verifyToken, checkRole("professor"),
+            uploadAssignmentFile.single("file"),  createAssignment);
+
+//professor get
 router.get("/professor/getSingleProfessor", verifyToken, checkRole("professor"), getSingleProfessor);
+router.get("/professor/getProfAssignmentOption", verifyToken, checkRole("professor"), getProfAssignmentOption);
+router.get("/professor/getAssignments", verifyToken, checkRole("professor"), getAssignments);
 
+//professor update
+router.put("/professor/updateAssignment", verifyToken, checkRole("professor"),
+             uploadAssignmentFile.single("file"), updateAssignment);
+
+//professor delete
+router.delete("/professor/deleteAssignment", verifyToken, checkRole("professor"), deleteAssignment);
+
+//professor patch
+router.patch("/professor/toggleStatusAssignment", verifyToken, checkRole("professor"), toggleStatusAssignment);
+
+//admin get
 router.get("/admin/getCurrentlyEnrolledStudents", verifyToken, checkRole("admin"), getCurrentlyEnrolledStudents);
 router.get("/admin/SimulateStudents", verifyToken, checkRole("admin"), SimulateStudents);
 router.get("/admin/getSubjectsByProgram", verifyToken, checkRole("admin"), getCurriculumSubjects);

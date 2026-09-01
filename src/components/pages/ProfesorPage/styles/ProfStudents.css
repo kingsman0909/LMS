@@ -1,0 +1,1403 @@
+/* =========================================================
+   PROFESSOR - STUDENTS PAGE
+   Gray / White / Professional Theme
+   ========================================================= */
+
+.students-page {
+  width: 100%;
+  min-height: 100%;
+  padding: 32px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: #f6f6f6;
+  color: #202020;
+}
+
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.students-loading {
+  min-height: 400px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #777;
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.students-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 26px;
+}
+
+.page-label {
+  display: inline-block;
+
+  margin-bottom: 7px;
+
+  color: #999;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 1.4px;
+}
+
+.students-header h1 {
+  margin: 0;
+
+  color: #222;
+
+  font-size: 28px;
+  font-weight: 700;
+
+  letter-spacing: -0.5px;
+}
+
+.students-header p {
+  margin: 7px 0 0;
+
+  color: #888;
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   EXPORT BUTTON
+   ========================================================= */
+
+.export-btn {
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  padding: 0 15px;
+
+  border: 1px solid #d4d4d4;
+  border-radius: 8px;
+
+  background: #fff;
+
+  color: #444;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.export-btn svg {
+  font-size: 16px;
+}
+
+.export-btn:hover {
+  background: #eeeeee;
+  border-color: #c5c5c5;
+}
+
+.export-btn:active {
+  transform: translateY(1px);
+}
+
+
+/* =========================================================
+   STATISTICS
+   ========================================================= */
+
+.student-stats {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 13px;
+
+  margin-bottom: 22px;
+}
+
+.student-stat-card {
+  min-height: 88px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  padding: 17px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #dedede;
+  border-radius: 10px;
+
+  background: #fff;
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.student-stat-card:hover {
+  border-color: #cfcfcf;
+
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 9px;
+
+  background: #eeeeee;
+
+  color: #555;
+
+  font-size: 19px;
+}
+
+.student-stat-card > div:last-child {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.student-stat-card span {
+  color: #999;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.5px;
+}
+
+.student-stat-card strong {
+  color: #292929;
+
+  font-size: 22px;
+  font-weight: 700;
+
+  line-height: 1;
+}
+
+
+/* =========================================================
+   DANGER STAT
+   ========================================================= */
+
+.student-stat-card.danger {
+  border-color: #dedede;
+}
+
+.student-stat-card.danger .stat-icon {
+  background: #eeeeee;
+
+  color: #666;
+}
+
+
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
+
+.students-toolbar {
+  min-height: 42px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  margin-bottom: 12px;
+}
+
+.search-box {
+  position: relative;
+
+  width: 350px;
+}
+
+.search-box > svg {
+  position: absolute;
+
+  left: 12px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  color: #999;
+
+  font-size: 16px;
+
+  pointer-events: none;
+}
+
+.search-box input {
+  width: 100%;
+  height: 40px;
+
+  box-sizing: border-box;
+
+  padding: 0 13px 0 36px;
+
+  border: 1px solid #d8d8d8;
+  border-radius: 8px;
+
+  background: #fff;
+
+  color: #333;
+
+  font-family: inherit;
+  font-size: 12px;
+
+  outline: none;
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.search-box input::placeholder {
+  color: #aaa;
+}
+
+.search-box input:focus {
+  border-color: #999;
+
+  box-shadow:
+    0 0 0 3px rgba(0, 0, 0, 0.035);
+}
+
+
+/* =========================================================
+   FILTER BUTTON
+   ========================================================= */
+
+.filter-btn {
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 0 13px;
+
+  border: 1px solid #d5d5d5;
+  border-radius: 8px;
+
+  background: #fff;
+
+  color: #555;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background 0.18s ease;
+}
+
+.filter-btn svg {
+  font-size: 16px;
+}
+
+.filter-btn:hover {
+  background: #eeeeee;
+}
+
+
+/* =========================================================
+   BULK ACTIONS
+   ========================================================= */
+
+.bulk-actions {
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  margin-left: auto;
+
+  padding-left: 10px;
+
+  border-left: 1px solid #ddd;
+}
+
+.bulk-actions span {
+  margin-right: 3px;
+
+  color: #777;
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.bulk-actions button {
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 0 10px;
+
+  border: 1px solid #d5d5d5;
+  border-radius: 6px;
+
+  background: #fff;
+
+  color: #555;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.bulk-actions button:hover {
+  background: #eeeeee;
+}
+
+
+/* =========================================================
+   FILTER PANEL
+   ========================================================= */
+
+.filter-panel {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(180px, 240px));
+
+  gap: 14px;
+
+  margin-bottom: 13px;
+
+  padding: 17px;
+
+  border: 1px solid #dedede;
+  border-radius: 9px;
+
+  background: #fff;
+
+  animation: filterOpen 0.18s ease;
+}
+
+@keyframes filterOpen {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-panel > div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.filter-panel label {
+  color: #777;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.5px;
+}
+
+.filter-panel select {
+  height: 38px;
+
+  padding: 0 10px;
+
+  border: 1px solid #d5d5d5;
+  border-radius: 7px;
+
+  background: #fff;
+
+  color: #444;
+
+  font-family: inherit;
+  font-size: 11px;
+
+  outline: none;
+
+  cursor: pointer;
+}
+
+.filter-panel select:focus {
+  border-color: #999;
+}
+
+
+/* =========================================================
+   TABLE CONTAINER
+   ========================================================= */
+
+.students-table-wrapper {
+  position: relative;
+
+  overflow-x: auto;
+
+  border: 1px solid #dedede;
+  border-radius: 11px;
+
+  background: #fff;
+}
+
+.students-table {
+  width: 100%;
+
+  min-width: 500px;
+
+  border-collapse: collapse;
+
+  table-layout: auto;
+}
+
+
+/* =========================================================
+   TABLE HEADER
+   ========================================================= */
+
+.students-table thead {
+  background: #f5f5f5;
+}
+
+.students-table th {
+  height: 44px;
+
+  padding: 0 14px;
+
+  border-bottom: 1px solid #ddd;
+
+  color: #777;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  text-align: left;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.55px;
+
+  white-space: nowrap;
+}
+
+.students-table th:first-child {
+  width: 38px;
+
+  padding-left: 17px;
+}
+
+
+/* =========================================================
+   TABLE BODY
+   ========================================================= */
+
+.students-table td {
+  height: 66px;
+
+  padding: 0 14px;
+
+  border-bottom: 1px solid #eeeeee;
+
+  color: #555;
+
+  font-size: 11px;
+
+  vertical-align: middle;
+}
+
+.students-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.students-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.students-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* =========================================================
+   CHECKBOX
+   ========================================================= */
+
+.students-table input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+
+  margin: 0;
+
+  accent-color: #444;
+
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   STUDENT INFO
+   ========================================================= */
+
+.student-info {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+}
+
+.student-avatar {
+  width: 35px;
+  height: 35px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #e9e9e9;
+
+  color: #555;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.student-info > div:last-child {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.student-info strong {
+  color: #333;
+
+  font-size: 12px;
+  font-weight: 650;
+
+  white-space: nowrap;
+}
+
+.student-info small {
+  color: #999;
+
+  font-size: 9px;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   COURSE
+   ========================================================= */
+
+.course-name {
+  display: block;
+
+  max-width: 180px;
+
+  overflow: hidden;
+
+  color: #444;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.students-table td > small {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #999;
+
+  font-size: 9px;
+}
+
+
+/* =========================================================
+   PERFORMANCE
+   ========================================================= */
+
+.progress-info {
+  width: 105px;
+}
+
+.progress-info strong {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #444;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 5px;
+
+  overflow: hidden;
+
+  border-radius: 10px;
+
+  background: #e9e9e9;
+}
+
+.progress-bar > div {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: #555;
+
+  transition: width 0.3s ease;
+}
+
+
+/* =========================================================
+   ATTENDANCE
+   ========================================================= */
+
+.attendance {
+  color: #555;
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.danger-text {
+  color: #777 !important;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   MISSING ASSIGNMENTS
+   ========================================================= */
+
+.missing {
+  color: #666;
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 9px;
+
+  border-radius: 20px;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  text-transform: capitalize;
+
+  white-space: nowrap;
+}
+
+.status.active {
+  background: #eeeeee;
+
+  color: #555;
+}
+
+.status.at-risk {
+  background: #e5e5e5;
+
+  color: #444;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.action-wrapper {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  gap: 5px;
+}
+
+.view-btn,
+.more-btn {
+  height: 31px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 6px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.view-btn {
+  gap: 5px;
+
+  padding: 0 9px;
+
+  border: 1px solid #d5d5d5;
+
+  background: #fff;
+
+  color: #555;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.view-btn svg {
+  font-size: 14px;
+}
+
+.view-btn:hover {
+  background: #333;
+
+  border-color: #333;
+
+  color: #fff;
+}
+
+.more-btn {
+  width: 31px;
+
+  padding: 0;
+
+  border: 1px solid transparent;
+
+  background: transparent;
+
+  color: #888;
+
+  font-size: 17px;
+}
+
+.more-btn:hover {
+  border-color: #ddd;
+
+  background: #eee;
+
+  color: #444;
+}
+
+
+/* =========================================================
+   STUDENT MENU
+   ========================================================= */
+
+.student-menu {
+  position: absolute;
+
+  z-index: 50;
+
+  top: calc(100% + 6px);
+
+  right: 0;
+
+  width: 190px;
+
+  padding: 5px;
+
+  border: 1px solid #ddd;
+  border-radius: 9px;
+
+  background: #fff;
+
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.1);
+
+  animation: menuOpen 0.15s ease;
+}
+
+@keyframes menuOpen {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.student-menu button {
+  width: 100%;
+  height: 35px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 0 9px;
+
+  border: none;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #555;
+
+  font-family: inherit;
+  font-size: 10px;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.student-menu button svg {
+  flex-shrink: 0;
+
+  color: #888;
+
+  font-size: 15px;
+}
+
+.student-menu button:hover {
+  background: #f0f0f0;
+}
+
+.student-menu .danger-action {
+  margin-top: 4px;
+
+  border-top: 1px solid #eee;
+
+  border-radius: 6px;
+
+  color: #666;
+}
+
+.student-menu .danger-action svg {
+  color: #777;
+}
+
+
+/* =========================================================
+   EMPTY STUDENTS
+   ========================================================= */
+
+.empty-students {
+  min-height: 260px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-direction: column;
+
+  padding: 30px;
+
+  box-sizing: border-box;
+
+  text-align: center;
+}
+
+.empty-students > svg {
+  width: 38px;
+  height: 38px;
+
+  margin-bottom: 10px;
+
+  color: #aaa;
+}
+
+.empty-students h3 {
+  margin: 0 0 5px;
+
+  color: #555;
+
+  font-size: 14px;
+}
+
+.empty-students p {
+  margin: 0;
+
+  color: #999;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   MODAL OVERLAY
+   ========================================================= */
+
+.student-modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  box-sizing: border-box;
+
+  background: rgba(0, 0, 0, 0.38);
+
+  animation: overlayOpen 0.18s ease;
+}
+
+@keyframes overlayOpen {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.student-modal {
+  position: relative;
+
+  width: 100%;
+
+  max-width: 650px;
+
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  padding: 28px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #ddd;
+  border-radius: 13px;
+
+  background: #fff;
+
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.2);
+
+  animation: modalOpen 0.2s ease;
+}
+
+@keyframes modalOpen {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(10px)
+      scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+
+/* =========================================================
+   CLOSE MODAL
+   ========================================================= */
+
+.close-modal {
+  position: absolute;
+
+  top: 17px;
+  right: 17px;
+
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #ddd;
+  border-radius: 7px;
+
+  background: #f5f5f5;
+
+  color: #777;
+
+  font-size: 17px;
+
+  cursor: pointer;
+}
+
+.close-modal:hover {
+  background: #e9e9e9;
+
+  color: #444;
+}
+
+
+/* =========================================================
+   PROFILE HEADER
+   ========================================================= */
+
+.profile-header {
+  display: flex;
+  align-items: center;
+
+  gap: 15px;
+
+  padding-bottom: 22px;
+
+  border-bottom: 1px solid #eee;
+}
+
+.large-avatar {
+  width: 65px;
+  height: 65px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #e8e8e8;
+
+  color: #555;
+
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.profile-header h2 {
+  margin: 0 0 4px;
+
+  color: #292929;
+
+  font-size: 19px;
+}
+
+.profile-header p {
+  margin: 0 0 8px;
+
+  color: #999;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   PROFILE GRID
+   ========================================================= */
+
+.profile-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 1px;
+
+  margin-top: 20px;
+
+  overflow: hidden;
+
+  border: 1px solid #e5e5e5;
+  border-radius: 9px;
+
+  background: #e5e5e5;
+}
+
+.profile-grid > div {
+  min-height: 70px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+
+  gap: 5px;
+
+  padding: 12px 15px;
+
+  box-sizing: border-box;
+
+  background: #fff;
+}
+
+.profile-grid span {
+  color: #999;
+
+  font-size: 9px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.4px;
+}
+
+.profile-grid strong {
+  overflow: hidden;
+
+  color: #444;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   PROFILE ACTIONS
+   ========================================================= */
+
+.profile-actions {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 20px;
+}
+
+.profile-actions button {
+  min-height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  flex: 1;
+
+  padding: 0 10px;
+
+  border: 1px solid #d5d5d5;
+  border-radius: 7px;
+
+  background: #fff;
+
+  color: #555;
+
+  font-family: inherit;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.profile-actions button svg {
+  font-size: 14px;
+}
+
+.profile-actions button:hover {
+  background: #eeeeee;
+
+  border-color: #c7c7c7;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+.students-table-wrapper::-webkit-scrollbar,
+.student-modal::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.students-table-wrapper::-webkit-scrollbar-track,
+.student-modal::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.students-table-wrapper::-webkit-scrollbar-thumb,
+.student-modal::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+
+  background: #ccc;
+}
+
+.students-table-wrapper::-webkit-scrollbar-thumb:hover,
+.student-modal::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+  .student-stats {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+
+@media (max-width: 800px) {
+
+  .students-page {
+    padding: 22px;
+  }
+
+  .students-header {
+    flex-direction: column;
+  }
+
+  .export-btn {
+    align-self: flex-start;
+  }
+
+  .students-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .bulk-actions {
+    width: 100%;
+
+    margin-left: 0;
+
+    padding-left: 0;
+
+    border-left: none;
+  }
+
+}
+
+
+@media (max-width: 600px) {
+
+  .students-page {
+    padding: 15px;
+  }
+
+  .students-header h1 {
+    font-size: 23px;
+  }
+
+  .students-header p {
+    font-size: 12px;
+  }
+
+  .student-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-actions {
+    flex-direction: column;
+  }
+
+  .student-modal {
+    padding: 20px;
+
+    max-height: 94vh;
+  }
+
+}

@@ -12,6 +12,8 @@ const Subject = require('../model/Subjects');
 const scheduleModel = require("../model/Schedule");
 const capacityChecker = require("../services/capacityCheckerService");
 const Curriculum = require("../model/Curriculum");
+const assignment = require("../model/Assignment");
+
 
 
 
@@ -1069,12 +1071,195 @@ const assignSubjectsToProfessor = async (professorId, subjectIds) => {
 };
 
 
+//===============================
+//  ASSIGNMENT SERVICE
+//=========================
 
+const createAssignmentService = async (data) => {
+    const {
+        professor_id,
+        subject_id,
+        section_id,
+        title,
+        description,
+        file_path,
+        points,
+        due_date
+    } = data;
+
+    // Required fields
+    if (!professor_id) {
+        throw new Error("Professor ID is required.");
+    }
+
+    if (!subject_id) {
+        throw new Error("Subject ID is required.");
+    }
+
+    if (!section_id) {
+        throw new Error("Section ID is required.");
+    }
+
+    if (!title || !title.trim()) {
+        throw new Error("Assignment title is required.");
+    }
+
+    if (!due_date) {
+        throw new Error("Due date is required.");
+    }
+
+    // Validate points
+    const assignmentPoints = Number(points);
+
+    if (
+        Number.isNaN(assignmentPoints) ||
+        assignmentPoints < 0
+    ) {
+        throw new Error(
+            "Points must be a valid non-negative number."
+        );
+    }
+
+    // Create assignment
+    const create = await assignment.createAssignment({
+        professor_id,
+        subject_id,
+        section_id,
+        title: title.trim(),
+        description: description?.trim() || null,
+        file_path: file_path || null,
+        points: assignmentPoints,
+        due_date,
+        status: "open"
+    });
+
+    return create;
+};
+
+
+/*
+|--------------------------------------------------------------------------
+| UPDATE ASSIGNMENT
+|--------------------------------------------------------------------------
+*/
+
+const updateAssignment = async (
+    assignmentId,
+    professorId,
+    data
+) => {
+
+    console.log("assignment service")
+
+    // Check if assignment exists
+    const assign =
+        await assignment.getAssignmentById(assignmentId);
+
+    if (!assign) {
+        throw new Error("Assignment not found.");
+    }
+
+    // Make sure the professor owns this assignment
+    if (Number(assign.professor_id) !== Number(professorId)) {
+        throw new Error(
+            "You are not authorized to update this assignment."
+        );
+    }
+
+    // Basic validation
+    if (!data.subject_id) {
+        throw new Error("Subject is required.");
+    }
+
+    if (!data.section_id) {
+        throw new Error("Section is required.");
+    }
+
+    if (!data.title || !data.title.trim()) {
+        throw new Error("Assignment title is required.");
+    }
+
+    if (!data.points || Number(data.points) <= 0) {
+        throw new Error("Points must be greater than zero.");
+    }
+
+    if (!data.due_date) {
+        throw new Error("Due date is required.");
+    }
+
+    // Update database
+    const updated =
+        await assignment.updateAssignment(
+            assignmentId,
+            {
+                subject_id: Number(data.subject_id),
+                section_id: Number(data.section_id),
+                title: data.title.trim(),
+                description:
+                    data.description?.trim() || null,
+                file_path:
+                    data.file_path || null,
+                points: Number(data.points),
+                due_date: data.due_date,
+                status: data.status || "open"
+            }
+        );
+
+    if (!updated) {
+        throw new Error("Failed to update assignment.");
+    }
+
+    // Return updated assignment
+    return await assignment.getAssignmentById(
+        assignmentId
+    );
+};
+
+const deleteAssignment = async (
+    assignmentId,
+    professorId
+) => {
+
+    // Check if assignment exists
+    const assign =
+        await assignment.getAssignmentById(assignmentId);
+
+    if (!assign) {
+        throw new Error("Assignment not found.");
+    }
+
+    // Make sure the professor owns this assignment
+    if (
+        Number(assign.professor_id) !==
+        Number(professorId)
+    ) {
+        throw new Error(
+            "You are not authorized to delete this assignment."
+        );
+    }
+
+    // Delete assignment
+    const deleted =
+        await assignment.deleteAssignment(
+            assignmentId
+        );
+
+    if (!deleted) {
+        throw new Error(
+            "Failed to delete assignment."
+        );
+    }
+
+    return true;
+};
 
 module.exports = {
+    deleteAssignment,
     loginUser,
     createAnnounce,
+    updateAssignment,
     apply,
+    createAssignmentService,
     assignSubjectsToProfessor,
     checkUniversityCapacity,
     getApplicants,

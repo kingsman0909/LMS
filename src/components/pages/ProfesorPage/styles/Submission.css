@@ -1,0 +1,1244 @@
+/* =========================================================
+   PROFESSOR SUBMISSIONS
+   ========================================================= */
+
+.professor-submissions {
+  width: 100%;
+  min-height: 100%;
+  padding: 30px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: #f5f5f5;
+  color: #222;
+}
+
+
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
+
+.submissions-page-header {
+  margin-bottom: 25px;
+}
+
+.submissions-page-header h1 {
+  margin: 0;
+
+  color: #222;
+
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.submissions-page-header p {
+  margin: 7px 0 0;
+
+  color: #777;
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   FILTER PANEL
+   ========================================================= */
+
+.submission-filter-panel {
+  padding: 20px;
+
+  border: 1px solid #dedede;
+  border-radius: 12px;
+
+  background: #fff;
+
+  margin-bottom: 20px;
+}
+
+.filter-heading {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-bottom: 18px;
+}
+
+.filter-icon {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  background: #eeeeee;
+
+  color: #555;
+
+  font-size: 16px;
+}
+
+.filter-heading strong {
+  display: block;
+
+  color: #333;
+
+  font-size: 14px;
+}
+
+.filter-heading small {
+  display: block;
+
+  margin-top: 3px;
+
+  color: #999;
+
+  font-size: 11px;
+}
+
+.filter-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 14px;
+}
+
+.filter-field {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.filter-field label {
+  color: #555;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+}
+
+.filter-field select {
+  width: 100%;
+  height: 42px;
+
+  padding: 0 12px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #d5d5d5;
+  border-radius: 8px;
+
+  background: #fff;
+
+  color: #444;
+
+  font-size: 13px;
+
+  outline: none;
+
+  cursor: pointer;
+}
+
+.filter-field select:focus {
+  border-color: #999;
+}
+
+.filter-field select:disabled {
+  background: #f1f1f1;
+
+  color: #aaa;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.submission-empty {
+  min-height: 350px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 30px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #e1e1e1;
+  border-radius: 12px;
+
+  background: #fff;
+
+  text-align: center;
+}
+
+.empty-icon {
+  width: 55px;
+  height: 55px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  background: #eeeeee;
+
+  font-size: 24px;
+}
+
+.submission-empty h2 {
+  margin: 15px 0 5px;
+
+  color: #444;
+
+  font-size: 17px;
+}
+
+.submission-empty p {
+  max-width: 400px;
+
+  margin: 0;
+
+  color: #999;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   ASSIGNMENT SUMMARY
+   ========================================================= */
+
+.assignment-summary {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding: 20px;
+
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  background: #fff;
+
+  margin-bottom: 15px;
+}
+
+.assignment-summary-main {
+  display: flex;
+
+  align-items: center;
+
+  gap: 13px;
+
+  min-width: 0;
+}
+
+.assignment-document-icon {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 9px;
+
+  background: #eeeeee;
+
+  font-size: 20px;
+}
+
+.assignment-title-line {
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+}
+
+.assignment-title-line h2 {
+  margin: 0;
+
+  color: #333;
+
+  font-size: 17px;
+}
+
+.assignment-summary-main p {
+  margin: 5px 0 0;
+
+  color: #888;
+
+  font-size: 12px;
+}
+
+.assignment-status {
+  padding: 4px 8px;
+
+  border-radius: 15px;
+
+  background: #eeeeee;
+
+  color: #555;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-transform: capitalize;
+}
+
+.assignment-summary-meta {
+  display: flex;
+
+  gap: 25px;
+}
+
+.assignment-summary-meta div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.assignment-summary-meta span {
+  color: #999;
+
+  font-size: 10px;
+
+  text-transform: uppercase;
+}
+
+.assignment-summary-meta strong {
+  color: #444;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   STATISTICS
+   ========================================================= */
+
+.submission-stats {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 12px;
+
+  margin-bottom: 15px;
+}
+
+.submission-stat {
+  padding: 16px;
+
+  border: 1px solid #dedede;
+  border-radius: 10px;
+
+  background: #fff;
+}
+
+.stat-number {
+  display: block;
+
+  color: #333;
+
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.stat-label {
+  display: block;
+
+  margin-top: 3px;
+
+  color: #999;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
+
+.submissions-toolbar {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  margin-bottom: 12px;
+}
+
+.submission-search {
+  position: relative;
+
+  width: 300px;
+}
+
+.submission-search span {
+  position: absolute;
+
+  left: 12px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  color: #888;
+
+  font-size: 18px;
+}
+
+.submission-search input {
+  width: 100%;
+  height: 39px;
+
+  box-sizing: border-box;
+
+  padding: 0 12px 0 36px;
+
+  border: 1px solid #d5d5d5;
+  border-radius: 8px;
+
+  background: #fff;
+
+  color: #333;
+
+  font-size: 12px;
+
+  outline: none;
+}
+
+.submission-search input:focus {
+  border-color: #999;
+}
+
+.submission-status-filter {
+  display: flex;
+
+  gap: 4px;
+
+  padding: 3px;
+
+  border: 1px solid #ddd;
+  border-radius: 8px;
+
+  background: #fff;
+}
+
+.submission-status-filter button {
+  padding: 7px 12px;
+
+  border: none;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #888;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.submission-status-filter button:hover {
+  background: #f1f1f1;
+}
+
+.submission-status-filter button.active {
+  background: #333;
+
+  color: #fff;
+}
+
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.submissions-table-wrapper {
+  overflow-x: auto;
+
+  border: 1px solid #dedede;
+  border-radius: 12px;
+
+  background: #fff;
+}
+
+.submissions-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  min-width: 900px;
+}
+
+.submissions-table thead {
+  background: #f6f6f6;
+}
+
+.submissions-table th {
+  padding: 13px 15px;
+
+  border-bottom: 1px solid #ddd;
+
+  color: #777;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-align: left;
+
+  text-transform: uppercase;
+
+  white-space: nowrap;
+}
+
+.submissions-table td {
+  padding: 14px 15px;
+
+  border-bottom: 1px solid #eeeeee;
+
+  color: #555;
+
+  font-size: 12px;
+
+  vertical-align: middle;
+}
+
+.submissions-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.submissions-table tbody tr:hover {
+  background: #fafafa;
+}
+
+
+/* =========================================================
+   STUDENT CELL
+   ========================================================= */
+
+.student-cell {
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+}
+
+.student-avatar {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #e7e7e7;
+
+  color: #555;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-cell div:last-child {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.student-cell strong {
+  color: #444;
+
+  font-size: 12px;
+
+  white-space: nowrap;
+}
+
+.student-cell span {
+  color: #999;
+
+  font-size: 10px;
+}
+
+
+/* =========================================================
+   FILE CELL
+   ========================================================= */
+
+.submission-file-cell {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  max-width: 250px;
+}
+
+.table-file-icon {
+  font-size: 16px;
+}
+
+.submission-file-cell div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 2px;
+
+  min-width: 0;
+}
+
+.submission-file-cell strong {
+  overflow: hidden;
+
+  color: #555;
+
+  font-size: 11px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.submission-file-cell span {
+  color: #aaa;
+
+  font-size: 9px;
+}
+
+.not-submitted {
+  color: #aaa;
+
+  font-size: 11px;
+}
+
+.submitted-date {
+  color: #777;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   GRADE
+   ========================================================= */
+
+.grade-value {
+  color: #333;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.grade-value small {
+  color: #999;
+
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.not-graded {
+  color: #999;
+
+  font-size: 10px;
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.student-submission-status {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  padding: 5px 8px;
+
+  border-radius: 15px;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.student-submission-status.submitted {
+  background: #eeeeee;
+
+  color: #555;
+}
+
+.student-submission-status.pending {
+  background: #f5f5f5;
+
+  color: #999;
+}
+
+.status-circle {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: currentColor;
+}
+
+
+/* =========================================================
+   CHECK BUTTON
+   ========================================================= */
+
+.check-submission-button {
+  padding: 7px 12px;
+
+  border: 1px solid #ccc;
+  border-radius: 6px;
+
+  background: #fff;
+
+  color: #444;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.check-submission-button:hover {
+  background: #333;
+
+  border-color: #333;
+
+  color: #fff;
+}
+
+.no-action {
+  color: #bbb;
+}
+
+
+/* =========================================================
+   TABLE EMPTY
+   ========================================================= */
+
+.table-empty {
+  height: 150px;
+
+  color: #999 !important;
+
+  text-align: center !important;
+}
+
+
+/* =========================================================
+   MODAL OVERLAY
+   ========================================================= */
+
+.submission-modal-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  box-sizing: border-box;
+
+  background: rgba(0, 0, 0, 0.35);
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.submission-modal {
+  width: 100%;
+
+  max-width: 620px;
+
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  border-radius: 12px;
+
+  background: #fff;
+
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.submission-modal-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 15px;
+
+  padding: 20px;
+
+  border-bottom: 1px solid #eee;
+}
+
+.submission-modal-header > div {
+  min-width: 0;
+}
+
+.submission-modal-header span {
+  color: #999;
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  text-transform: uppercase;
+}
+
+.submission-modal-header h2 {
+  margin: 5px 0 2px;
+
+  color: #333;
+
+  font-size: 18px;
+}
+
+.submission-modal-header p {
+  margin: 0;
+
+  color: #999;
+
+  font-size: 11px;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+
+  flex-shrink: 0;
+
+  border: none;
+  border-radius: 7px;
+
+  background: #eee;
+
+  color: #555;
+
+  font-size: 20px;
+
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: #ddd;
+}
+
+
+/* =========================================================
+   MODAL BODY
+   ========================================================= */
+
+.submission-modal-body {
+  padding: 20px;
+}
+
+.modal-assignment-info {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+
+  margin-bottom: 20px;
+}
+
+.modal-assignment-info span,
+.modal-file-section label,
+.grading-section label,
+.feedback-section label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #777;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+}
+
+.modal-assignment-info strong {
+  color: #444;
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   SUBMITTED FILE
+   ========================================================= */
+
+.modal-file-section {
+  margin-bottom: 20px;
+}
+
+.modal-file {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 12px;
+
+  border: 1px solid #ddd;
+  border-radius: 8px;
+
+  background: #fafafa;
+}
+
+.modal-file-icon {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 7px;
+
+  background: #e8e8e8;
+
+  font-size: 17px;
+}
+
+.modal-file-info {
+  flex: 1;
+
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.modal-file-info strong {
+  overflow: hidden;
+
+  color: #444;
+
+  font-size: 11px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.modal-file-info span {
+  color: #999;
+
+  font-size: 9px;
+}
+
+.view-submission-file {
+  padding: 7px 11px;
+
+  border: 1px solid #ccc;
+  border-radius: 6px;
+
+  background: #fff;
+
+  color: #444;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.view-submission-file:hover {
+  background: #eee;
+}
+
+
+/* =========================================================
+   GRADING
+   ========================================================= */
+
+.grading-section {
+  margin-bottom: 18px;
+}
+
+.grade-input-wrapper {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  width: 150px;
+}
+
+.grade-input-wrapper input {
+  width: 90px;
+  height: 40px;
+
+  box-sizing: border-box;
+
+  padding: 0 10px;
+
+  border: 1px solid #ccc;
+  border-radius: 7px;
+
+  color: #333;
+
+  font-size: 14px;
+
+  outline: none;
+}
+
+.grade-input-wrapper input:focus {
+  border-color: #888;
+}
+
+.grade-input-wrapper span {
+  color: #777;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   FEEDBACK
+   ========================================================= */
+
+.feedback-section textarea {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 11px;
+
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  resize: vertical;
+
+  color: #444;
+
+  font-family: inherit;
+
+  font-size: 12px;
+
+  line-height: 1.5;
+
+  outline: none;
+}
+
+.feedback-section textarea:focus {
+  border-color: #888;
+}
+
+
+/* =========================================================
+   MODAL FOOTER
+   ========================================================= */
+
+.submission-modal-footer {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 8px;
+
+  padding: 15px 20px;
+
+  border-top: 1px solid #eee;
+}
+
+.modal-cancel-button,
+.save-grade-button {
+  padding: 9px 15px;
+
+  border-radius: 7px;
+
+  font-size: 11px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.modal-cancel-button {
+  border: 1px solid #ccc;
+
+  background: #fff;
+
+  color: #555;
+}
+
+.modal-cancel-button:hover {
+  background: #f2f2f2;
+}
+
+.save-grade-button {
+  border: 1px solid #333;
+
+  background: #333;
+
+  color: #fff;
+}
+
+.save-grade-button:hover {
+  background: #222;
+}
+
+.save-grade-button:disabled,
+.modal-cancel-button:disabled {
+  opacity: 0.5;
+
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .submission-stats {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+  .assignment-summary {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .assignment-summary-meta {
+    width: 100%;
+
+    justify-content: flex-start;
+  }
+}
+
+
+@media (max-width: 650px) {
+  .professor-submissions {
+    padding: 18px;
+  }
+
+  .submissions-toolbar {
+    align-items: stretch;
+
+    flex-direction: column;
+  }
+
+  .submission-search {
+    width: 100%;
+  }
+
+  .submission-status-filter {
+    width: fit-content;
+  }
+
+  .assignment-title-line {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .assignment-summary-meta {
+    flex-direction: column;
+
+    gap: 10px;
+  }
+}
+
+
+@media (max-width: 480px) {
+  .professor-submissions {
+    padding: 12px;
+  }
+
+  .submission-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .submission-filter-panel,
+  .assignment-summary {
+    padding: 15px;
+  }
+
+  .submission-modal-overlay {
+    padding: 10px;
+  }
+
+  .submission-modal-body {
+    padding: 15px;
+  }
+
+  .submission-modal-footer {
+    padding: 12px 15px;
+  }
+}

@@ -8,6 +8,7 @@ import {
 import Home from './ProfesorPage/ProfHome';
 import StudentDemo from './ProfesorPage/ProfStudent-demo'
 import ProfAssignment from './ProfesorPage/ProfAssignment';
+import Submission from './ProfesorPage/Submission';
 
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { Navigate, useLocation } from 'react-router-dom';
@@ -195,11 +196,10 @@ const logout = () => {
 
 const location = useLocation();
 const pathMap = {
-    "/student": 0,
-    "/student/PendingTask": 1,
-    "/student/schedule": 2,
-    "/student/calendar": 3,
-    "/student/references": 4,
+    "/profesor": 0,
+    "/profesor/students-demo": 1,
+    "/profesor/courses": 2,
+    "/profesor/submission": 4
   };
 const ind = pathMap[location.pathname] ?? 0;
 
@@ -212,13 +212,13 @@ const handlePage = (index, label) =>{
         navigate('/profesor/students-demo')
         break;
       case 2:
-        navigate('/student/schedule');
+        navigate('/profesor/courses');
         break;
       case 3:
         navigate('/profesor/assignments');
         break;
       case 4:
-        navigate('/student/courses');
+        navigate('/profesor/submission');
         break;
       default:
         alert("Error in navigating page!");
@@ -279,7 +279,7 @@ return (
                 </div>
               </div>
             <LineSidebar 
-                          items={['Homepage','My Students', 'Courses', 'Assignments', 'Attendance ']}
+                          items={['Homepage','My Students', 'Courses', 'Assignments', 'Submission']}
                           accentColor="rgb(50, 231, 50)"
                           textColor="#c4c4c4"
                           markerColor="#6c6c6c"
@@ -304,7 +304,8 @@ return (
         <Routes>
             <Route path="/" element={<Home data={profData} students={students} user={user}/>} />
             <Route path='/students-demo' element={<StudentDemo user={user} academicTerm={academicTerm}/>} />
-            <Route path='/assignments' element={<ProfAssignment />} />
+            <Route path='/assignments' element={<ProfAssignment user={user} academicTerm={academicTerm}/>} />
+            <Route path='/submission' element={<Submission />} />
         </Routes>
     </div>
 </div>

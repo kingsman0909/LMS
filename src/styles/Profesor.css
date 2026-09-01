@@ -91,6 +91,8 @@ color: var(--text);
   }
 }
 
+
+
 .prof-container::before{
   content: "";
   position: fixed;
@@ -132,9 +134,9 @@ color: var(--text);
 
 .prof-menu{
   width: 250px;
-  height: 100vh;
+  height: 100%;
   position: fixed;
-  top: calc(0-72px);
+  top: 72px;
   background-color: var(--sidebarBg);
   left: 0;
   transition: all 0.5s;
@@ -247,5 +249,11 @@ padding:16px;border-radius:14px;margin-top:14px;transition:.25s
 .prof-dashboard{padding:90px 0px 20px}
 .header-title h3{font-size:18px}
 .logo h1{font-size:28px}
+}
+
+@media (max-width: 400px){
+  .header-title h3{
+    display: none;
+  }
 }
 
