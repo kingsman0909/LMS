@@ -179,7 +179,7 @@ const Admin = ({role}) => {
 
         localStorage.removeItem(`${role}_token`);
 
-        navigate('/');
+        navigate('/admin/login');
 
     };
 
