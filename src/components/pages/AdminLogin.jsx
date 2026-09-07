@@ -189,7 +189,7 @@ const AdminLogin = (props) => {
 
                                 type="text"
 
-                                placeholder="Enter admin username"
+                                placeholder="admin"
 
                                 value={username}
 
@@ -227,10 +227,10 @@ const AdminLogin = (props) => {
                                 type={
                                     showPassword
                                         ? 'text'
-                                        : 'password'
+                                        : 'text'
                                 }
 
-                                placeholder="Enter password"
+                                placeholder="admin123"
 
                                 value={password}
 

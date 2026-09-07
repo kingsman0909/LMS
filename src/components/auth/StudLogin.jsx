@@ -69,9 +69,9 @@ const Stud = (props) => {
       <h2>Student</h2>
       <div className='l-input'>
         <label>Username</label>
-        <input type='text' placeholder='username' value={username} onChange={(e)=>setUsername(e.target.value)} required/>
+        <input type='text' placeholder='jaxpjax' value={username} onChange={(e)=>setUsername(e.target.value)} required/>
         <label>Password</label>
-        <input type='password' placeholder='password' value={password} onChange={(e)=>setPassword(e.target.value)} required />
+        <input type='text' placeholder='jaxpjax123' value={password} onChange={(e)=>setPassword(e.target.value)} required />
       </div>
       <button type='submit' className = {`${loading ? "loading": "notloading"}`} disabled={loading}>
         {loading ? 

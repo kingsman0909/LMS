@@ -68,9 +68,9 @@ const Prof = (props) => {
       <h2>Profesor</h2>
       <div className='l-input'>
         <label>username</label>
-        <input type='text' placeholder='username' value={username} onChange={(e)=>setUsername(e.target.value)} required/>
+        <input type='text' placeholder='cyrus' value={username} onChange={(e)=>setUsername(e.target.value)} required/>
         <label>password</label>
-        <input type='password' placeholder='password' value={password} onChange={(e)=>setPassword(e.target.value)} required/>
+        <input type='text' placeholder='cyrus123' value={password} onChange={(e)=>setPassword(e.target.value)} required/>
       </div>
       <button type='submit' disabled={loading} className={`${loading ? 'loading':''}`}>
         {
