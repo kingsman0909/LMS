@@ -27,7 +27,6 @@ section{
 }
 .admin-dashboard {
     min-width: 0;
-    height: 100vh;
     width: 100vw;
     background:
 
@@ -40,7 +39,7 @@ section{
         #080b0a;
     color: var(--admin-text);
     display: flex;
-    padding: 0;
+    padding: 0 !important;
     margin: 0;
 }
 
@@ -447,15 +446,16 @@ section{
 }
 
 .admin-content{
-    flex: 1;
+    height: calc(100dvh - 72px);
     margin-top: 72px;
     padding-top: 50px;
-    padding-inline: 30px;
+    padding-inline: 30px !important;
     color: white;
     box-sizing: border-box;
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    overflow: auto;
 }
 
 @media screen and (max-width: 768px) {

@@ -257,12 +257,10 @@
     border: none;
 
     outline: none;
-
+    background: transparent;
     color: #f4f4f4;
 
-    background: transparent;
-
-    font-size: 14px;
+    font-size: clamp(16px, 2vw, 18px);
 
 }
 

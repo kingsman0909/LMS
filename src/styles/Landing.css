@@ -224,6 +224,7 @@
     width: 100%;
     padding-left: 10px;
     border: none;
+    font-size: clamp(16px, 2vw, 18px);
     color: black;
     border-radius: 5px;
 }
