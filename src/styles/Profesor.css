@@ -11,6 +11,7 @@ color: var(--text);
   background-color: rgb(0, 0, 0);
   z-index: 1;
   box-sizing: border-box;
+  height: calc(100dvh - 80px);
 }
 
 @media (max-width: 400px){
@@ -44,6 +45,7 @@ color: var(--text);
   padding: 20px;
   justify-content: space-between;
   align-items: center;
+  font-size: 16px;
 
   input{
     outline: none;
@@ -53,18 +55,20 @@ color: var(--text);
     opacity: 0.7;
     padding-left: 5px;
     border-radius: 4px;
+    font-size: 16px;
   }
 
   TextArea{
     height: 50%;
     width: 90%;
-    min-width: 400px;
+    min-width: 200px;
     outline: none;
     opacity: 0.7;
     padding-inline: 10px;
     padding-top: 5px;
     border-radius: 7px;
     border: none;
+    font-size: 16px;
   }
 
   button{
@@ -96,7 +100,7 @@ color: var(--text);
   content: "";
   position: fixed;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   background: rgb(7, 7, 7);
   top: 0;
   z-index: -1;
@@ -119,7 +123,7 @@ color: var(--text);
 
 .prof-menu-wrapper{
   width: 250px;
-  height: 100vh;
+  height: 100dvh;
   transition: all 0.5s;
   z-index: 1000;
 }
@@ -146,7 +150,7 @@ color: var(--text);
 
 
 .prof-dashboard{
-min-height:100vh;
+min-height:100dvh;
 width: 100%;
 }
 
