@@ -203,6 +203,7 @@ const generateSectionName = (number) => {
 
 
 const apply = async (data) => {
+    const { getIO } = require("../realtimeConn/socket");
 
     const {
         firstname,
@@ -311,6 +312,14 @@ const apply = async (data) => {
         birthdate,
         address
 
+    });
+    const io = getIO();
+
+    io.to("admins").emit("new_application", {
+        message: "A new student application has been submitted.",
+        firstname,
+        lastname,
+        username
     });
 
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import "./styles/Applicants.css";
 import ApplicantModal from "./ApplicantComp/ApplicantModal";
 import { API_BASE_URL } from "../../../config";
+import { io } from "socket.io-client";
 
 export default function AdminApplicants() {
 
@@ -293,6 +294,30 @@ const approveAllApplicants = async () => {
     useEffect(() => {
     fetchApplicants();
     fetchAcademicTerm();
+}, []);
+
+
+//listener to update applicants realtime when someone enrolls
+useEffect(() => {
+    const token = localStorage.getItem("admin_token");
+
+    const socket = io(API_BASE_URL, {
+        auth: {
+            token
+        }
+    });
+
+    const handleNewApplication = (data) => {
+        console.log("New application:", data);
+        fetchApplicants();
+    };
+
+    socket.on("new_application", handleNewApplication);
+
+    return () => {
+        socket.off("new_application", handleNewApplication);
+        socket.disconnect();
+    };
 }, []);
 
 useEffect(() => {

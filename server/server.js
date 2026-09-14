@@ -2,13 +2,20 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const http = require("http");
+const jwt = require("jsonwebtoken");
+const { Server } = require("socket.io");
 
 const authRoutes = require("./routes/auth");
+const { setIO } = require("./realtimeConn/socket");
 
 const app = express();
 
 const isDevelopment = process.env.DEVELOPMENT === "true";
 const isDebugger = process.env.DEBUGGER === "true";
+
+
+// EXPRESS CORS
 
 app.use(cors({
     origin: isDebugger || isDevelopment
@@ -17,14 +24,124 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json()); 
+
+app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 
+
+// HTTP SERVER
+
+const server = http.createServer(app);
+
+
+// SOCKET.IO
+
+const io = new Server(server, {
+    cors: {
+        origin: isDebugger || isDevelopment
+            ? true
+            : process.env.CLIENT_URL,
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+
+// Make Socket.IO available to services
+
+setIO(io);
+
+
+// SOCKET AUTHENTICATION
+
+io.use((socket, next) => {
+
+    const token = socket.handshake.auth.token;
+
+    if (!token) {
+
+        return next(
+            new Error("Authentication required")
+        );
+
+    }
+
+
+    try {
+
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
+
+
+        socket.user = decoded.user;
+
+
+        if (!socket.user) {
+
+            return next(
+                new Error("Invalid token")
+            );
+
+        }
+
+
+        if (socket.user.role !== "admin") {
+
+            return next(
+                new Error("Admin access required")
+            );
+
+        }
+
+
+        next();
+
+    } catch (error) {
+
+        return next(
+            new Error("Invalid token")
+        );
+
+    }
+
+});
+
+
+// SOCKET CONNECTION
+
+io.on("connection", (socket) => {
+
+    console.log(
+        "Admin socket connected:",
+        socket.id
+    );
+
+
+    socket.join("admins");
+
+
+    socket.on("disconnect", () => {
+
+        console.log(
+            "Admin socket disconnected:",
+            socket.id
+        );
+
+    });
+
+});
+
+
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, "0.0.0.0", () => {
+
+server.listen(PORT, "0.0.0.0", () => {
+
     console.log(
         `Server is running on port ${PORT} and client URL: ${process.env.CLIENT_URL}`
     );
+
 });
