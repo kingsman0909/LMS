@@ -12,11 +12,69 @@ import { io } from "socket.io-client";
 
 export default function AdminApplicants() {
 
+    /*
+    ==========================================
+    BULK APPROVAL
+    ==========================================
+    */
+
+    /*
+    Global bulk state.
+
+    true = ANY admin is currently running
+    the bulk approval process.
+    */
+    const [isApproving, setIsApproving] =
+        useState(false);
+
+    /*
+    Personal bulk state.
+
+    true = THIS admin started the
+    bulk approval process.
+
+    Only this admin sees the
+    large progress overlay.
+    */
+    const [isMyBulkApproval, setIsMyBulkApproval] =
+        useState(false);
+
+    const [bulkProgress, setBulkProgress] =
+        useState({
+            status: "idle",
+            processed: 0,
+            total: 0,
+            approved: 0,
+            failed: 0,
+            percentage: 0
+        });
+
+
+    /*
+    ==========================================
+    APPLICANT MODAL
+    ==========================================
+    */
+
     const [selectedStudent, setSelectedStudent] =
         useState(null);
 
+
+    /*
+    ==========================================
+    TABS
+    ==========================================
+    */
+
     const [activeTab, setActiveTab] =
         useState("students");
+
+
+    /*
+    ==========================================
+    APPLICANTS
+    ==========================================
+    */
 
     const [applicants, setApplicants] =
         useState([]);
@@ -27,14 +85,18 @@ export default function AdminApplicants() {
     const [applicantsLoading, setApplicantsLoading] =
         useState(false);
 
-    const [bulkLoading, setBulkLoading] =
-        useState(false);
-
     const [hasMoreApplicants, setHasMoreApplicants] =
         useState(true);
 
     const [lastApplicantId, setLastApplicantId] =
         useState(0);
+
+
+    /*
+    ==========================================
+    CAPACITY
+    ==========================================
+    */
 
     const [showCapacityModal, setShowCapacityModal] =
         useState(false);
@@ -51,14 +113,12 @@ export default function AdminApplicants() {
     const [capacityData, setCapacityData] =
         useState(null);
 
-    const [bulkProgress, setBulkProgress] = useState({
-        status: "idle",
-        processed: 0,
-        total: 0,
-        approved: 0,
-        failed: 0,
-        percentage: 0
-    });
+
+    /*
+    ==========================================
+    PROFESSORS
+    ==========================================
+    */
 
     const [professors, setProfessors] =
         useState([
@@ -84,6 +144,7 @@ export default function AdminApplicants() {
             }
         ]);
 
+
     /*
     ==========================================
     PAGINATION SETTINGS
@@ -91,15 +152,19 @@ export default function AdminApplicants() {
     */
 
     const INITIAL_APPLICANTS_LIMIT = 1000;
+
     const APPLICANTS_BATCH_SIZE = 500;
+
 
     /*
     ==========================================
-    REF FOR INFINITE SCROLL
+    INFINITE SCROLL
     ==========================================
     */
 
-    const loadMoreRef = useRef(null);
+    const loadMoreRef =
+        useRef(null);
+
 
     /*
     ==========================================
@@ -110,115 +175,39 @@ export default function AdminApplicants() {
     const applicantsLoadingRef =
         useRef(false);
 
+
     /*
     ==========================================
     FETCH ACADEMIC TERM
     ==========================================
     */
 
-    const fetchAcademicTerm = async () => {
-
-        try {
-
-            const token =
-                localStorage.getItem("admin_token");
-
-            const response = await fetch(
-                `${API_BASE_URL}/api/auth/getAcademicTerm`,
-                {
-                    method: "GET",
-
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`
-                    }
-                }
-            );
-
-            const data =
-                await response.json();
-
-            if (!response.ok) {
-
-                throw new Error(
-                    data.message ||
-                    "Failed to fetch academic term."
-                );
-
-            }
-
-            setAcademicTerm(data.term);
-
-        } catch (error) {
-
-            console.error(
-                "Academic term error:",
-                error
-            );
-
-        }
-    };
-
-    /*
-    ==========================================
-    FETCH APPLICANTS
-    ==========================================
-    
-    initial = true
-        → fetch first 1000
-
-    initial = false
-        → fetch next 500
-    */
-
-    const fetchApplicants = useCallback(
-        async (initial = false) => {
-
-            if (applicantsLoadingRef.current) {
-                return;
-            }
-
-            if (
-                !initial &&
-                !hasMoreApplicants
-            ) {
-                return;
-            }
+    const fetchAcademicTerm =
+        useCallback(async () => {
 
             try {
-
-                applicantsLoadingRef.current = true;
-
-                setApplicantsLoading(true);
 
                 const token =
                     localStorage.getItem(
                         "admin_token"
                     );
 
-                const limit = initial
-                    ? INITIAL_APPLICANTS_LIMIT
-                    : APPLICANTS_BATCH_SIZE;
+                if (!token) {
+                    return;
+                }
 
-                const lastId = initial
-                    ? 0
-                    : lastApplicantId;
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/api/auth/getAcademicTerm`,
+                        {
+                            method: "GET",
 
-                console.log(
-                    `Fetching applicants: limit=${limit}, lastId=${lastId}`
-                );
-
-                const response = await fetch(
-                    `${API_BASE_URL}/api/auth/applicants?limit=${limit}&lastId=${lastId}`,
-                    {
-                        method: "GET",
-
-                        headers: {
-                            Authorization:
-                                `Bearer ${token}`
+                            headers: {
+                                Authorization:
+                                    `Bearer ${token}`
+                            }
                         }
-                    }
-                );
+                    );
 
                 const data =
                     await response.json();
@@ -227,104 +216,222 @@ export default function AdminApplicants() {
 
                     throw new Error(
                         data.message ||
-                        "Failed to fetch applicants"
+                        "Failed to fetch academic term."
                     );
-
                 }
 
-                const newApplicants =
-                    data.applicants || [];
-
-                console.log(
-                    `Fetched ${newApplicants.length} applicants`
-                );
-
-                /*
-                ==========================================
-                INITIAL LOAD
-                ==========================================
-                */
-
-                if (initial) {
-
-                    setApplicants(
-                        newApplicants
-                    );
-
-                }
-
-                /*
-                ==========================================
-                LOAD MORE
-                ==========================================
-                */
-
-                else {
-
-                    setApplicants(
-                        previous => [
-                            ...previous,
-                            ...newApplicants
-                        ]
-                    );
-
-                }
-
-                /*
-                ==========================================
-                UPDATE LAST ID
-                ==========================================
-                */
-
-                if (
-                    newApplicants.length > 0
-                ) {
-
-                    const lastApplicant =
-                        newApplicants[
-                            newApplicants.length - 1
-                        ];
-
-                    setLastApplicantId(
-                        lastApplicant.id
-                    );
-
-                }
-
-                /*
-                ==========================================
-                HAS MORE
-                ==========================================
-                */
-
-                setHasMoreApplicants(
-                    Boolean(data.hasMore)
+                setAcademicTerm(
+                    data.term
                 );
 
             } catch (error) {
 
                 console.error(
-                    "Failed to fetch applicants:",
-                    error.message
+                    "Academic term error:",
+                    error
                 );
-
-            } finally {
-
-                applicantsLoadingRef.current =
-                    false;
-
-                setApplicantsLoading(false);
-
-                setLoading(false);
-
             }
 
-        },
-        [
-            hasMoreApplicants,
-            lastApplicantId
-        ]
-    );
+        }, []);
+
+
+    /*
+    ==========================================
+    FETCH APPLICANTS
+    ==========================================
+
+    initial = true
+        → first 1000 applicants
+
+    initial = false
+        → next 500 applicants
+    */
+
+    const fetchApplicants =
+        useCallback(
+            async (initial = false) => {
+
+                /*
+                Prevent duplicate requests.
+                */
+
+                if (
+                    applicantsLoadingRef.current
+                ) {
+                    return;
+                }
+
+                /*
+                Stop if there are no more applicants.
+                */
+
+                if (
+                    !initial &&
+                    !hasMoreApplicants
+                ) {
+                    return;
+                }
+
+                try {
+
+                    applicantsLoadingRef.current =
+                        true;
+
+                    setApplicantsLoading(
+                        true
+                    );
+
+                    const token =
+                        localStorage.getItem(
+                            "admin_token"
+                        );
+
+                    if (!token) {
+
+                        throw new Error(
+                            "Admin authentication token not found."
+                        );
+                    }
+
+                    const limit =
+                        initial
+                            ? INITIAL_APPLICANTS_LIMIT
+                            : APPLICANTS_BATCH_SIZE;
+
+                    const lastId =
+                        initial
+                            ? 0
+                            : lastApplicantId;
+
+                    console.log(
+                        `Fetching applicants: limit=${limit}, lastId=${lastId}`
+                    );
+
+                    const response =
+                        await fetch(
+                            `${API_BASE_URL}/api/auth/applicants?limit=${limit}&lastId=${lastId}`,
+                            {
+                                method: "GET",
+
+                                headers: {
+                                    Authorization:
+                                        `Bearer ${token}`
+                                }
+                            }
+                        );
+
+                    const data =
+                        await response.json();
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            data.message ||
+                            "Failed to fetch applicants."
+                        );
+                    }
+
+                    const newApplicants =
+                        data.applicants || [];
+
+                    console.log(
+                        `Fetched ${newApplicants.length} applicants`
+                    );
+
+
+                    /*
+                    ==========================================
+                    INITIAL LOAD
+                    ==========================================
+                    */
+
+                    if (initial) {
+
+                        setApplicants(
+                            newApplicants
+                        );
+
+                    }
+
+
+                    /*
+                    ==========================================
+                    LOAD MORE
+                    ==========================================
+                    */
+
+                    else {
+
+                        setApplicants(
+                            previous => [
+                                ...previous,
+                                ...newApplicants
+                            ]
+                        );
+                    }
+
+
+                    /*
+                    ==========================================
+                    UPDATE LAST ID
+                    ==========================================
+                    */
+
+                    if (
+                        newApplicants.length > 0
+                    ) {
+
+                        const lastApplicant =
+                            newApplicants[
+                                newApplicants.length - 1
+                            ];
+
+                        setLastApplicantId(
+                            lastApplicant.id
+                        );
+                    }
+
+
+                    /*
+                    ==========================================
+                    HAS MORE
+                    ==========================================
+                    */
+
+                    setHasMoreApplicants(
+                        Boolean(
+                            data.hasMore
+                        )
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Failed to fetch applicants:",
+                        error.message
+                    );
+
+                } finally {
+
+                    applicantsLoadingRef.current =
+                        false;
+
+                    setApplicantsLoading(
+                        false
+                    );
+
+                    setLoading(
+                        false
+                    );
+                }
+
+            },
+            [
+                hasMoreApplicants,
+                lastApplicantId
+            ]
+        );
+
 
     /*
     ==========================================
@@ -335,9 +442,14 @@ export default function AdminApplicants() {
     useEffect(() => {
 
         fetchApplicants(true);
+
         fetchAcademicTerm();
 
-    }, []);
+    }, [
+        fetchApplicants,
+        fetchAcademicTerm
+    ]);
+
 
     /*
     ==========================================
@@ -360,26 +472,28 @@ export default function AdminApplicants() {
                         !applicantsLoadingRef.current
                     ) {
 
-                        fetchApplicants(false);
-
+                        fetchApplicants(
+                            false
+                        );
                     }
-
                 },
                 {
                     threshold: 0.1
                 }
             );
 
+
         const currentRef =
             loadMoreRef.current;
+
 
         if (currentRef) {
 
             observer.observe(
                 currentRef
             );
-
         }
+
 
         return () => {
 
@@ -388,9 +502,7 @@ export default function AdminApplicants() {
                 observer.unobserve(
                     currentRef
                 );
-
             }
-
         };
 
     }, [
@@ -398,9 +510,17 @@ export default function AdminApplicants() {
         hasMoreApplicants
     ]);
 
+
     /*
     ==========================================
-    BULK APPROVAL SOCKET
+    SOCKET.IO
+    ==========================================
+
+    Handles:
+
+    1. Global bulk approval status
+    2. Personal bulk approval progress
+    3. New applications
     ==========================================
     */
 
@@ -411,90 +531,309 @@ export default function AdminApplicants() {
                 "admin_token"
             );
 
+
+        if (!token) {
+
+            console.warn(
+                "Admin token not found. Socket not connected."
+            );
+
+            return;
+        }
+
+
+        console.log(
+            "🔌 Connecting admin Socket.IO..."
+        );
+
+
         const socket =
-            io(API_BASE_URL, {
-                auth: {
-                    token
+            io(
+                API_BASE_URL,
+                {
+                    auth: {
+                        token
+                    }
                 }
-            });
+            );
+
+
+        /*
+        ==========================================
+        SOCKET CONNECTED
+        ==========================================
+        */
 
         socket.on(
-            "bulk_approval_progress",
-            progress => {
+            "connect",
+            () => {
 
                 console.log(
-                    "Bulk approval progress:",
-                    progress
+                    "🔌 Admin socket connected:",
+                    socket.id
                 );
-
-                setBulkProgress(
-                    progress
-                );
-
             }
         );
 
-        return () => {
 
-            socket.off(
-                "bulk_approval_progress"
-            );
+        /*
+        ==========================================
+        SOCKET ERROR
+        ==========================================
+        */
 
-            socket.disconnect();
+        socket.on(
+            "connect_error",
+            error => {
 
-        };
+                console.error(
+                    "❌ Socket connection error:",
+                    error.message
+                );
+            }
+        );
 
-    }, []);
 
-    /*
-    ==========================================
-    NEW APPLICATION SOCKET
-    ==========================================
-    */
+        /*
+        ==========================================
+        GLOBAL BULK APPROVAL STATUS
+        ==========================================
 
-    useEffect(() => {
+        Sent to:
 
-        const token =
-            localStorage.getItem(
-                "admin_token"
-            );
+            io.to("admins")
 
-        const socket =
-            io(API_BASE_URL, {
-                auth: {
-                    token
+        Therefore EVERY admin receives it.
+
+        This controls the small indicator and
+        disables Approve All.
+        ==========================================
+        */
+
+        const handleBulkStatus =
+            data => {
+
+                console.log(
+                    "🌐 Global bulk approval status:",
+                    data
+                );
+
+
+                const approving =
+                    data?.isApproving === true;
+
+
+                setIsApproving(
+                    approving
+                );
+
+
+                /*
+                When bulk approval finishes,
+                this admin should no longer be
+                considered the active admin.
+                */
+
+                if (!approving) {
+
+                    setIsMyBulkApproval(
+                        false
+                    );
                 }
-            });
+            };
+
+
+        socket.on(
+            "bulk_approval_status",
+            handleBulkStatus
+        );
+
+
+        /*
+        ==========================================
+        PERSONAL BULK APPROVAL PROGRESS
+        ==========================================
+
+        Sent ONLY to:
+
+            admin:${adminId}
+
+        Therefore only the admin who started
+        the operation receives this.
+        ==========================================
+        */
+
+        const handleBulkProgress =
+            progress => {
+
+                console.log(
+                    "📊 My bulk approval progress:",
+                    progress
+                );
+
+
+                /*
+                Update detailed progress.
+                */
+
+                setBulkProgress({
+
+                    status:
+                        progress.status ||
+                        "processing",
+
+                    processed:
+                        Number(
+                            progress.processed || 0
+                        ),
+
+                    total:
+                        Number(
+                            progress.total || 0
+                        ),
+
+                    approved:
+                        Number(
+                            progress.approved || 0
+                        ),
+
+                    failed:
+                        Number(
+                            progress.failed || 0
+                        ),
+
+                    percentage:
+                        Number(
+                            progress.percentage || 0
+                        )
+                });
+
+
+                /*
+                Backend controls the global
+                approval state.
+                */
+
+                setIsApproving(
+                    progress.isApproving === true
+                );
+
+
+                /*
+                Receiving started/processing
+                means THIS admin owns the job.
+                */
+
+                if (
+                    progress.status === "started" ||
+                    progress.status === "processing"
+                ) {
+
+                    setIsMyBulkApproval(
+                        true
+                    );
+                }
+
+
+                /*
+                Operation completed.
+                */
+
+                if (
+                    progress.status === "completed"
+                ) {
+
+                    setIsMyBulkApproval(
+                        false
+                    );
+
+                    setIsApproving(
+                        false
+                    );
+                }
+            };
+
+
+        socket.on(
+            "bulk_approval_progress",
+            handleBulkProgress
+        );
+
+
+        /*
+        ==========================================
+        NEW APPLICATION
+        ==========================================
+        */
 
         const handleNewApplication =
             data => {
 
                 console.log(
-                    "New application:",
+                    "📩 New application:",
                     data
                 );
 
+
                 /*
-                Reset pagination and
-                reload first 1000.
+                Reset pagination.
                 */
 
-                setLastApplicantId(0);
+                setLastApplicantId(
+                    0
+                );
 
                 setHasMoreApplicants(
                     true
                 );
 
-                fetchApplicants(true);
 
+                /*
+                Reload first page.
+                */
+
+                fetchApplicants(
+                    true
+                );
             };
+
 
         socket.on(
             "new_application",
             handleNewApplication
         );
 
+
+        /*
+        ==========================================
+        CLEANUP
+        ==========================================
+        */
+
         return () => {
+
+            console.log(
+                "🔌 Disconnecting admin Socket.IO..."
+            );
+
+
+            socket.off(
+                "connect"
+            );
+
+            socket.off(
+                "connect_error"
+            );
+
+            socket.off(
+                "bulk_approval_status",
+                handleBulkStatus
+            );
+
+            socket.off(
+                "bulk_approval_progress",
+                handleBulkProgress
+            );
 
             socket.off(
                 "new_application",
@@ -502,83 +841,101 @@ export default function AdminApplicants() {
             );
 
             socket.disconnect();
-
         };
 
-    }, [fetchApplicants]);
+    }, [
+        fetchApplicants
+    ]);
+
 
     /*
     ==========================================
-    SIMULATE STUDENTS
+    SIMULATE STUDENTS / CHECK CAPACITY
     ==========================================
     */
 
-    const SimulateStudents = async () => {
+    const SimulateStudents =
+        async () => {
 
-        try {
+            try {
 
-            console.log(
-                "Starting student capacity simulation..."
-            );
+                console.log(
+                    "Starting student capacity simulation..."
+                );
 
-            setCapacityLoading(true);
+                setCapacityLoading(
+                    true
+                );
 
-            const response =
-                await fetch(
-                    `${API_BASE_URL}/api/auth/admin/SimulateStudents`,
-                    {
-                        method: "GET",
 
-                        headers: {
-                            "Content-Type":
-                                "application/json",
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/api/auth/admin/SimulateStudents`,
+                        {
+                            method: "GET",
 
-                            Authorization:
-                                `Bearer ${
-                                    localStorage.getItem(
-                                        "admin_token"
-                                    )
-                                }`
+                            headers: {
+
+                                "Content-Type":
+                                    "application/json",
+
+                                Authorization:
+                                    `Bearer ${
+                                        localStorage.getItem(
+                                            "admin_token"
+                                        )
+                                    }`
+                            }
                         }
-                    }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.message ||
+                        "Failed to simulate student capacity."
+                    );
+                }
+
+
+                console.log(
+                    "Student capacity simulation completed:",
+                    data
                 );
 
-            const data =
-                await response.json();
 
-            if (!response.ok) {
-
-                throw new Error(
-                    data.message ||
-                    "Failed to simulate student capacity."
+                setCapacityData(
+                    data
                 );
 
+
+                return data;
+
+            } catch (error) {
+
+                console.error(
+                    "SimulateStudents error:",
+                    error
+                );
+
+                alert(
+                    error.message ||
+                    "Failed to check capacity."
+                );
+
+            } finally {
+
+                setCapacityLoading(
+                    false
+                );
             }
+        };
 
-            console.log(
-                "Student capacity simulation completed:",
-                data
-            );
-
-            setCapacityData(data);
-
-            return data;
-
-        } catch (error) {
-
-            console.error(
-                "SimulateStudents error:",
-                error
-            );
-
-            throw error;
-
-        } finally {
-
-            setCapacityLoading(false);
-
-        }
-    };
 
     /*
     ==========================================
@@ -596,6 +953,15 @@ export default function AdminApplicants() {
                         "admin_token"
                     );
 
+
+                if (!token) {
+
+                    throw new Error(
+                        "Admin authentication token not found."
+                    );
+                }
+
+
                 const response =
                     await fetch(
                         `${API_BASE_URL}/api/auth/admin/applicants/${student.id}/approvedApplicant`,
@@ -609,8 +975,10 @@ export default function AdminApplicants() {
                         }
                     );
 
+
                 const data =
                     await response.json();
+
 
                 if (!response.ok) {
 
@@ -618,26 +986,35 @@ export default function AdminApplicants() {
                         data.message ||
                         "Failed to approve applicant."
                     );
-
                 }
 
-                console.log(data);
+
+                console.log(
+                    data
+                );
+
 
                 alert(
                     "Approved."
                 );
 
+
                 /*
-                Reload the first 1000.
+                Reload first page.
                 */
 
-                setLastApplicantId(0);
+                setLastApplicantId(
+                    0
+                );
 
                 setHasMoreApplicants(
                     true
                 );
 
-                await fetchApplicants(true);
+
+                await fetchApplicants(
+                    true
+                );
 
             } catch (error) {
 
@@ -646,17 +1023,28 @@ export default function AdminApplicants() {
                     error.message
                 );
 
+
                 alert(
                     error.message ||
                     "Failed to approve applicant."
                 );
-
             }
         };
 
+
     /*
     ==========================================
-    APPROVE ALL
+    APPROVE ALL APPLICANTS
+    ==========================================
+
+    IMPORTANT:
+
+    isApproving is controlled by backend.
+
+    This function only sends the request.
+
+    Backend decides whether the request
+    is accepted or returns 409.
     ==========================================
     */
 
@@ -670,28 +1058,19 @@ export default function AdminApplicants() {
                         "admin_token"
                     );
 
-                /*
-                Do NOT determine total applicants
-                from the currently loaded 1000.
 
-                Backend will determine the real
-                pending count.
-                */
+                if (!token) {
 
-                setBulkLoading(true);
+                    throw new Error(
+                        "Admin authentication token not found."
+                    );
+                }
 
-                setBulkProgress({
-                    status: "starting",
-                    processed: 0,
-                    total: 0,
-                    approved: 0,
-                    failed: 0,
-                    percentage: 0
-                });
 
                 console.log(
-                    "Starting bulk applicant approval..."
+                    "🚀 Starting bulk applicant approval..."
                 );
+
 
                 const response =
                     await fetch(
@@ -700,6 +1079,7 @@ export default function AdminApplicants() {
                             method: "POST",
 
                             headers: {
+
                                 Authorization:
                                     `Bearer ${token}`,
 
@@ -709,8 +1089,41 @@ export default function AdminApplicants() {
                         }
                     );
 
+
                 const data =
                     await response.json();
+
+
+                /*
+                ==========================================
+                ANOTHER ADMIN IS ALREADY PROCESSING
+                ==========================================
+                */
+
+                if (
+                    response.status === 409
+                ) {
+
+                    console.warn(
+                        "Bulk approval already running."
+                    );
+
+
+                    alert(
+                        data.message ||
+                        "Bulk approval is already in progress."
+                    );
+
+
+                    return;
+                }
+
+
+                /*
+                ==========================================
+                OTHER ERROR
+                ==========================================
+                */
 
                 if (!response.ok) {
 
@@ -718,26 +1131,40 @@ export default function AdminApplicants() {
                         data.message ||
                         "Failed to approve applicants."
                     );
-
                 }
 
+
                 console.log(
-                    "Batch approval result:",
+                    "✅ Bulk approval completed:",
                     data
                 );
 
+
                 /*
-                Reload first page after
-                bulk approval.
+                ==========================================
+                REFRESH APPLICANTS
+                ==========================================
                 */
 
-                setLastApplicantId(0);
+                setLastApplicantId(
+                    0
+                );
 
                 setHasMoreApplicants(
                     true
                 );
 
-                await fetchApplicants(true);
+
+                await fetchApplicants(
+                    true
+                );
+
+
+                /*
+                ==========================================
+                RESULT
+                ==========================================
+                */
 
                 alert(
                     `Finished approving applicants!\n\n` +
@@ -752,21 +1179,18 @@ export default function AdminApplicants() {
             } catch (error) {
 
                 console.error(
-                    "Approve all error:",
+                    "❌ Approve all error:",
                     error
                 );
+
 
                 alert(
                     error.message ||
                     "An error occurred while approving applicants."
                 );
-
-            } finally {
-
-                setBulkLoading(false);
-
             }
         };
+
 
     /*
     ==========================================
@@ -784,13 +1208,14 @@ export default function AdminApplicants() {
                             professor.id === id
                                 ? {
                                     ...professor,
-                                    status: "approved"
+                                    status:
+                                        "approved"
                                 }
                                 : professor
                     )
             );
-
         };
+
 
     const rejectProfessor =
         id => {
@@ -802,13 +1227,14 @@ export default function AdminApplicants() {
                             professor.id === id
                                 ? {
                                     ...professor,
-                                    status: "rejected"
+                                    status:
+                                        "rejected"
                                 }
                                 : professor
                     )
             );
-
         };
+
 
     /*
     ==========================================
@@ -823,8 +1249,8 @@ export default function AdminApplicants() {
                 "Reject student:",
                 id
             );
-
         };
+
 
     /*
     ==========================================
@@ -835,14 +1261,18 @@ export default function AdminApplicants() {
     const pendingStudents =
         applicants.filter(
             applicant =>
-                applicant.status === "pending"
+                applicant.status ===
+                "pending"
         );
+
 
     const pendingProfessors =
         professors.filter(
             professor =>
-                professor.status === "pending"
+                professor.status ===
+                "pending"
         );
+
 
     /*
     ==========================================
@@ -853,73 +1283,270 @@ export default function AdminApplicants() {
     return (
         <>
 
-            {/* ======================================
-                BULK APPROVAL LOADING
-            ====================================== */}
+            {/* ==================================================
+                GLOBAL BULK STATUS
 
-            {bulkLoading && (
+                SHOWN TO ADMINS WHO DID NOT START
+                THE BULK APPROVAL
 
-                <div className="bulk-loading">
+                isApproving = true
+                isMyBulkApproval = false
+            ================================================== */}
 
-                    <h2>
-                        Approving Applicants...
-                    </h2>
+            {isApproving &&
+                !isMyBulkApproval && (
 
-                    <p>
+                    <div className="global-bulk-status">
 
-                        {bulkProgress.processed
-                            .toLocaleString()}
+                        <span className="global-bulk-spinner"></span>
 
-                        {" / "}
+                        <div className="global-bulk-status-text">
 
-                        {bulkProgress.total
-                            ? bulkProgress.total
-                                .toLocaleString()
-                            : "..."}
+                            <strong>
+                                Approval in progress
+                            </strong>
 
-                        {" applicants processed"}
+                            <span>
+                                Another admin is approving applicants
+                            </span>
 
-                    </p>
+                        </div>
 
-                    <div className="progress-bar">
+                    </div>
+                )}
 
-                        <div
-                            className="progress-fill"
-                            style={{
-                                width:
-                                    `${bulkProgress.percentage}%`
-                            }}
-                        />
+
+            {/* ==================================================
+                PERSONAL BULK APPROVAL PROGRESS
+
+                ONLY THE ADMIN WHO STARTED THE OPERATION
+                SEES THIS LARGE OVERLAY.
+            ================================================== */}
+
+            {isMyBulkApproval && (
+
+                <div className="bulk-loading-overlay">
+
+                    <div className="bulk-loading">
+
+                        {/* ==================================
+                            ICON
+                        ================================== */}
+
+                        <div className="bulk-loading-icon">
+
+                            <div className="bulk-spinner"></div>
+
+                        </div>
+
+
+                        {/* ==================================
+                            HEADER
+                        ================================== */}
+
+                        <div className="bulk-loading-header">
+
+                            <span className="bulk-live-dot"></span>
+
+                            <span>
+                                BULK APPROVAL IN PROGRESS
+                            </span>
+
+                        </div>
+
+
+                        {/* ==================================
+                            TITLE
+                        ================================== */}
+
+                        <h2>
+                            Approving Applicants
+                        </h2>
+
+
+                        {/* ==================================
+                            DESCRIPTION
+                        ================================== */}
+
+                        <p className="bulk-loading-description">
+
+                            Please wait while the system
+                            processes the applicants in batches.
+
+                        </p>
+
+
+                        {/* ==================================
+                            PROGRESS INFO
+                        ================================== */}
+
+                        <div className="bulk-progress-info">
+
+                            <div>
+
+                                <strong>
+                                    {
+                                        bulkProgress
+                                            .processed
+                                            .toLocaleString()
+                                    }
+                                </strong>
+
+                                <span>
+
+                                    {" / "}
+
+                                    {
+                                        bulkProgress.total
+                                            ? bulkProgress
+                                                .total
+                                                .toLocaleString()
+                                            : "..."
+                                    }
+
+                                    {" applicants"}
+
+                                </span>
+
+                            </div>
+
+
+                            <strong className="bulk-percentage">
+
+                                {
+                                    bulkProgress
+                                        .percentage
+                                }%
+
+                            </strong>
+
+                        </div>
+
+
+                        {/* ==================================
+                            PROGRESS BAR
+                        ================================== */}
+
+                        <div className="bulk-progress-bar">
+
+                            <div
+                                className="bulk-progress-fill"
+                                style={{
+                                    width:
+                                        `${Math.min(
+                                            Math.max(
+                                                bulkProgress.percentage,
+                                                0
+                                            ),
+                                            100
+                                        )}%`
+                                }}
+                            />
+
+                        </div>
+
+
+                        {/* ==================================
+                            STATUS
+                        ================================== */}
+
+                        <div className="bulk-progress-status">
+
+                            {
+                                bulkProgress.status ===
+                                "started"
+
+                                    ? "Preparing applicants..."
+
+                                    : "Processing applicants..."
+                            }
+
+                        </div>
+
+
+                        {/* ==================================
+                            STATS
+                        ================================== */}
+
+                        <div className="bulk-stats">
+
+                            <div className="bulk-stat approved">
+
+                                <span>
+                                    APPROVED
+                                </span>
+
+                                <strong>
+                                    {
+                                        bulkProgress
+                                            .approved
+                                            .toLocaleString()
+                                    }
+                                </strong>
+
+                            </div>
+
+
+                            <div className="bulk-stat failed">
+
+                                <span>
+                                    FAILED
+                                </span>
+
+                                <strong>
+                                    {
+                                        bulkProgress
+                                            .failed
+                                            .toLocaleString()
+                                    }
+                                </strong>
+
+                            </div>
+
+
+                            <div className="bulk-stat processed">
+
+                                <span>
+                                    PROCESSED
+                                </span>
+
+                                <strong>
+                                    {
+                                        bulkProgress
+                                            .processed
+                                            .toLocaleString()
+                                    }
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        {/* ==================================
+                            FOOTER
+                        ================================== */}
+
+                        <div className="bulk-loading-footer">
+
+                            <span></span>
+
+                            <p>
+                                Do not close this page until
+                                the operation is complete.
+                            </p>
+
+                        </div>
 
                     </div>
 
-                    <strong>
-                        {bulkProgress.percentage}%
-                    </strong>
-
-                    <p>
-
-                        Approved:{" "}
-
-                        {bulkProgress.approved
-                            .toLocaleString()}
-
-                        {" | "}
-
-                        Failed:{" "}
-
-                        {bulkProgress.failed
-                            .toLocaleString()}
-
-                    </p>
-
                 </div>
-
             )}
 
-            {/* ======================================
+
+            {/* ==================================================
                 MAIN PAGE
-            ====================================== */}
+            ================================================== */}
 
             <div
                 className="applicants-page"
@@ -931,9 +1558,10 @@ export default function AdminApplicants() {
                 }}
             >
 
-                {/* ==================================
+
+                {/* ==================================================
                     HEADER
-                ================================== */}
+                ================================================== */}
 
                 <div className="applicants-header">
 
@@ -949,39 +1577,91 @@ export default function AdminApplicants() {
 
                     </div>
 
+
                     <div className="applicants-header-right">
 
                         <div className="a-h-btn">
+
+
+                            {/* ==================================
+                                APPROVE ALL
+                            ================================== */}
 
                             <button
                                 onClick={
                                     approveAllApplicants
                                 }
-                                className="approveAll"
-                                disabled={bulkLoading}
+                                className={
+                                    `approveAll ${
+                                        isApproving
+                                            ? "bulk-approval-active"
+                                            : ""
+                                    }`
+                                }
+                                disabled={
+                                    isApproving
+                                }
                             >
-                                Approve All
+
+                                {isApproving ? (
+
+                                    <>
+
+                                        <span className="approve-all-spinner"></span>
+
+                                        <span>
+                                            Approval in progress...
+                                        </span>
+
+                                    </>
+
+                                ) : (
+
+                                    "Approve All"
+
+                                )}
+
                             </button>
+
+
+                            {/* ==================================
+                                CHECK CAPACITY
+                            ================================== */}
 
                             <button
                                 onClick={
                                     SimulateStudents
                                 }
                                 className="capacityBtn"
-                                disabled={capacityLoading}
+                                disabled={
+                                    capacityLoading
+                                }
                             >
-                                {capacityLoading
-                                    ? "Checking..."
-                                    : "Check Capacity"}
+
+                                {
+                                    capacityLoading
+                                        ? "Checking..."
+                                        : "Check Capacity"
+                                }
+
                             </button>
 
                         </div>
 
+
+                        {/* ==================================
+                            PENDING COUNT
+                        ================================== */}
+
                         <div className="applicant-count">
 
-                            {activeTab === "students"
-                                ? pendingStudents.length
-                                : pendingProfessors.length
+                            {
+                                activeTab ===
+                                "students"
+
+                                    ? pendingStudents.length
+
+                                    : pendingProfessors.length
                             }
 
                             <span>
@@ -994,15 +1674,17 @@ export default function AdminApplicants() {
 
                 </div>
 
-                {/* ==================================
+
+                {/* ==================================================
                     TABS
-                ================================== */}
+                ================================================== */}
 
                 <div className="applicant-tabs">
 
                     <button
                         className={
-                            activeTab === "students"
+                            activeTab ===
+                            "students"
                                 ? "active"
                                 : ""
                         }
@@ -1016,14 +1698,18 @@ export default function AdminApplicants() {
                         Students
 
                         <span>
-                            {pendingStudents.length}
+                            {
+                                pendingStudents.length
+                            }
                         </span>
 
                     </button>
 
+
                     <button
                         className={
-                            activeTab === "professors"
+                            activeTab ===
+                            "professors"
                                 ? "active"
                                 : ""
                         }
@@ -1037,411 +1723,545 @@ export default function AdminApplicants() {
                         Professors
 
                         <span>
-                            {pendingProfessors.length}
+                            {
+                                pendingProfessors.length
+                            }
                         </span>
 
                     </button>
 
                 </div>
 
-                {/* ==================================
+
+                {/* ==================================================
                     STUDENTS
-                ================================== */}
+                ================================================== */}
 
-                {activeTab === "students" && (
+                {
+                    activeTab ===
+                    "students" && (
 
-                    <div className="applications-list">
+                        <div className="applications-list">
 
-                        {applicants.map(
-                            student => (
+                            {
+                                applicants.map(
+                                    student => (
 
-                                <div
-                                    className={`application-card ${student.status}`}
-                                    key={student.id}
-                                >
+                                        <div
+                                            className={
+                                                `application-card ${student.status}`
+                                            }
+                                            key={
+                                                student.id
+                                            }
+                                        >
 
-                                    {/* ==================
-                                        STUDENT INFO
-                                    ================== */}
 
-                                    <div className="applicant-info">
+                                            {/* ==================
+                                                STUDENT INFO
+                                            ================== */}
 
-                                        <div className="applicant-avatar">
+                                            <div className="applicant-info">
 
-                                            {student.firstname
-                                                ?.charAt(0)
-                                                ?.toUpperCase()}
+                                                <div className="applicant-avatar">
 
-                                        </div>
-
-                                        <div>
-
-                                            <h2>
-                                                {student.firstname}
-                                            </h2>
-
-                                            <p>
-                                                {student.email}
-                                            </p>
-
-                                            <small>
-                                                Applied on{" "}
-                                                {student.created_at}
-                                            </small>
-
-                                        </div>
-
-                                    </div>
-
-                                    {/* ==================
-                                        DETAILS
-                                    ================== */}
-
-                                    <div className="application-details">
-
-                                        <div>
-
-                                            <span>
-                                                Course
-                                            </span>
-
-                                            <strong>
-                                                <p>
                                                     {
-                                                        student.program_name
+                                                        student
+                                                            .firstname
+                                                            ?.charAt(0)
+                                                            ?.toUpperCase()
                                                     }
-                                                </p>
-                                            </strong>
 
-                                        </div>
+                                                </div>
 
-                                        <div>
 
-                                            <span>
-                                                Year Level
-                                            </span>
+                                                <div>
 
-                                            <strong>
+                                                    <h2>
+                                                        {
+                                                            student.firstname
+                                                        }
+                                                    </h2>
+
+                                                    <p>
+                                                        {
+                                                            student.email
+                                                        }
+                                                    </p>
+
+                                                    <small>
+
+                                                        Applied on{" "}
+
+                                                        {
+                                                            student.created_at
+                                                        }
+
+                                                    </small>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            {/* ==================
+                                                DETAILS
+                                            ================== */}
+
+                                            <div className="application-details">
+
+                                                <div>
+
+                                                    <span>
+                                                        Course
+                                                    </span>
+
+                                                    <strong>
+
+                                                        <p>
+                                                            {
+                                                                student.program_name
+                                                            }
+                                                        </p>
+
+                                                    </strong>
+
+                                                </div>
+
+
+                                                <div>
+
+                                                    <span>
+                                                        Year Level
+                                                    </span>
+
+                                                    <strong>
+                                                        {
+                                                            student.year_level
+                                                        }
+                                                    </strong>
+
+                                                </div>
+
+
+                                                <div>
+
+                                                    <span>
+                                                        Username
+                                                    </span>
+
+                                                    <strong>
+                                                        {
+                                                            student.username
+                                                        }
+                                                    </strong>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            {/* ==================
+                                                ACTIONS
+                                            ================== */}
+
+                                            <div className="application-actions">
+
                                                 {
-                                                    student.year_level
+                                                    student.status ===
+                                                    "pending" && (
+
+                                                        <>
+
+                                                            <button
+                                                                className="approve-btn"
+                                                                onClick={() =>
+                                                                    approvedApplicant(
+                                                                        student
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isApproving
+                                                                }
+                                                            >
+
+                                                                {
+                                                                    isApproving
+                                                                        ? "Approval in progress..."
+                                                                        : "Approve & Enroll"
+                                                                }
+
+                                                            </button>
+
+
+                                                            <button
+                                                                className="reject-btn"
+                                                                onClick={() =>
+                                                                    rejectStudent(
+                                                                        student.id
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isApproving
+                                                                }
+                                                            >
+
+                                                                Reject
+
+                                                            </button>
+
+                                                        </>
+
+                                                    )
                                                 }
-                                            </strong>
 
-                                        </div>
 
-                                        <div>
-
-                                            <span>
-                                                Username
-                                            </span>
-
-                                            <strong>
                                                 {
-                                                    student.username
+                                                    student.status ===
+                                                    "approved" && (
+
+                                                        <span className="approved-status">
+
+                                                            ✓ Enrolled
+
+                                                        </span>
+
+                                                    )
                                                 }
-                                            </strong>
 
-                                        </div>
 
-                                    </div>
+                                                {
+                                                    student.status ===
+                                                    "rejected" && (
 
-                                    {/* ==================
-                                        ACTIONS
-                                    ================== */}
+                                                        <span className="rejected-status">
 
-                                    <div className="application-actions">
+                                                            ✕ Rejected
 
-                                        {student.status ===
-                                            "pending" && (
+                                                        </span>
 
-                                            <>
+                                                    )
+                                                }
+
 
                                                 <button
-                                                    className="approve-btn"
+                                                    className="a-view-btn"
                                                     onClick={() =>
-                                                        approvedApplicant(
+                                                        setSelectedStudent(
                                                             student
                                                         )
                                                     }
                                                 >
-                                                    Approve & Enroll
+
+                                                    View
+
                                                 </button>
 
-                                                <button
-                                                    className="reject-btn"
-                                                    onClick={() =>
-                                                        rejectStudent(
-                                                            student.id
-                                                        )
-                                                    }
-                                                >
-                                                    Reject
-                                                </button>
+                                            </div>
 
-                                            </>
+                                        </div>
 
-                                        )}
+                                    )
+                                )
+                            }
 
-                                        {student.status ===
-                                            "approved" && (
 
-                                            <span className="approved-status">
+                            {/* ==================================================
+                                LOAD MORE
+                            ================================================== */}
 
-                                                ✓ Enrolled
+                            {
+                                hasMoreApplicants && (
 
-                                            </span>
+                                    <div
+                                        ref={
+                                            loadMoreRef
+                                        }
+                                        className="load-more-trigger"
+                                    >
 
-                                        )}
+                                        {
+                                            applicantsLoading
+                                                ? "Loading more applicants..."
+                                                : "Scroll to load more"
+                                        }
 
-                                        {student.status ===
-                                            "rejected" && (
+                                    </div>
 
-                                            <span className="rejected-status">
+                                )
+                            }
 
-                                                ✕ Rejected
 
-                                            </span>
+                            {/* ==================================================
+                                ALL LOADED
+                            ================================================== */}
 
-                                        )}
+                            {
+                                !hasMoreApplicants &&
+                                applicants.length > 0 && (
 
-                                        <button
-                                            className="a-view-btn"
-                                            onClick={() =>
-                                                setSelectedStudent(
-                                                    student
-                                                )
+                                    <div className="load-more-trigger">
+
+                                        All applicants loaded.
+
+                                    </div>
+
+                                )
+                            }
+
+
+                            {/* ==================================================
+                                INITIAL LOADING
+                            ================================================== */}
+
+                            {
+                                loading &&
+                                applicants.length === 0 && (
+
+                                    <div className="load-more-trigger">
+
+                                        Loading applicants...
+
+                                    </div>
+
+                                )
+                            }
+
+                        </div>
+
+                    )
+                }
+
+
+                {/* ==================================================
+                    APPLICANT MODAL
+                ================================================== */}
+
+                {
+                    selectedStudent && (
+
+                        <ApplicantModal
+                            selectedStudent={
+                                selectedStudent
+                            }
+                            setSelectedStudent={
+                                setSelectedStudent
+                            }
+                            approved={
+                                approvedApplicant
+                            }
+                        />
+
+                    )
+                }
+
+
+                {/* ==================================================
+                    PROFESSORS
+                ================================================== */}
+
+                {
+                    activeTab ===
+                    "professors" && (
+
+                        <div className="applications-list">
+
+                            {
+                                professors.map(
+                                    professor => (
+
+                                        <div
+                                            className={
+                                                `application-card ${professor.status}`
+                                            }
+                                            key={
+                                                professor.id
                                             }
                                         >
-                                            View
-                                        </button>
 
-                                    </div>
 
-                                </div>
+                                            {/* ==================
+                                                PROFESSOR INFO
+                                            ================== */}
 
-                            )
-                        )}
+                                            <div className="applicant-info">
 
-                        {/* ==================================
-                            LOAD MORE TRIGGER
-                        ================================== */}
+                                                <div className="applicant-avatar professor">
 
-                        {hasMoreApplicants && (
-
-                            <div
-                                ref={loadMoreRef}
-                                className="load-more-trigger"
-                            >
-
-                                {applicantsLoading
-                                    ? "Loading more applicants..."
-                                    : "Scroll to load more"}
-
-                            </div>
-
-                        )}
-
-                        {!hasMoreApplicants &&
-                            applicants.length > 0 && (
-
-                            <div className="load-more-trigger">
-
-                                All applicants loaded.
-
-                            </div>
-
-                        )}
-
-                        {loading &&
-                            applicants.length === 0 && (
-
-                            <div className="load-more-trigger">
-
-                                Loading applicants...
-
-                            </div>
-
-                        )}
-
-                    </div>
-
-                )}
-
-                {/* ======================================
-                    APPLICANT MODAL
-                ====================================== */}
-
-                {selectedStudent && (
-
-                    <ApplicantModal
-                        selectedStudent={
-                            selectedStudent
-                        }
-                        setSelectedStudent={
-                            setSelectedStudent
-                        }
-                        approved={
-                            approvedApplicant
-                        }
-                    />
-
-                )}
-
-                {/* ======================================
-                    PROFESSORS
-                ====================================== */}
-
-                {activeTab === "professors" && (
-
-                    <div className="applications-list">
-
-                        {professors.map(
-                            professor => (
-
-                                <div
-                                    className={`application-card ${professor.status}`}
-                                    key={professor.id}
-                                >
-
-                                    <div className="applicant-info">
-
-                                        <div className="applicant-avatar professor">
-
-                                            {professor.name
-                                                .charAt(0)}
-
-                                        </div>
-
-                                        <div>
-
-                                            <h2>
-                                                {professor.name}
-                                            </h2>
-
-                                            <p>
-                                                {professor.email}
-                                            </p>
-
-                                            <small>
-                                                Applied on{" "}
-                                                {professor.date}
-                                            </small>
-
-                                        </div>
-
-                                    </div>
-
-                                    <div className="application-details">
-
-                                        <div>
-
-                                            <span>
-                                                Specialization
-                                            </span>
-
-                                            <strong>
-                                                {
-                                                    professor.specialization
-                                                }
-                                            </strong>
-
-                                        </div>
-
-                                        <div>
-
-                                            <span>
-                                                Experience
-                                            </span>
-
-                                            <strong>
-                                                {
-                                                    professor.experience
-                                                }
-                                            </strong>
-
-                                        </div>
-
-                                        <div>
-
-                                            <span>
-                                                Username
-                                            </span>
-
-                                            <strong>
-                                                {
-                                                    professor.username
-                                                }
-                                            </strong>
-
-                                        </div>
-
-                                    </div>
-
-                                    <div className="application-actions">
-
-                                        {professor.status ===
-                                            "pending" && (
-
-                                            <>
-
-                                                <button
-                                                    className="approve-btn"
-                                                    onClick={() =>
-                                                        approveProfessor(
-                                                            professor.id
-                                                        )
+                                                    {
+                                                        professor.name
+                                                            .charAt(0)
                                                     }
-                                                >
-                                                    Approve
-                                                </button>
 
-                                                <button
-                                                    className="reject-btn"
-                                                    onClick={() =>
-                                                        rejectProfessor(
-                                                            professor.id
-                                                        )
-                                                    }
-                                                >
-                                                    Reject
-                                                </button>
+                                                </div>
 
-                                            </>
 
-                                        )}
+                                                <div>
 
-                                        {professor.status ===
-                                            "approved" && (
+                                                    <h2>
+                                                        {
+                                                            professor.name
+                                                        }
+                                                    </h2>
 
-                                            <span className="approved-status">
+                                                    <p>
+                                                        {
+                                                            professor.email
+                                                        }
+                                                    </p>
 
-                                                ✓ Approved
+                                                    <small>
 
-                                            </span>
+                                                        Applied on{" "}
 
-                                        )}
+                                                        {
+                                                            professor.date
+                                                        }
 
-                                        {professor.status ===
-                                            "rejected" && (
+                                                    </small>
 
-                                            <span className="rejected-status">
+                                                </div>
 
-                                                ✕ Rejected
+                                            </div>
 
-                                            </span>
 
-                                        )}
+                                            {/* ==================
+                                                DETAILS
+                                            ================== */}
 
-                                    </div>
+                                            <div className="application-details">
 
-                                </div>
+                                                <div>
 
-                            )
-                        )}
+                                                    <span>
+                                                        Specialization
+                                                    </span>
 
-                    </div>
+                                                    <strong>
+                                                        {
+                                                            professor.specialization
+                                                        }
+                                                    </strong>
 
-                )}
+                                                </div>
+
+
+                                                <div>
+
+                                                    <span>
+                                                        Experience
+                                                    </span>
+
+                                                    <strong>
+                                                        {
+                                                            professor.experience
+                                                        }
+                                                    </strong>
+
+                                                </div>
+
+
+                                                <div>
+
+                                                    <span>
+                                                        Username
+                                                    </span>
+
+                                                    <strong>
+                                                        {
+                                                            professor.username
+                                                        }
+                                                    </strong>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            {/* ==================
+                                                ACTIONS
+                                            ================== */}
+
+                                            <div className="application-actions">
+
+                                                {
+                                                    professor.status ===
+                                                    "pending" && (
+
+                                                        <>
+
+                                                            <button
+                                                                className="approve-btn"
+                                                                onClick={() =>
+                                                                    approveProfessor(
+                                                                        professor.id
+                                                                    )
+                                                                }
+                                                            >
+
+                                                                Approve
+
+                                                            </button>
+
+
+                                                            <button
+                                                                className="reject-btn"
+                                                                onClick={() =>
+                                                                    rejectProfessor(
+                                                                        professor.id
+                                                                    )
+                                                                }
+                                                            >
+
+                                                                Reject
+
+                                                            </button>
+
+                                                        </>
+
+                                                    )
+                                                }
+
+
+                                                {
+                                                    professor.status ===
+                                                    "approved" && (
+
+                                                        <span className="approved-status">
+
+                                                            ✓ Approved
+
+                                                        </span>
+
+                                                    )
+                                                }
+
+
+                                                {
+                                                    professor.status ===
+                                                    "rejected" && (
+
+                                                        <span className="rejected-status">
+
+                                                            ✕ Rejected
+
+                                                        </span>
+
+                                                    )
+                                                }
+
+                                            </div>
+
+                                        </div>
+
+                                    )
+                                )
+                            }
+
+                        </div>
+
+                    )
+                }
 
             </div>
 

@@ -706,192 +706,275 @@ const approveApplicant = async (req) => {
 
 //==========================BATCH APPLICANT APPROVAL===============================
 
+let bulkApprovalRunning = false;
+
 const { getIO } = require("../realtimeConn/socket");
 
 const BATCH_SIZE = 500;
 const PROGRESS_INTERVAL = 5;
 
-
 const approveAllApplicants = async (adminId) => {
 
-    const term = await Academic.getAcademicTerm();
+    // ==========================================
+    // GLOBAL BULK APPROVAL LOCK
+    // ==========================================
 
-    if (!term) {
-        throw new Error("No active academic term found.");
+    if (bulkApprovalRunning) {
+
+        const error = new Error(
+            "Bulk approval is already in progress."
+        );
+
+        error.statusCode = 409;
+
+        throw error;
     }
 
-    const io = getIO();
+    bulkApprovalRunning = true;
 
-    let lastId = 0;
-    let totalProcessed = 0;
-    let totalApproved = 0;
-    let totalFailed = 0;
-    let totalBatches = 0;
+    try {
 
-    // Get total pending applicants for progress percentage
-    const totalPending =
-        await StudentApplication.countPendingApplications();
+        const term = await Academic.getAcademicTerm();
 
-    console.log(`Total pending applicants: ${totalPending}`);
-
-    // Initial UI update
-    io.to("admins").emit("bulk_approval_progress", {
-        status: "started",
-        processed: 0,
-        total: totalPending,
-        approved: 0,
-        failed: 0,
-        percentage: 0
-    });
-
-    while (true) {
-
-        const applicants =
-            await StudentApplication.getPendingApplicationsBatch(
-                BATCH_SIZE,
-                lastId
+        if (!term) {
+            throw new Error(
+                "No active academic term found."
             );
-
-        if (applicants.length === 0) {
-            break;
         }
 
-        totalBatches++;
+        const io = getIO();
 
-        const successfulIds = [];
+                // Tell ALL admins that bulk approval has started
+        io.to("admins").emit(
+            "bulk_approval_status",
+            {
+                isApproving: true
+            }
+        );
 
-        for (const applicantData of applicants) {
 
-            totalProcessed++;
+        let lastId = 0;
+        let totalProcessed = 0;
+        let totalApproved = 0;
+        let totalFailed = 0;
+        let totalBatches = 0;
 
-            try {
+        const totalPending =
+            await StudentApplication.countPendingApplications();
 
-                const program =
-                    await Programs.findById(
-                        applicantData.course_id
-                    );
+        console.log(
+            `Total pending applicants: ${totalPending}`
+        );
 
-                if (!program) {
-                    throw new Error(
-                        `Program ${applicantData.course_id} not found.`
-                    );
-                }
+        // ==========================================
+        // INITIAL UI UPDATE
+        // ADMIN WHO STARTED ONLY
+        // ==========================================
 
-                const userResult =
-                    await User.createUser({
-                        ...applicantData,
-                        role: "student",
-                        status: "active"
-                    });
+        io.to(`admin:${adminId}`).emit(
+            "bulk_approval_progress",
+            {
+                status: "started",
+                processed: 0,
+                total: totalPending,
+                approved: 0,
+                failed: 0,
+                percentage: 0
+            }
+        );
 
-                if (!userResult?.insertId) {
-                    throw new Error("Failed to create user.");
-                }
+        while (true) {
 
-                const studentResult =
-                    await Student.createStudent({
-                        ...applicantData,
-                        course_name: program.program_code,
-                        user_id: userResult.insertId,
-                        student_id: generateStudentId(
-                            userResult.insertId
-                        )
-                    });
-
-                if (!studentResult?.insertId) {
-                    throw new Error("Failed to create student.");
-                }
-
-                await assignSection(
-                    adminId,
-                    studentResult.insertId,
-                    applicantData.course_id,
-                    applicantData.year_level,
-                    term.id
+            const applicants =
+                await StudentApplication.getPendingApplicationsBatch(
+                    BATCH_SIZE,
+                    lastId
                 );
 
-                successfulIds.push(applicantData.id);
-
-                totalApproved++;
-
-            } catch (error) {
-
-                totalFailed++;
-
-                console.error(
-                    `Applicant ${applicantData.id} failed:`,
-                    error.message
-                );
+            if (applicants.length === 0) {
+                break;
             }
 
-            // ==========================================
-            // SEND UI PROGRESS EVERY 5 APPLICANTS
-            // ==========================================
-            if (
-                totalProcessed % PROGRESS_INTERVAL === 0 ||
-                totalProcessed === totalPending
-            ) {
+            totalBatches++;
 
-                const percentage =
-                    totalPending > 0
-                        ? Math.round(
-                            (totalProcessed / totalPending) * 100
-                        )
-                        : 100;
+            const successfulIds = [];
 
-                io.to("admins").emit(
-                    "bulk_approval_progress",
-                    {
-                        status: "processing",
-                        processed: totalProcessed,
-                        total: totalPending,
-                        approved: totalApproved,
-                        failed: totalFailed,
-                        percentage
+            for (const applicantData of applicants) {
+
+                totalProcessed++;
+
+                try {
+
+                    const program =
+                        await Programs.findById(
+                            applicantData.course_id
+                        );
+
+                    if (!program) {
+                        throw new Error(
+                            `Program ${applicantData.course_id} not found.`
+                        );
                     }
-                );
 
-                console.log(
-                    `📊 Progress: ${totalProcessed}/${totalPending} (${percentage}%)`
+                    const userResult =
+                        await User.createUser({
+                            ...applicantData,
+                            role: "student",
+                            status: "active"
+                        });
+
+                    if (!userResult?.insertId) {
+                        throw new Error(
+                            "Failed to create user."
+                        );
+                    }
+
+                    const studentResult =
+                        await Student.createStudent({
+                            ...applicantData,
+                            course_name:
+                                program.program_code,
+                            user_id:
+                                userResult.insertId,
+                            student_id:
+                                generateStudentId(
+                                    userResult.insertId
+                                )
+                        });
+
+                    if (!studentResult?.insertId) {
+                        throw new Error(
+                            "Failed to create student."
+                        );
+                    }
+
+                    await assignSection(
+                        adminId,
+                        studentResult.insertId,
+                        applicantData.course_id,
+                        applicantData.year_level,
+                        term.id
+                    );
+
+                    successfulIds.push(
+                        applicantData.id
+                    );
+
+                    totalApproved++;
+
+                } catch (error) {
+
+                    totalFailed++;
+
+                    console.error(
+                        `Applicant ${applicantData.id} failed:`,
+                        error.message
+                    );
+                }
+
+                // ==========================================
+                // PROGRESS EVERY 5 APPLICANTS
+                // ADMIN WHO STARTED ONLY
+                // ==========================================
+
+                if (
+                    totalProcessed %
+                        PROGRESS_INTERVAL === 0 ||
+                    totalProcessed === totalPending
+                ) {
+
+                    const percentage =
+                        totalPending > 0
+                            ? Math.round(
+                                (totalProcessed /
+                                    totalPending) *
+                                    100
+                            )
+                            : 100;
+
+                    io.to(`admin:${adminId}`).emit(
+                        "bulk_approval_progress",
+                        {
+                            status: "processing",
+                            isApproving: true,
+                            processed: totalProcessed,
+                            total: totalPending,
+                            approved: totalApproved,
+                            failed: totalFailed,
+                            percentage
+                        }
+                    );
+
+                    console.log(
+                        `📊 Progress: ${totalProcessed}/${totalPending} (${percentage}%)`
+                    );
+                }
+            }
+
+            // ==========================================
+            // BULK UPDATE APPLICATION STATUS
+            // ==========================================
+
+            if (successfulIds.length > 0) {
+
+                await StudentApplication.approveBatch(
+                    successfulIds,
+                    adminId
                 );
             }
+
+            lastId =
+                applicants[
+                    applicants.length - 1
+                ].id;
         }
 
-        // Approve application records in one SQL query
-        if (successfulIds.length > 0) {
+        // ==========================================
+        // FINAL UI UPDATE
+        // ==========================================
 
-            await StudentApplication.approveBatch(
-                successfulIds,
-                adminId
-            );
-        }
+        io.to(`admin:${adminId}`).emit(
+            "bulk_approval_progress",
+            {
+                status: "completed",
+                isApproving: false,
+                processed: totalProcessed,
+                total: totalPending,
+                approved: totalApproved,
+                failed: totalFailed,
+                percentage: 100
+            }
+        );
 
-        lastId =
-            applicants[applicants.length - 1].id;
-    }
+        io.to("admins").emit(
+            "bulk_approval_status",
+            {
+                isApproving: false
+            }
+        );
 
-    // ==========================================
-    // FINAL UI UPDATE
-    // ==========================================
-    io.to("admins").emit(
-        "bulk_approval_progress",
-        {
-            status: "completed",
+        return {
             processed: totalProcessed,
-            total: totalPending,
             approved: totalApproved,
             failed: totalFailed,
-            percentage: 100
-        }
-    );
+            batches: totalBatches
+        };
 
-    return {
-        processed: totalProcessed,
-        approved: totalApproved,
-        failed: totalFailed,
-        batches: totalBatches
-    };
+    } finally {
+
+        // ==========================================
+        // ALWAYS RELEASE LOCK
+        // ==========================================
+
+        bulkApprovalRunning = false;
+
+        console.log(
+            "🔓 Bulk approval lock released."
+        );
+    }
 };
+
+
 
 const removeSensitiveFields = (user) => {
     const {
