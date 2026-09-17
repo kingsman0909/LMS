@@ -109,7 +109,6 @@ io.use((socket, next) => {
 
 });
 
-
 // SOCKET CONNECTION
 
 io.on("connection", (socket) => {
@@ -119,9 +118,67 @@ io.on("connection", (socket) => {
         socket.id
     );
 
+    // Only allow authenticated admins
+    if (socket.user?.role !== "admin") {
 
+        console.log(
+            "Non-admin socket rejected:",
+            socket.id
+        );
+
+        socket.disconnect(true);
+
+        return;
+    }
+
+    const adminId =
+        socket.user.id;
+
+    // Global admin room
     socket.join("admins");
 
+    // Personal admin room
+    socket.join(
+        `admin:${adminId}`
+    );
+
+    console.log(
+        "Admin joined rooms:",
+        {
+            socketId: socket.id,
+            adminId,
+            rooms: [
+                "admins",
+                `admin:${adminId}`
+            ]
+        }
+    );
+
+    // IMPORTANT:
+    // If bulk approval is already running
+    // when this admin connects/reconnects,
+    // immediately tell this admin.
+    const {
+        getBulkApprovalStatus
+    } = require(
+        "./services/authService"
+    );
+
+    const bulkStatus =
+        getBulkApprovalStatus();
+
+    if (bulkStatus.isApproving) {
+
+        socket.emit(
+            "bulk_approval_status",
+            {
+                isApproving: true,
+                adminId:
+                    bulkStatus.adminId
+            }
+        );
+
+    }
 
     socket.on("disconnect", () => {
 
@@ -133,7 +190,6 @@ io.on("connection", (socket) => {
     });
 
 });
-
 
 const PORT = process.env.PORT || 3000;
 
