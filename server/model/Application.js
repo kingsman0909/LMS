@@ -187,36 +187,6 @@ const StudentApplication = {
 
 
     // ==================================================
-    // GET PENDING APPLICATIONS IN BATCH
-    // ==================================================
-
-    getPendingApplicationsBatch: async (
-        limit,
-        lastId = 0
-    ) => {
-
-        const [rows] = await db.execute(
-
-            `SELECT *
-             FROM student_applications
-             WHERE status = 'pending'
-             AND id > ?
-             ORDER BY id ASC
-             LIMIT ?`,
-
-            [
-                lastId,
-                limit
-            ]
-
-        );
-
-        return rows;
-
-    },
-
-
-    // ==================================================
     // BULK APPROVE APPLICATIONS
     // ==================================================
 
