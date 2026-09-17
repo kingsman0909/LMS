@@ -796,6 +796,8 @@ function PendingTask({
         const token =
           getToken();
 
+          console.log("Submitting assignment: ", assignment);
+
         const response =
           await fetch(
             `${API_BASE_URL}/api/student/assignments/${assignment.id}/submit`,

@@ -1802,6 +1802,7 @@
     margin: 0 0 6px;
     font-size: 28px;
     font-weight: 700;
+    color: var(--primary-dark);
 }
 
 .schedule-page .page-header p {
@@ -1819,6 +1820,7 @@
 
 .term-info strong {
     font-size: 14px;
+    color: var(--primary-dark);
 }
 
 .term-info span {
@@ -1851,16 +1853,15 @@
     display: grid;
 
     grid-template-columns:
-        120px repeat(7, min(120, 140));
+        120px repeat(7, min(120px, 140px));
 
     grid-template-rows:
-        52px
-        repeat(15, 50px);
+        80px
+        repeat(15, min(80px, 100px));
 
     position: relative;
-    
     width: 100%;
-    min-width: 0;
+    min-width: 600px;
     box-sizing: border-box;
 }
 
@@ -1909,7 +1910,7 @@
 
 .schedule-time-cell {
     width: 100%;
-    height: 50px;
+    height: auto;
 
     display: flex;
 
@@ -1938,14 +1939,13 @@
 ========================= */
 
 .schedule-cell {
-    height: 50px;
+    height: auto;
     width: auto;
-
     border-left: 1px solid black;
     border-bottom: 1px solid black;
 
     box-sizing: border-box;
-    min-width: 0;
+    min-width: fit-content;
 }
 .schedule-cell:hover {
     background: #fafafa;
@@ -1960,6 +1960,8 @@
 
     padding: 10px;
     width: auto;
+    min-width: fit-content;
+    
     background: #f0fff0;
 
     border-left: 1px solid black;
@@ -2025,6 +2027,10 @@
     color: black;
 
     margin-bottom: 2px;
+}
+
+.class-block > small{
+  color: black;
 }
 
 
