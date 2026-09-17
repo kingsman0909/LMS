@@ -767,6 +767,7 @@ async function assignSection(
 }
 
 
+
 // =========================================================
 // APPROVE SINGLE APPLICANT
 // =========================================================
@@ -910,6 +911,294 @@ const approveApplicant = async (req) => {
             "Application approved! You can now login to your account."
 
     };
+};
+
+
+// =========================================================
+// BULK APPROVAL HELPERS
+// =========================================================
+
+const BULK_BATCH_SIZE = 500;
+const PROGRESS_INTERVAL = 5;
+const SECTION_CAPACITY = 50;
+
+
+// ---------------------------------------------------------
+// Load all programs once
+// ---------------------------------------------------------
+
+const loadProgramCache = async () => {
+
+    const [rows] = await db.query(`
+        SELECT
+            id,
+            program_code,
+            program_name
+        FROM programs
+        WHERE status = 'active'
+    `);
+
+    const cache = new Map();
+
+    for (const program of rows) {
+
+        cache.set(
+            Number(program.id),
+            program
+        );
+
+    }
+
+    return cache;
+};
+
+
+// ---------------------------------------------------------
+// Load all sections + occupancy once
+// ---------------------------------------------------------
+
+const loadSectionCache = async (
+    academicTermId
+) => {
+
+    const [rows] = await db.query(`
+        SELECT
+            s.id,
+            s.program_id,
+            s.year_level,
+            s.section_name,
+            s.academic_term_id,
+            s.max_students,
+
+            COUNT(ss.student_id) AS student_count
+
+        FROM sections s
+
+        LEFT JOIN student_sections ss
+            ON ss.section_id = s.id
+            AND ss.academic_term_id = s.academic_term_id
+
+        WHERE s.academic_term_id = ?
+
+        GROUP BY
+            s.id,
+            s.program_id,
+            s.year_level,
+            s.section_name,
+            s.academic_term_id,
+            s.max_students
+
+        ORDER BY
+            s.program_id,
+            s.year_level,
+            s.section_name
+    `, [
+        academicTermId
+    ]);
+
+    const cache = new Map();
+
+    for (const row of rows) {
+
+        const programId =
+            Number(row.program_id);
+
+        const yearLevel =
+            Number(row.year_level);
+
+        const key =
+            `${programId}:${yearLevel}`;
+
+        if (!cache.has(key)) {
+
+            cache.set(
+                key,
+                []
+            );
+
+        }
+
+        cache.get(key).push({
+
+            id:
+                Number(row.id),
+
+            program_id:
+                programId,
+
+            year_level:
+                yearLevel,
+
+            section_name:
+                row.section_name,
+
+            academic_term_id:
+                Number(row.academic_term_id),
+
+            max_students:
+                Number(row.max_students),
+
+            student_count:
+                Number(row.student_count)
+
+        });
+
+    }
+
+    return cache;
+};
+
+
+// ---------------------------------------------------------
+// Get next section name
+// ---------------------------------------------------------
+
+const getNextSectionName = (
+    sections
+) => {
+
+    const usedLetters =
+        new Set(
+            sections.map(
+                section =>
+                    String(
+                        section.section_name
+                    ).toUpperCase()
+            )
+        );
+
+    let number = 1;
+
+    while (true) {
+
+        const name =
+            generateSectionName(
+                number
+            );
+
+        if (
+            !usedLetters.has(name)
+        ) {
+
+            return name;
+
+        }
+
+        number++;
+
+    }
+};
+
+
+// ---------------------------------------------------------
+// Allocate section from memory
+// ---------------------------------------------------------
+
+const allocateSection = async ({
+    programId,
+    yearLevel,
+    academicTermId,
+    sectionCache
+}) => {
+
+    const key =
+        `${programId}:${yearLevel}`;
+
+    let sections =
+        sectionCache.get(key);
+
+    if (!sections) {
+
+        sections = [];
+
+        sectionCache.set(
+            key,
+            sections
+        );
+
+    }
+
+    // -----------------------------------------------------
+    // Find available section in memory
+    // -----------------------------------------------------
+
+    for (const section of sections) {
+
+        if (
+            section.student_count <
+            section.max_students
+        ) {
+
+            section.student_count++;
+
+            return section;
+
+        }
+
+    }
+
+    // -----------------------------------------------------
+    // No available section
+    // Create a new one
+    // -----------------------------------------------------
+
+    const sectionName =
+        getNextSectionName(
+            sections
+        );
+
+    const [result] =
+        await db.query(
+            `
+            INSERT INTO sections
+            (
+                program_id,
+                year_level,
+                section_name,
+                academic_term_id,
+                max_students
+            )
+            VALUES (?, ?, ?, ?, ?)
+            `,
+            [
+                programId,
+                yearLevel,
+                sectionName,
+                academicTermId,
+                SECTION_CAPACITY
+            ]
+        );
+
+    const newSection = {
+
+        id:
+            Number(result.insertId),
+
+        program_id:
+            Number(programId),
+
+        year_level:
+            Number(yearLevel),
+
+        section_name:
+            sectionName,
+
+        academic_term_id:
+            Number(academicTermId),
+
+        max_students:
+            SECTION_CAPACITY,
+
+        student_count:
+            1
+
+    };
+
+    sections.push(
+        newSection
+    );
+
+    return newSection;
 };
 
 
@@ -1418,7 +1707,1113 @@ const approveAllApplicants = async (adminId) => {
         );
     }
 };
+// =========================================================
+// BULK APPLICANT APPROVAL
+// =========================================================
 
+let bulkApprovalRunning = false;
+let bulkApprovalAdminId = null;
+
+
+const approveAllApplicants = async (
+    adminId
+) => {
+
+    // =====================================================
+    // GLOBAL LOCK
+    // =====================================================
+
+    if (bulkApprovalRunning) {
+
+        const error =
+            new Error(
+                "Bulk approval is already in progress."
+            );
+
+        error.statusCode =
+            409;
+
+        throw error;
+
+    }
+
+
+    bulkApprovalRunning =
+        true;
+
+    bulkApprovalAdminId =
+        adminId;
+
+
+    const io =
+        getIO();
+
+
+    try {
+
+        // =================================================
+        // ACTIVE ACADEMIC TERM
+        // =================================================
+
+        const term =
+            await Academic.getAcademicTerm();
+
+        if (!term) {
+
+            throw new Error(
+                "No active academic term found."
+            );
+
+        }
+
+
+        // =================================================
+        // GLOBAL START STATUS
+        // =================================================
+
+        io.to("admins").emit(
+            "bulk_approval_status",
+            {
+                isApproving: true,
+                adminId
+            }
+        );
+
+
+        // =================================================
+        // COUNT PENDING
+        // =================================================
+
+        const totalPending =
+            Number(
+                await StudentApplication
+                    .countPendingApplications()
+            );
+
+
+        // =================================================
+        // OWNER START EVENT
+        // =================================================
+
+        io.to(`admin:${adminId}`).emit(
+            "bulk_approval_progress",
+            {
+                status:
+                    "started",
+
+                isApproving:
+                    true,
+
+                processed:
+                    0,
+
+                total:
+                    totalPending,
+
+                approved:
+                    0,
+
+                failed:
+                    0,
+
+                percentage:
+                    0
+            }
+        );
+
+
+        // =================================================
+        // NOTHING TO APPROVE
+        // =================================================
+
+        if (
+            totalPending === 0
+        ) {
+
+            io.to(`admin:${adminId}`).emit(
+                "bulk_approval_progress",
+                {
+                    status:
+                        "completed",
+
+                    isApproving:
+                        false,
+
+                    processed:
+                        0,
+
+                    total:
+                        0,
+
+                    approved:
+                        0,
+
+                    failed:
+                        0,
+
+                    percentage:
+                        100
+                }
+            );
+
+            return {
+
+                processed:
+                    0,
+
+                approved:
+                    0,
+
+                failed:
+                    0,
+
+                batches:
+                    0
+
+            };
+
+        }
+
+
+        // =================================================
+        // LOAD STATIC DATA ONCE
+        // =================================================
+
+        console.log(
+            "⚡ Loading programs..."
+        );
+
+        const programCache =
+            await loadProgramCache();
+
+
+        console.log(
+            "⚡ Loading sections and occupancy..."
+        );
+
+        const sectionCache =
+            await loadSectionCache(
+                term.id
+            );
+
+
+        console.log(
+            "⚡ Bulk approval data loaded."
+        );
+
+
+        // =================================================
+        // COUNTERS
+        // =================================================
+
+        let lastId = 0;
+
+        let totalProcessed = 0;
+
+        let totalApproved = 0;
+
+        let totalFailed = 0;
+
+        let totalBatches = 0;
+
+
+        // =================================================
+        // PROCESS BATCHES
+        // =================================================
+
+        while (true) {
+
+            const applicants =
+                await StudentApplication
+                    .getPendingApplicationsBatch(
+                        BULK_BATCH_SIZE,
+                        lastId
+                    );
+
+
+            if (
+                applicants.length === 0
+            ) {
+
+                break;
+
+            }
+
+
+            totalBatches++;
+
+
+            console.log(
+                `⚡ Processing batch ${totalBatches} (${applicants.length} applicants)`
+            );
+
+
+            // =================================================
+            // BATCH ARRAYS
+            // =================================================
+
+            const approvedApplications = [];
+
+            const users = [];
+
+            const studentRecords = [];
+
+            const studentSections = [];
+
+            const enrollments = [];
+
+
+            // =================================================
+            // TRANSACTION
+            // =================================================
+
+            const connection =
+                await db.getConnection();
+
+
+            try {
+
+                await connection.beginTransaction();
+
+
+                // =================================================
+                // PREPARE APPLICANTS
+                // =================================================
+
+                for (
+                    const applicant
+                    of applicants
+                ) {
+
+                    try {
+
+                        const program =
+                            programCache.get(
+                                Number(
+                                    applicant.course_id
+                                )
+                            );
+
+
+                        if (!program) {
+
+                            throw new Error(
+                                `Program ${applicant.course_id} not found.`
+                            );
+
+                        }
+
+
+                        // -------------------------------------------------
+                        // Allocate section in memory
+                        // -------------------------------------------------
+
+                        const section =
+                            await allocateSection({
+
+                                programId:
+                                    Number(
+                                        applicant.course_id
+                                    ),
+
+                                yearLevel:
+                                    Number(
+                                        applicant.year_level
+                                    ),
+
+                                academicTermId:
+                                    Number(
+                                        term.id
+                                    ),
+
+                                sectionCache
+
+                            });
+
+
+                        // -------------------------------------------------
+                        // User
+                        // -------------------------------------------------
+
+                        users.push({
+
+                            applicationId:
+                                applicant.id,
+
+                            email:
+                                applicant.email,
+
+                            username:
+                                applicant.username,
+
+                            password:
+                                applicant.password,
+
+                            role:
+                                "student",
+
+                            status:
+                                "active"
+
+                        });
+
+
+                        // -------------------------------------------------
+                        // Temporarily store section
+                        // -------------------------------------------------
+
+                        studentRecords.push({
+
+                            applicant,
+
+                            program,
+
+                            section
+
+                        });
+
+
+                    } catch (error) {
+
+                        totalFailed++;
+
+                        totalProcessed++;
+
+
+                        console.error(
+                            `Applicant ${applicant.id} preparation failed:`,
+                            error.message
+                        );
+
+
+                        // ---------------------------------------------
+                        // Progress
+                        // ---------------------------------------------
+
+                        if (
+                            totalProcessed %
+                                PROGRESS_INTERVAL ===
+                            0
+                        ) {
+
+                            const percentage =
+                                Math.round(
+                                    (
+                                        totalProcessed /
+                                        totalPending
+                                    ) * 100
+                                );
+
+
+                            io.to(
+                                `admin:${adminId}`
+                            ).emit(
+                                "bulk_approval_progress",
+                                {
+                                    status:
+                                        "processing",
+
+                                    isApproving:
+                                        true,
+
+                                    processed:
+                                        totalProcessed,
+
+                                    total:
+                                        totalPending,
+
+                                    approved:
+                                        totalApproved,
+
+                                    failed:
+                                        totalFailed,
+
+                                    percentage
+                                }
+                            );
+
+                        }
+
+                    }
+
+                }
+
+
+                // =================================================
+                // BULK INSERT USERS
+                // =================================================
+
+                if (
+                    users.length === 0
+                ) {
+
+                    await connection.rollback();
+
+                    lastId =
+                        applicants[
+                            applicants.length - 1
+                        ].id;
+
+                    continue;
+
+                }
+
+
+                const userPlaceholders =
+                    users
+                        .map(
+                            () =>
+                                "(?, ?, ?, ?, ?)"
+                        )
+                        .join(",");
+
+
+                const userValues =
+                    [];
+
+                for (
+                    const user
+                    of users
+                ) {
+
+                    userValues.push(
+                        user.email,
+                        user.username,
+                        user.password,
+                        user.role,
+                        user.status
+                    );
+
+                }
+
+
+                await connection.query(
+                    `
+                    INSERT INTO users
+                    (
+                        email,
+                        username,
+                        password,
+                        role,
+                        status
+                    )
+                    VALUES ${userPlaceholders}
+                    `,
+                    userValues
+                );
+
+
+                // =================================================
+                // GET CREATED USER IDS
+                // =================================================
+
+                const usernames =
+                    users.map(
+                        user =>
+                            user.username
+                    );
+
+
+                const userQueryPlaceholders =
+                    usernames
+                        .map(
+                            () => "?"
+                        )
+                        .join(",");
+
+
+                const [
+                    createdUsers
+                ] =
+                    await connection.query(
+                        `
+                        SELECT
+                            id,
+                            username
+                        FROM users
+                        WHERE username IN
+                        (${userQueryPlaceholders})
+                        `,
+                        usernames
+                    );
+
+
+                const userMap =
+                    new Map();
+
+
+                for (
+                    const user
+                    of createdUsers
+                ) {
+
+                    userMap.set(
+                        user.username,
+                        Number(user.id)
+                    );
+
+                }
+
+
+                // =================================================
+                // PREPARE STUDENTS
+                // =================================================
+
+                for (
+                    const record
+                    of studentRecords
+                ) {
+
+                    const {
+                        applicant,
+                        program,
+                        section
+                    } = record;
+
+
+                    const userId =
+                        userMap.get(
+                            applicant.username
+                        );
+
+
+                    if (!userId) {
+
+                        throw new Error(
+                            `Created user not found for ${applicant.username}.`
+                        );
+
+                    }
+
+
+                    const studentId =
+                        generateStudentId(
+                            userId
+                        );
+
+
+                    studentRecords[
+                        studentRecords.indexOf(record)
+                    ].userId =
+                        userId;
+
+
+                    studentRecords[
+                        studentRecords.indexOf(record)
+                    ].studentId =
+                        studentId;
+
+
+                    // -------------------------------------------------
+                    // Student
+                    // -------------------------------------------------
+
+                    // section_id is inserted directly here.
+                    // No UPDATE required later.
+
+                }
+
+
+                // =================================================
+                // BULK INSERT STUDENTS
+                // =================================================
+
+                const studentPlaceholders =
+                    studentRecords
+                        .map(
+                            () =>
+                                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        )
+                        .join(",");
+
+
+                const studentValues =
+                    [];
+
+
+                for (
+                    const record
+                    of studentRecords
+                ) {
+
+                    const {
+                        applicant,
+                        program,
+                        section,
+                        userId,
+                        studentId
+                    } = record;
+
+
+                    studentValues.push(
+
+                        userId,
+
+                        studentId,
+
+                        applicant.firstname,
+
+                        applicant.middlename,
+
+                        applicant.lastname,
+
+                        program.program_code,
+
+                        applicant.year_level,
+
+                        section.id,
+
+                        applicant.phone,
+
+                        applicant.gender,
+
+                        applicant.birthdate,
+
+                        applicant.address,
+
+                        null
+
+                    );
+
+                }
+
+
+                await connection.query(
+                    `
+                    INSERT INTO student
+                    (
+                        user_id,
+                        student_id,
+                        firstname,
+                        middlename,
+                        lastname,
+                        course,
+                        year_level,
+                        section_id,
+                        phone,
+                        gender,
+                        birthdate,
+                        address,
+                        profile_picture
+                    )
+                    VALUES ${studentPlaceholders}
+                    `,
+                    studentValues
+                );
+
+
+                // =================================================
+                // GET CREATED STUDENT IDS
+                // =================================================
+
+                const studentIdValues =
+                    studentRecords.map(
+                        record =>
+                            record.studentId
+                    );
+
+
+                const studentPlaceholders2 =
+                    studentIdValues
+                        .map(
+                            () => "?"
+                        )
+                        .join(",");
+
+
+                const [
+                    createdStudents
+                ] =
+                    await connection.query(
+                        `
+                        SELECT
+                            id,
+                            student_id
+                        FROM student
+                        WHERE student_id IN
+                        (${studentPlaceholders2})
+                        `,
+                        studentIdValues
+                    );
+
+
+                const studentMap =
+                    new Map();
+
+
+                for (
+                    const student
+                    of createdStudents
+                ) {
+
+                    studentMap.set(
+                        student.student_id,
+                        Number(student.id)
+                    );
+
+                }
+
+
+                // =================================================
+                // PREPARE RELATION RECORDS
+                // =================================================
+
+                for (
+                    const record
+                    of studentRecords
+                ) {
+
+                    const studentDbId =
+                        studentMap.get(
+                            record.studentId
+                        );
+
+
+                    if (!studentDbId) {
+
+                        throw new Error(
+                            `Student record not found for ${record.studentId}.`
+                        );
+
+                    }
+
+
+                    record.studentDbId =
+                        studentDbId;
+
+
+                    // -------------------------------------------------
+                    // student_sections
+                    // -------------------------------------------------
+
+                    studentSections.push([
+                        studentDbId,
+                        record.section.id,
+                        term.id
+                    ]);
+
+
+                    // -------------------------------------------------
+                    // student_enrollments
+                    // -------------------------------------------------
+
+                    enrollments.push([
+                        studentDbId,
+                        record.section.id,
+                        "approved",
+                        adminId,
+                        null
+                    ]);
+
+
+                    // -------------------------------------------------
+                    // Applications
+                    // -------------------------------------------------
+
+                    approvedApplications.push(
+                        record.applicant.id
+                    );
+
+                }
+
+
+                // =================================================
+                // BULK INSERT STUDENT SECTIONS
+                // =================================================
+
+                if (
+                    studentSections.length > 0
+                ) {
+
+                    const placeholders =
+                        studentSections
+                            .map(
+                                () =>
+                                    "(?, ?, ?)"
+                            )
+                            .join(",");
+
+
+                    const values =
+                        studentSections.flat();
+
+
+                    await connection.query(
+                        `
+                        INSERT INTO student_sections
+                        (
+                            student_id,
+                            section_id,
+                            academic_term_id
+                        )
+                        VALUES ${placeholders}
+                        `,
+                        values
+                    );
+
+                }
+
+
+                // =================================================
+                // BULK INSERT ENROLLMENTS
+                // =================================================
+
+                if (
+                    enrollments.length > 0
+                ) {
+
+                    const placeholders =
+                        enrollments
+                            .map(
+                                () =>
+                                    "(?, ?, ?, NOW(), ?, ?)"
+                            )
+                            .join(",");
+
+
+                    const values =
+                        enrollments.flat();
+
+
+                    await connection.query(
+                        `
+                        INSERT INTO student_enrollments
+                        (
+                            student_id,
+                            section_id,
+                            status,
+                            approved_at,
+                            approved_by,
+                            remarks
+                        )
+                        VALUES ${placeholders}
+                        `,
+                        values
+                    );
+
+                }
+
+
+                // =================================================
+                // BULK APPROVE APPLICATIONS
+                // =================================================
+
+                if (
+                    approvedApplications.length > 0
+                ) {
+
+                    const placeholders =
+                        approvedApplications
+                            .map(
+                                () => "?"
+                            )
+                            .join(",");
+
+
+                    await connection.query(
+                        `
+                        UPDATE student_applications
+                        SET
+                            status = 'approved',
+                            reviewed_by = ?,
+                            reviewed_at = CURRENT_TIMESTAMP
+                        WHERE status = 'pending'
+                        AND id IN (${placeholders})
+                        `,
+                        [
+                            adminId,
+                            ...approvedApplications
+                        ]
+                    );
+
+                }
+
+
+                // =================================================
+                // COMMIT
+                // =================================================
+
+                await connection.commit();
+
+
+                // =================================================
+                // UPDATE COUNTERS
+                // =================================================
+
+                const batchApproved =
+                    approvedApplications.length;
+
+
+                totalApproved +=
+                    batchApproved;
+
+
+                totalProcessed +=
+                    batchApproved;
+
+
+                // =================================================
+                // PROGRESS
+                // =================================================
+
+                io.to(
+                    `admin:${adminId}`
+                ).emit(
+                    "bulk_approval_progress",
+                    {
+                        status:
+                            "processing",
+
+                        isApproving:
+                            true,
+
+                        processed:
+                            totalProcessed,
+
+                        total:
+                            totalPending,
+
+                        approved:
+                            totalApproved,
+
+                        failed:
+                            totalFailed,
+
+                        percentage:
+                            Math.round(
+                                (
+                                    totalProcessed /
+                                    totalPending
+                                ) * 100
+                            )
+                    }
+                );
+
+
+            } catch (error) {
+
+                await connection.rollback();
+
+                console.error(
+                    `❌ Batch ${totalBatches} failed:`,
+                    error
+                );
+
+                /*
+                 * Important:
+                 * Since the entire batch is transactional,
+                 * database changes are rolled back together.
+                 *
+                 * We don't silently continue pretending
+                 * the batch succeeded.
+                 */
+
+                throw error;
+
+            } finally {
+
+                connection.release();
+
+            }
+
+
+            // =================================================
+            // NEXT BATCH
+            // =================================================
+
+            lastId =
+                applicants[
+                    applicants.length - 1
+                ].id;
+
+        }
+
+
+        // =====================================================
+        // COMPLETED
+        // =====================================================
+
+        io.to(
+            `admin:${adminId}`
+        ).emit(
+            "bulk_approval_progress",
+            {
+                status:
+                    "completed",
+
+                isApproving:
+                    false,
+
+                processed:
+                    totalProcessed,
+
+                total:
+                    totalPending,
+
+                approved:
+                    totalApproved,
+
+                failed:
+                    totalFailed,
+
+                percentage:
+                    100
+            }
+        );
+
+
+        return {
+
+            processed:
+                totalProcessed,
+
+            approved:
+                totalApproved,
+
+            failed:
+                totalFailed,
+
+            batches:
+                totalBatches
+
+        };
+
+
+    } finally {
+
+        // =====================================================
+        // RELEASE GLOBAL LOCK
+        // =====================================================
+
+        bulkApprovalRunning =
+            false;
+
+        bulkApprovalAdminId =
+            null;
+
+
+        // =====================================================
+        // TELL ALL ADMINS
+        // =====================================================
+
+        io.to("admins").emit(
+            "bulk_approval_status",
+            {
+                isApproving:
+                    false,
+
+                adminId:
+                    null
+            }
+        );
+
+
+        console.log(
+            "🔓 Bulk approval lock released."
+        );
+
+    }
+};
 
 // =========================================================
 // GET BULK APPROVAL STATUS
