@@ -1,8 +1,7 @@
+
 const db = require('../config/db');
 
 const StudentApplication = {
-
-    
 
     createApplication: async (data) => {
 
@@ -112,55 +111,66 @@ const StudentApplication = {
 
     },
 
-    
+    countPendingApplications: async () => {
+
+        const [rows] = await db.execute(`
+            SELECT COUNT(*) AS total
+            FROM student_applications
+            WHERE status = 'pending'
+        `);
+
+        return rows[0].total;
+    },
+
 
     getPendingApplications: async () => {
 
-    console.log("🔥 GET PENDING APPLICATIONS CALLED");
+        console.log("🔥 GET PENDING APPLICATIONS CALLED");
 
-    const [dbInfo] = await db.execute(`
-        SELECT
-            DATABASE() AS db_name,
-            @@hostname AS hostname,
-            @@port AS port
-    `);
+        const [dbInfo] = await db.execute(`
+            SELECT
+                DATABASE() AS db_name,
+                @@hostname AS hostname,
+                @@port AS port
+        `);
 
-    console.log("🔥 DB INFO:", dbInfo);
+        console.log("🔥 DB INFO:", dbInfo);
 
-    const [count] = await db.execute(`
-        SELECT COUNT(*) AS total
-        FROM student_applications
-    `);
+        const [count] = await db.execute(`
+            SELECT COUNT(*) AS total
+            FROM student_applications
+        `);
 
-    console.log("🔥 TOTAL APPLICATIONS:", count);
+        console.log("🔥 TOTAL APPLICATIONS:", count);
 
-    const [info] = await db.execute(`
-    SELECT
-        DATABASE() AS db,
-        @@hostname AS host,
-        @@port AS port,
-        @@server_uuid AS uuid,
-        @@datadir AS datadir
-`);
+        const [info] = await db.execute(`
+            SELECT
+                DATABASE() AS db,
+                @@hostname AS host,
+                @@port AS port,
+                @@server_uuid AS uuid,
+                @@datadir AS datadir
+        `);
 
-console.log(info);
+        console.log(info);
 
-    const [rows] = await db.execute(`
-        SELECT
-            sa.*,
-            p.program_code,
-            p.program_name
-        FROM student_applications sa
-        JOIN programs p
-            ON sa.course_id = p.id
-        WHERE sa.status = 'pending'
-        ORDER BY sa.created_at DESC
-    `);
+        const [rows] = await db.execute(`
+            SELECT
+                sa.*,
+                p.program_code,
+                p.program_name
+            FROM student_applications sa
+            JOIN programs p
+                ON sa.course_id = p.id
+            WHERE sa.status = 'pending'
+            ORDER BY sa.created_at DESC
+        `);
 
-    console.log("🔥 PENDING:", rows);
+        console.log("🔥 PENDING:", rows);
 
-    return rows;
-},
+        return rows;
+
+    },
 
 
     updateStatus: async (
@@ -172,12 +182,10 @@ console.log(info);
         const [result] = await db.execute(
 
             `UPDATE student_applications
-
              SET
                 status = ?,
                 reviewed_by = ?,
                 reviewed_at = CURRENT_TIMESTAMP
-
              WHERE id = ?`,
 
             [
@@ -190,8 +198,84 @@ console.log(info);
 
         return result;
 
+    },
+
+
+    // ==================================================
+    // GET PENDING APPLICATIONS IN BATCH
+    // ==================================================
+
+    getPendingApplicationsBatch: async (
+        limit,
+        lastId = 0
+    ) => {
+
+        const [rows] = await db.execute(
+
+            `SELECT *
+             FROM student_applications
+             WHERE status = 'pending'
+             AND id > ?
+             ORDER BY id ASC
+             LIMIT ?`,
+
+            [
+                lastId,
+                limit
+            ]
+
+        );
+
+        return rows;
+
+    },
+
+
+    // ==================================================
+    // BULK APPROVE APPLICATIONS
+    // ==================================================
+
+    approveBatch: async (
+        ids,
+        reviewedBy
+    ) => {
+
+        if (!ids || ids.length === 0) {
+
+            return {
+                affectedRows: 0
+            };
+
+        }
+
+
+        const placeholders =
+            ids.map(() => '?').join(',');
+
+
+        const [result] = await db.execute(
+
+            `UPDATE student_applications
+             SET
+                status = 'approved',
+                reviewed_by = ?,
+                reviewed_at = CURRENT_TIMESTAMP
+             WHERE status = 'pending'
+             AND id IN (${placeholders})`,
+
+            [
+                reviewedBy,
+                ...ids
+            ]
+
+        );
+
+
+        return result;
+
     }
 
 };
+
 
 module.exports = StudentApplication;

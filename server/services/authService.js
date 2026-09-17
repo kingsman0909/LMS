@@ -332,6 +332,10 @@ const apply = async (data) => {
 
 };
 
+
+//========================APPROVE ALL APPLICANT USING BATCH======================
+
+
 const generateStudentId = (userId) => {
     return `2026-${String(userId).padStart(4, "0")}`;
 };
@@ -697,6 +701,195 @@ const approveApplicant = async (req) => {
         message:
             "Application approved! You can now login to your account."
 
+    };
+};
+
+//==========================BATCH APPLICANT APPROVAL===============================
+
+const { getIO } = require("../realtimeConn/socket");
+
+const BATCH_SIZE = 500;
+const PROGRESS_INTERVAL = 5;
+
+
+const approveAllApplicants = async (adminId) => {
+
+    const term = await Academic.getAcademicTerm();
+
+    if (!term) {
+        throw new Error("No active academic term found.");
+    }
+
+    const io = getIO();
+
+    let lastId = 0;
+    let totalProcessed = 0;
+    let totalApproved = 0;
+    let totalFailed = 0;
+    let totalBatches = 0;
+
+    // Get total pending applicants for progress percentage
+    const totalPending =
+        await StudentApplication.countPendingApplications();
+
+    console.log(`Total pending applicants: ${totalPending}`);
+
+    // Initial UI update
+    io.to("admins").emit("bulk_approval_progress", {
+        status: "started",
+        processed: 0,
+        total: totalPending,
+        approved: 0,
+        failed: 0,
+        percentage: 0
+    });
+
+    while (true) {
+
+        const applicants =
+            await StudentApplication.getPendingApplicationsBatch(
+                BATCH_SIZE,
+                lastId
+            );
+
+        if (applicants.length === 0) {
+            break;
+        }
+
+        totalBatches++;
+
+        const successfulIds = [];
+
+        for (const applicantData of applicants) {
+
+            totalProcessed++;
+
+            try {
+
+                const program =
+                    await Programs.findById(
+                        applicantData.course_id
+                    );
+
+                if (!program) {
+                    throw new Error(
+                        `Program ${applicantData.course_id} not found.`
+                    );
+                }
+
+                const userResult =
+                    await User.createUser({
+                        ...applicantData,
+                        role: "student",
+                        status: "active"
+                    });
+
+                if (!userResult?.insertId) {
+                    throw new Error("Failed to create user.");
+                }
+
+                const studentResult =
+                    await Student.createStudent({
+                        ...applicantData,
+                        course_name: program.program_code,
+                        user_id: userResult.insertId,
+                        student_id: generateStudentId(
+                            userResult.insertId
+                        )
+                    });
+
+                if (!studentResult?.insertId) {
+                    throw new Error("Failed to create student.");
+                }
+
+                await assignSection(
+                    adminId,
+                    studentResult.insertId,
+                    applicantData.course_id,
+                    applicantData.year_level,
+                    term.id
+                );
+
+                successfulIds.push(applicantData.id);
+
+                totalApproved++;
+
+            } catch (error) {
+
+                totalFailed++;
+
+                console.error(
+                    `Applicant ${applicantData.id} failed:`,
+                    error.message
+                );
+            }
+
+            // ==========================================
+            // SEND UI PROGRESS EVERY 5 APPLICANTS
+            // ==========================================
+            if (
+                totalProcessed % PROGRESS_INTERVAL === 0 ||
+                totalProcessed === totalPending
+            ) {
+
+                const percentage =
+                    totalPending > 0
+                        ? Math.round(
+                            (totalProcessed / totalPending) * 100
+                        )
+                        : 100;
+
+                io.to("admins").emit(
+                    "bulk_approval_progress",
+                    {
+                        status: "processing",
+                        processed: totalProcessed,
+                        total: totalPending,
+                        approved: totalApproved,
+                        failed: totalFailed,
+                        percentage
+                    }
+                );
+
+                console.log(
+                    `📊 Progress: ${totalProcessed}/${totalPending} (${percentage}%)`
+                );
+            }
+        }
+
+        // Approve application records in one SQL query
+        if (successfulIds.length > 0) {
+
+            await StudentApplication.approveBatch(
+                successfulIds,
+                adminId
+            );
+        }
+
+        lastId =
+            applicants[applicants.length - 1].id;
+    }
+
+    // ==========================================
+    // FINAL UI UPDATE
+    // ==========================================
+    io.to("admins").emit(
+        "bulk_approval_progress",
+        {
+            status: "completed",
+            processed: totalProcessed,
+            total: totalPending,
+            approved: totalApproved,
+            failed: totalFailed,
+            percentage: 100
+        }
+    );
+
+    return {
+        processed: totalProcessed,
+        approved: totalApproved,
+        failed: totalFailed,
+        batches: totalBatches
     };
 };
 
@@ -1287,5 +1480,6 @@ module.exports = {
     getSchedulesByTerm,
     getSectionsForSchedule,
     getSchedulesBySection,
-    getProfStudent
+    getProfStudent,
+    approveAllApplicants
 };

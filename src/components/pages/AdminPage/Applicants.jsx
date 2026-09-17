@@ -11,9 +11,18 @@ export default function AdminApplicants() {
 
     const [applicants, setApplicants] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [bulkLoading, setBulkLoading] = useState(false);
     const [showCapacityModal, setShowCapacityModal] = useState(false);
     const [capacities, setCapacities] = useState([]);
     const [academicTerm, setAcademicTerm] = useState(null);
+    const [bulkProgress, setBulkProgress] = useState({
+        status: "idle",
+        processed: 0,
+        total: 0,
+        approved: 0,
+        failed: 0,
+        percentage: 0
+    });
     
     const [professors, setProfessors] = useState([
         {
@@ -38,7 +47,43 @@ export default function AdminApplicants() {
         }
     ]);
 
-    const fetchAcademicTerm = async () => {
+useEffect(() => {
+
+    const token =
+        localStorage.getItem("admin_token");
+
+    const socket = io(API_BASE_URL, {
+        auth: {
+            token
+        }
+    });
+
+    socket.on(
+        "bulk_approval_progress",
+        (progress) => {
+
+            console.log(
+                "Bulk approval progress:",
+                progress
+            );
+
+            setBulkProgress(progress);
+        }
+    );
+
+    return () => {
+
+        socket.off(
+            "bulk_approval_progress"
+        );
+
+        socket.disconnect();
+
+    };
+
+}, []);
+
+const fetchAcademicTerm = async () => {
 
     try {
 
@@ -173,61 +218,79 @@ const approvedApplicant = async (student) => {
 
 };
 
+
 const approveAllApplicants = async () => {
+
     try {
 
         const token =
             localStorage.getItem("admin_token");
 
-        // Get current applicants
-        const applicantsToApprove = applicants.filter(
-            student => student.status === "pending"
-        );
+        const pendingCount =
+            applicants.filter(
+                student =>
+                    student.status === "pending"
+            ).length;
+
+        if (pendingCount === 0) {
+            alert(
+                "No pending applicants to approve."
+            );
+            return;
+        }
+
+        setBulkLoading(true);
+
+        setBulkProgress({
+            status: "starting",
+            processed: 0,
+            total: pendingCount,
+            approved: 0,
+            failed: 0,
+            percentage: 0
+        });
 
         console.log(
-            `Starting approval of ${applicantsToApprove.length} applicants...`
+            `Starting batch approval of ${pendingCount} applicants...`
         );
 
-        for (let i = 0; i < applicantsToApprove.length; i++) {
+        const response = await fetch(
+            `${API_BASE_URL}/api/auth/admin/applicants/approveAll`,
+            {
+                method: "POST",
 
-            const student = applicantsToApprove[i];
+                headers: {
+                    Authorization:
+                        `Bearer ${token}`,
 
-            console.log(
-                `Approving ${i + 1}/${applicantsToApprove.length}:`,
-                student.email
-            );
-
-            const response = await fetch(`${API_BASE_URL}/api/auth/admin/applicants/${student.id}/approvedApplicant`,
-                {
-                    method: "POST",
-
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                    "Content-Type":
+                        "application/json"
                 }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-
-                console.error(
-                    `Failed applicant ${student.id}:`,
-                    data.message
-                );
-
-                // Continue to next applicant
-                continue;
             }
+        );
 
-            console.log(
-                `Approved ${i + 1}/${applicantsToApprove.length}`
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message ||
+                "Failed to approve applicants."
             );
         }
 
-        alert("Finished approving applicants!");
+        console.log(
+            "Batch approval result:",
+            data
+        );
 
-        fetchApplicants();
+        await fetchApplicants();
+
+        alert(
+            `Finished approving applicants!\n\n` +
+            `Approved: ${data.approved}\n` +
+            `Failed: ${data.failed || 0}`
+        );
 
     } catch (error) {
 
@@ -236,14 +299,20 @@ const approveAllApplicants = async () => {
             error
         );
 
+        alert(
+            error.message ||
+            "An error occurred while approving applicants."
+        );
+
     } finally {
 
-        setLoading(false);
+        setBulkLoading(false);
 
     }
 };
 
-    const fetchApplicants = async () => {
+
+const fetchApplicants = async () => {
 
     try {
 
@@ -389,14 +458,46 @@ useEffect(() => {
 
     return (
 <>
-        {capacityLoading && 
-                <div className="capacity-wrapper">
-                    <div className="capacityModal">
-                        <h4>Capacity Checker</h4>
-                        <p>Checking Capacity...</p>
-                    </div>
+        {bulkLoading && (
+            <div className="bulk-loading">
+
+                <h2>
+                    Approving Applicants...
+                </h2>
+
+                <p>
+                    {bulkProgress.processed.toLocaleString()}
+                    {" / "}
+                    {bulkProgress.total.toLocaleString()}
+                    {" applicants processed"}
+                </p>
+
+                <div className="progress-bar">
+                    <div
+                        className="progress-fill"
+                        style={{
+                            width:
+                                `${bulkProgress.percentage}%`
+                        }}
+                    />
                 </div>
-            }
+
+                <strong>
+                    {bulkProgress.percentage}%
+                </strong>
+
+                <p>
+                    Approved:{" "}
+                    {bulkProgress.approved.toLocaleString()}
+                    {" | "}
+                    Failed:{" "}
+                    {bulkProgress.failed.toLocaleString()}
+                </p>
+
+            </div>
+        )}
+
+
         <div className="applicants-page" style={{filter: capacityLoading && 'blur(6px)'}}>
             
             <div className="applicants-header">

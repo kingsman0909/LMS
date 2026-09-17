@@ -1861,7 +1861,7 @@
 
     position: relative;
     width: 100%;
-    min-width: 600px;
+    min-width: fit-content;
     box-sizing: border-box;
 }
 

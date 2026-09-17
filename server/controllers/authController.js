@@ -250,6 +250,8 @@ const createProgram = async (req, res) => {
 };
 
 
+
+
 const enroll = async (req, res) => {
 
     try {
@@ -357,6 +359,66 @@ const getCourses = async (req, res) => {
         });
     }
 }
+
+const approveAllApplicants = async (req, res) => {
+
+    try {
+
+        const adminId = req.user.id;
+
+        console.log(
+            "========================================"
+        );
+
+        console.log(
+            "BULK APPROVE APPLICANTS REQUEST"
+        );
+
+        console.log(
+            "Admin ID:",
+            adminId
+        );
+
+        console.log(
+            "========================================"
+        );
+
+        const result =
+            await authService.approveAllApplicants(
+                adminId
+            );
+
+        return res.status(200).json({
+
+            success: true,
+
+            message:
+                "Bulk applicant approval completed.",
+
+            ...result
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Bulk applicant approval error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                error.message ||
+                "Failed to approve applicants."
+
+        });
+
+    }
+
+};
 
 const getSubjects = async (req, res) => {
     console.log("=================================");
@@ -2032,6 +2094,7 @@ module.exports = {
     getSchedulesBySection,
     getStudentSubjects,
     getProfStudent,
-    deleteCurriculum
+    deleteCurriculum,
+    approveAllApplicants
 };
 
