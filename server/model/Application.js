@@ -122,56 +122,41 @@ const StudentApplication = {
         return rows[0].total;
     },
 
+    // ==================================================
+    // GET PENDING APPLICATIONS IN BATCH
+    // ==================================================
 
-    getPendingApplications: async () => {
+    getPendingApplicationsBatch: async (
+        limit,
+        lastId = 0
+    ) => {
 
-        console.log("🔥 GET PENDING APPLICATIONS CALLED");
-
-        const [dbInfo] = await db.execute(`
-            SELECT
-                DATABASE() AS db_name,
-                @@hostname AS hostname,
-                @@port AS port
-        `);
-
-        console.log("🔥 DB INFO:", dbInfo);
-
-        const [count] = await db.execute(`
-            SELECT COUNT(*) AS total
-            FROM student_applications
-        `);
-
-        console.log("🔥 TOTAL APPLICATIONS:", count);
-
-        const [info] = await db.execute(`
-            SELECT
-                DATABASE() AS db,
-                @@hostname AS host,
-                @@port AS port,
-                @@server_uuid AS uuid,
-                @@datadir AS datadir
-        `);
-
-        console.log(info);
-
-        const [rows] = await db.execute(`
+        const [rows] = await db.execute(
+            `
             SELECT
                 sa.*,
                 p.program_code,
                 p.program_name
             FROM student_applications sa
+
             JOIN programs p
                 ON sa.course_id = p.id
-            WHERE sa.status = 'pending'
-            ORDER BY sa.created_at DESC
-        `);
 
-        console.log("🔥 PENDING:", rows);
+            WHERE sa.status = 'pending'
+            AND sa.id > ?
+
+            ORDER BY sa.id ASC
+
+            LIMIT ?
+            `,
+            [
+                lastId,
+                limit
+            ]
+        );
 
         return rows;
-
     },
-
 
     updateStatus: async (
         id,

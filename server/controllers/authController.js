@@ -560,17 +560,90 @@ const getApplicants = async (req, res) => {
 
     try {
 
-        const applicants =
-            await authService.getApplicants();
+        let limit =
+            parseInt(req.query.limit, 10);
 
-        res.json({
-            applicants
+        let lastId =
+            parseInt(req.query.lastId, 10);
+
+        /*
+        ==========================================
+        DEFAULT VALUES
+        ==========================================
+        */
+
+        if (
+            !Number.isInteger(limit) ||
+            limit <= 0
+        ) {
+            limit = 1000;
+        }
+
+        if (
+            !Number.isInteger(lastId) ||
+            lastId < 0
+        ) {
+            lastId = 0;
+        }
+
+        /*
+        ==========================================
+        SAFETY LIMIT
+        ==========================================
+        
+        Prevent someone from requesting
+        100,000+ records at once.
+        */
+
+        if (limit > 1000) {
+            limit = 1000;
+        }
+
+        const applicants =
+            await authService.getApplicants(
+                limit,
+                lastId
+            );
+
+        /*
+        ==========================================
+        HAS MORE
+        ==========================================
+        
+        If we received exactly the requested
+        amount, there may be another batch.
+        */
+
+        const hasMore =
+            applicants.length === limit;
+
+        return res.status(200).json({
+
+            applicants,
+
+            hasMore,
+
+            count: applicants.length,
+
+            limit,
+
+            lastId
+
         });
 
     } catch (error) {
 
-        res.status(500).json({
-            message: error.message
+        console.error(
+            "Get applicants error:",
+            error
+        );
+
+        return res.status(500).json({
+
+            message:
+                error.message ||
+                "Failed to fetch applicants."
+
         });
 
     }

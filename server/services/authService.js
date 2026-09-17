@@ -904,10 +904,20 @@ const removeSensitiveFields = (user) => {
 
 
 
-const getApplicants = async () => {
+const getApplicants = async (
+    limit = 1000,
+    lastId = 0
+) => {
 
-    const applicants = await StudentApplication.getPendingApplications();
-    return applicants.map(removeSensitiveFields);
+    const applicants =
+        await StudentApplication.getPendingApplicationsBatch(
+            limit,
+            lastId
+        );
+
+    return applicants.map(
+        removeSensitiveFields
+    );
 
 };
 
