@@ -18,24 +18,9 @@ export default function AdminApplicants() {
     ==========================================
     */
 
-    /*
-    Global bulk state.
-
-    true = ANY admin is currently running
-    the bulk approval process.
-    */
     const [isApproving, setIsApproving] =
         useState(false);
 
-    /*
-    Personal bulk state.
-
-    true = THIS admin started the
-    bulk approval process.
-
-    Only this admin sees the
-    large progress overlay.
-    */
     const [isMyBulkApproval, setIsMyBulkApproval] =
         useState(false);
 
@@ -151,9 +136,11 @@ export default function AdminApplicants() {
     ==========================================
     */
 
-    const INITIAL_APPLICANTS_LIMIT = 1000;
+    const INITIAL_APPLICANTS_LIMIT =
+        1000;
 
-    const APPLICANTS_BATCH_SIZE = 500;
+    const APPLICANTS_BATCH_SIZE =
+        500;
 
 
     /*
@@ -174,6 +161,56 @@ export default function AdminApplicants() {
 
     const applicantsLoadingRef =
         useRef(false);
+
+
+    /*
+    ==========================================
+    CURRENT ADMIN ID
+    ==========================================
+    */
+
+    const getCurrentAdminId =
+        () => {
+
+            try {
+
+                const token =
+                    localStorage.getItem(
+                        "admin_token"
+                    );
+
+                if (!token) {
+                    return null;
+                }
+
+                const parts =
+                    token.split(".");
+
+                if (parts.length !== 3) {
+                    return null;
+                }
+
+                const payload =
+                    JSON.parse(
+                        atob(parts[1])
+                    );
+
+                return (
+                    payload?.user?.id ??
+                    payload?.id ??
+                    null
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Failed to decode admin token:",
+                    error
+                );
+
+                return null;
+            }
+        };
 
 
     /*
@@ -239,12 +276,6 @@ export default function AdminApplicants() {
     ==========================================
     FETCH APPLICANTS
     ==========================================
-
-    initial = true
-        → first 1000 applicants
-
-    initial = false
-        → next 500 applicants
     */
 
     const fetchApplicants =
@@ -261,8 +292,10 @@ export default function AdminApplicants() {
                     return;
                 }
 
+
                 /*
-                Stop if there are no more applicants.
+                Stop loading more when
+                there are no more applicants.
                 */
 
                 if (
@@ -271,6 +304,7 @@ export default function AdminApplicants() {
                 ) {
                     return;
                 }
+
 
                 try {
 
@@ -281,10 +315,12 @@ export default function AdminApplicants() {
                         true
                     );
 
+
                     const token =
                         localStorage.getItem(
                             "admin_token"
                         );
+
 
                     if (!token) {
 
@@ -293,19 +329,23 @@ export default function AdminApplicants() {
                         );
                     }
 
+
                     const limit =
                         initial
                             ? INITIAL_APPLICANTS_LIMIT
                             : APPLICANTS_BATCH_SIZE;
+
 
                     const lastId =
                         initial
                             ? 0
                             : lastApplicantId;
 
+
                     console.log(
                         `Fetching applicants: limit=${limit}, lastId=${lastId}`
                     );
+
 
                     const response =
                         await fetch(
@@ -320,8 +360,10 @@ export default function AdminApplicants() {
                             }
                         );
 
+
                     const data =
                         await response.json();
+
 
                     if (!response.ok) {
 
@@ -331,8 +373,10 @@ export default function AdminApplicants() {
                         );
                     }
 
+
                     const newApplicants =
                         data.applicants || [];
+
 
                     console.log(
                         `Fetched ${newApplicants.length} applicants`
@@ -368,6 +412,7 @@ export default function AdminApplicants() {
                                 ...newApplicants
                             ]
                         );
+
                     }
 
 
@@ -386,9 +431,11 @@ export default function AdminApplicants() {
                                 newApplicants.length - 1
                             ];
 
+
                         setLastApplicantId(
                             lastApplicant.id
                         );
+
                     }
 
 
@@ -403,6 +450,7 @@ export default function AdminApplicants() {
                             data.hasMore
                         )
                     );
+
 
                 } catch (error) {
 
@@ -435,18 +483,51 @@ export default function AdminApplicants() {
 
     /*
     ==========================================
+    IMPORTANT:
+    KEEP LATEST fetchApplicants IN REF
+    ==========================================
+    */
+
+    const fetchApplicantsRef =
+        useRef(fetchApplicants);
+
+
+    useEffect(() => {
+
+        fetchApplicantsRef.current =
+            fetchApplicants;
+
+    }, [
+        fetchApplicants
+    ]);
+
+
+    /*
+    ==========================================
     INITIAL PAGE LOAD
+    ==========================================
+
+    IMPORTANT:
+
+    This effect intentionally has no
+    fetchApplicants dependency.
+
+    Otherwise every change to
+    lastApplicantId would recreate
+    fetchApplicants and trigger another
+    initial request.
     ==========================================
     */
 
     useEffect(() => {
 
-        fetchApplicants(true);
+        fetchApplicantsRef.current(
+            true
+        );
 
         fetchAcademicTerm();
 
     }, [
-        fetchApplicants,
         fetchAcademicTerm
     ]);
 
@@ -466,16 +547,19 @@ export default function AdminApplicants() {
                     const firstEntry =
                         entries[0];
 
+
                     if (
                         firstEntry.isIntersecting &&
                         hasMoreApplicants &&
                         !applicantsLoadingRef.current
                     ) {
 
-                        fetchApplicants(
+                        fetchApplicantsRef.current(
                             false
                         );
+
                     }
+
                 },
                 {
                     threshold: 0.1
@@ -492,6 +576,7 @@ export default function AdminApplicants() {
             observer.observe(
                 currentRef
             );
+
         }
 
 
@@ -502,11 +587,12 @@ export default function AdminApplicants() {
                 observer.unobserve(
                     currentRef
                 );
+
             }
+
         };
 
     }, [
-        fetchApplicants,
         hasMoreApplicants
     ]);
 
@@ -516,11 +602,10 @@ export default function AdminApplicants() {
     SOCKET.IO
     ==========================================
 
-    Handles:
+    ONE SOCKET CONNECTION ONLY.
 
-    1. Global bulk approval status
-    2. Personal bulk approval progress
-    3. New applications
+    It does NOT recreate itself whenever
+    pagination changes.
     ==========================================
     */
 
@@ -542,6 +627,28 @@ export default function AdminApplicants() {
         }
 
 
+        /*
+        ==========================================
+        GET CURRENT ADMIN ID
+        ==========================================
+        */
+
+        const currentAdminId =
+            getCurrentAdminId();
+
+
+        console.log(
+            "👤 Current admin ID:",
+            currentAdminId
+        );
+
+
+        /*
+        ==========================================
+        CONNECT SOCKET
+        ==========================================
+        */
+
         console.log(
             "🔌 Connecting admin Socket.IO..."
         );
@@ -560,7 +667,7 @@ export default function AdminApplicants() {
 
         /*
         ==========================================
-        SOCKET CONNECTED
+        CONNECTED
         ==========================================
         */
 
@@ -572,13 +679,14 @@ export default function AdminApplicants() {
                     "🔌 Admin socket connected:",
                     socket.id
                 );
+
             }
         );
 
 
         /*
         ==========================================
-        SOCKET ERROR
+        CONNECTION ERROR
         ==========================================
         */
 
@@ -590,23 +698,34 @@ export default function AdminApplicants() {
                     "❌ Socket connection error:",
                     error.message
                 );
+
             }
         );
 
 
         /*
         ==========================================
-        GLOBAL BULK APPROVAL STATUS
+        GLOBAL BULK STATUS
         ==========================================
 
-        Sent to:
+        Backend sends:
 
-            io.to("admins")
+        {
+            isApproving: true,
+            adminId: 5
+        }
 
-        Therefore EVERY admin receives it.
+        We compare:
 
-        This controls the small indicator and
-        disables Approve All.
+        currentAdminId === adminId
+
+        SAME ADMIN
+            ↓
+        Full overlay
+
+        DIFFERENT ADMIN
+            ↓
+        Small indicator
         ==========================================
         */
 
@@ -614,7 +733,7 @@ export default function AdminApplicants() {
             data => {
 
                 console.log(
-                    "🌐 Global bulk approval status:",
+                    "🌐 Bulk approval status:",
                     data
                 );
 
@@ -623,15 +742,81 @@ export default function AdminApplicants() {
                     data?.isApproving === true;
 
 
+                const ownerAdminId =
+                    data?.adminId;
+
+
+                /*
+                ==========================================
+                GLOBAL STATE
+                ==========================================
+                */
+
                 setIsApproving(
                     approving
                 );
 
 
                 /*
-                When bulk approval finishes,
-                this admin should no longer be
-                considered the active admin.
+                ==========================================
+                OWNER CHECK
+                ==========================================
+                */
+
+                if (
+                    approving &&
+                    ownerAdminId != null &&
+                    currentAdminId != null
+                ) {
+
+                    const isOwner =
+                        Number(
+                            currentAdminId
+                        ) === Number(
+                            ownerAdminId
+                        );
+
+
+                    console.log(
+                        "Bulk approval owner check:",
+                        {
+                            currentAdminId,
+                            ownerAdminId,
+                            isOwner
+                        }
+                    );
+
+
+                    setIsMyBulkApproval(
+                        isOwner
+                    );
+
+
+                    /*
+                    If this admin is NOT
+                    the owner, reset personal
+                    progress state.
+                    */
+
+                    if (!isOwner) {
+
+                        setBulkProgress(
+                            previous => ({
+                                ...previous,
+                                status:
+                                    "idle"
+                            })
+                        );
+
+                    }
+
+                }
+
+
+                /*
+                ==========================================
+                BULK FINISHED
+                ==========================================
                 */
 
                 if (!approving) {
@@ -639,7 +824,17 @@ export default function AdminApplicants() {
                     setIsMyBulkApproval(
                         false
                     );
+
+                    setBulkProgress(
+                        previous => ({
+                            ...previous,
+                            status:
+                                "idle"
+                        })
+                    );
+
                 }
+
             };
 
 
@@ -651,15 +846,15 @@ export default function AdminApplicants() {
 
         /*
         ==========================================
-        PERSONAL BULK APPROVAL PROGRESS
+        PERSONAL BULK PROGRESS
         ==========================================
 
-        Sent ONLY to:
+        Backend sends this ONLY to:
 
             admin:${adminId}
 
-        Therefore only the admin who started
-        the operation receives this.
+        Therefore this admin is already
+        the owner.
         ==========================================
         */
 
@@ -671,10 +866,6 @@ export default function AdminApplicants() {
                     progress
                 );
 
-
-                /*
-                Update detailed progress.
-                */
 
                 setBulkProgress({
 
@@ -706,22 +897,14 @@ export default function AdminApplicants() {
                         Number(
                             progress.percentage || 0
                         )
+
                 });
 
 
                 /*
-                Backend controls the global
-                approval state.
-                */
-
-                setIsApproving(
-                    progress.isApproving === true
-                );
-
-
-                /*
-                Receiving started/processing
-                means THIS admin owns the job.
+                ==========================================
+                THIS ADMIN IS THE OWNER
+                ==========================================
                 */
 
                 if (
@@ -732,11 +915,18 @@ export default function AdminApplicants() {
                     setIsMyBulkApproval(
                         true
                     );
+
+                    setIsApproving(
+                        true
+                    );
+
                 }
 
 
                 /*
-                Operation completed.
+                ==========================================
+                COMPLETED
+                ==========================================
                 */
 
                 if (
@@ -750,7 +940,9 @@ export default function AdminApplicants() {
                     setIsApproving(
                         false
                     );
+
                 }
+
             };
 
 
@@ -789,12 +981,13 @@ export default function AdminApplicants() {
 
 
                 /*
-                Reload first page.
+                Refresh first page.
                 */
 
-                fetchApplicants(
+                fetchApplicantsRef.current(
                     true
                 );
+
             };
 
 
@@ -841,11 +1034,10 @@ export default function AdminApplicants() {
             );
 
             socket.disconnect();
+
         };
 
-    }, [
-        fetchApplicants
-    ]);
+    }, []);
 
 
     /*
@@ -885,6 +1077,7 @@ export default function AdminApplicants() {
                                             "admin_token"
                                         )
                                     }`
+
                             }
                         }
                     );
@@ -900,6 +1093,7 @@ export default function AdminApplicants() {
                         data.message ||
                         "Failed to simulate student capacity."
                     );
+
                 }
 
 
@@ -923,6 +1117,7 @@ export default function AdminApplicants() {
                     error
                 );
 
+
                 alert(
                     error.message ||
                     "Failed to check capacity."
@@ -933,7 +1128,9 @@ export default function AdminApplicants() {
                 setCapacityLoading(
                     false
                 );
+
             }
+
         };
 
 
@@ -959,6 +1156,7 @@ export default function AdminApplicants() {
                     throw new Error(
                         "Admin authentication token not found."
                     );
+
                 }
 
 
@@ -986,6 +1184,7 @@ export default function AdminApplicants() {
                         data.message ||
                         "Failed to approve applicant."
                     );
+
                 }
 
 
@@ -1012,9 +1211,10 @@ export default function AdminApplicants() {
                 );
 
 
-                await fetchApplicants(
+                await fetchApplicantsRef.current(
                     true
                 );
+
 
             } catch (error) {
 
@@ -1028,7 +1228,9 @@ export default function AdminApplicants() {
                     error.message ||
                     "Failed to approve applicant."
                 );
+
             }
+
         };
 
 
@@ -1036,20 +1238,25 @@ export default function AdminApplicants() {
     ==========================================
     APPROVE ALL APPLICANTS
     ==========================================
-
-    IMPORTANT:
-
-    isApproving is controlled by backend.
-
-    This function only sends the request.
-
-    Backend decides whether the request
-    is accepted or returns 409.
-    ==========================================
     */
 
     const approveAllApplicants =
         async () => {
+
+            /*
+            Frontend guard.
+
+            Backend still has the real lock.
+            This only prevents unnecessary
+            requests from this browser.
+            */
+
+            if (isApproving) {
+
+                return;
+
+            }
+
 
             try {
 
@@ -1064,6 +1271,7 @@ export default function AdminApplicants() {
                     throw new Error(
                         "Admin authentication token not found."
                     );
+
                 }
 
 
@@ -1085,6 +1293,7 @@ export default function AdminApplicants() {
 
                                 "Content-Type":
                                     "application/json"
+
                             }
                         }
                     );
@@ -1096,7 +1305,7 @@ export default function AdminApplicants() {
 
                 /*
                 ==========================================
-                ANOTHER ADMIN IS ALREADY PROCESSING
+                ANOTHER ADMIN ALREADY RUNNING
                 ==========================================
                 */
 
@@ -1116,6 +1325,7 @@ export default function AdminApplicants() {
 
 
                     return;
+
                 }
 
 
@@ -1131,6 +1341,7 @@ export default function AdminApplicants() {
                         data.message ||
                         "Failed to approve applicants."
                     );
+
                 }
 
 
@@ -1155,7 +1366,7 @@ export default function AdminApplicants() {
                 );
 
 
-                await fetchApplicants(
+                await fetchApplicantsRef.current(
                     true
                 );
 
@@ -1176,6 +1387,7 @@ export default function AdminApplicants() {
                     }`
                 );
 
+
             } catch (error) {
 
                 console.error(
@@ -1188,7 +1400,9 @@ export default function AdminApplicants() {
                     error.message ||
                     "An error occurred while approving applicants."
                 );
+
             }
+
         };
 
 
@@ -1214,6 +1428,7 @@ export default function AdminApplicants() {
                                 : professor
                     )
             );
+
         };
 
 
@@ -1233,6 +1448,7 @@ export default function AdminApplicants() {
                                 : professor
                     )
             );
+
         };
 
 
@@ -1249,6 +1465,7 @@ export default function AdminApplicants() {
                 "Reject student:",
                 id
             );
+
         };
 
 
@@ -1284,10 +1501,9 @@ export default function AdminApplicants() {
         <>
 
             {/* ==================================================
-                GLOBAL BULK STATUS
+                GLOBAL SMALL INDICATOR
 
-                SHOWN TO ADMINS WHO DID NOT START
-                THE BULK APPROVAL
+                ONLY FOR OTHER ADMINS.
 
                 isApproving = true
                 isMyBulkApproval = false
@@ -1313,14 +1529,15 @@ export default function AdminApplicants() {
                         </div>
 
                     </div>
+
                 )}
 
 
             {/* ==================================================
-                PERSONAL BULK APPROVAL PROGRESS
+                OWNER FULL OVERLAY
 
-                ONLY THE ADMIN WHO STARTED THE OPERATION
-                SEES THIS LARGE OVERLAY.
+                ONLY THE ADMIN WHO STARTED
+                THE BULK APPROVAL SEES THIS.
             ================================================== */}
 
             {isMyBulkApproval && (
@@ -1329,20 +1546,12 @@ export default function AdminApplicants() {
 
                     <div className="bulk-loading">
 
-                        {/* ==================================
-                            ICON
-                        ================================== */}
-
                         <div className="bulk-loading-icon">
 
                             <div className="bulk-spinner"></div>
 
                         </div>
 
-
-                        {/* ==================================
-                            HEADER
-                        ================================== */}
 
                         <div className="bulk-loading-header">
 
@@ -1355,18 +1564,10 @@ export default function AdminApplicants() {
                         </div>
 
 
-                        {/* ==================================
-                            TITLE
-                        ================================== */}
-
                         <h2>
                             Approving Applicants
                         </h2>
 
-
-                        {/* ==================================
-                            DESCRIPTION
-                        ================================== */}
 
                         <p className="bulk-loading-description">
 
@@ -1375,10 +1576,6 @@ export default function AdminApplicants() {
 
                         </p>
 
-
-                        {/* ==================================
-                            PROGRESS INFO
-                        ================================== */}
 
                         <div className="bulk-progress-info">
 
@@ -1423,10 +1620,6 @@ export default function AdminApplicants() {
                         </div>
 
 
-                        {/* ==================================
-                            PROGRESS BAR
-                        ================================== */}
-
                         <div className="bulk-progress-bar">
 
                             <div
@@ -1446,10 +1639,6 @@ export default function AdminApplicants() {
                         </div>
 
 
-                        {/* ==================================
-                            STATUS
-                        ================================== */}
-
                         <div className="bulk-progress-status">
 
                             {
@@ -1463,10 +1652,6 @@ export default function AdminApplicants() {
 
                         </div>
 
-
-                        {/* ==================================
-                            STATS
-                        ================================== */}
 
                         <div className="bulk-stats">
 
@@ -1523,10 +1708,6 @@ export default function AdminApplicants() {
                         </div>
 
 
-                        {/* ==================================
-                            FOOTER
-                        ================================== */}
-
                         <div className="bulk-loading-footer">
 
                             <span></span>
@@ -1541,6 +1722,7 @@ export default function AdminApplicants() {
                     </div>
 
                 </div>
+
             )}
 
 
@@ -1557,7 +1739,6 @@ export default function AdminApplicants() {
                             : "none"
                 }}
             >
-
 
                 {/* ==================================================
                     HEADER
@@ -1581,7 +1762,6 @@ export default function AdminApplicants() {
                     <div className="applicants-header-right">
 
                         <div className="a-h-btn">
-
 
                             {/* ==================================
                                 APPROVE ALL
@@ -1756,11 +1936,6 @@ export default function AdminApplicants() {
                                             }
                                         >
 
-
-                                            {/* ==================
-                                                STUDENT INFO
-                                            ================== */}
-
                                             <div className="applicant-info">
 
                                                 <div className="applicant-avatar">
@@ -1803,10 +1978,6 @@ export default function AdminApplicants() {
 
                                             </div>
 
-
-                                            {/* ==================
-                                                DETAILS
-                                            ================== */}
 
                                             <div className="application-details">
 
@@ -1860,10 +2031,6 @@ export default function AdminApplicants() {
 
                                             </div>
 
-
-                                            {/* ==================
-                                                ACTIONS
-                                            ================== */}
 
                                             <div className="application-actions">
 
@@ -2079,11 +2246,6 @@ export default function AdminApplicants() {
                                             }
                                         >
 
-
-                                            {/* ==================
-                                                PROFESSOR INFO
-                                            ================== */}
-
                                             <div className="applicant-info">
 
                                                 <div className="applicant-avatar professor">
@@ -2124,10 +2286,6 @@ export default function AdminApplicants() {
 
                                             </div>
 
-
-                                            {/* ==================
-                                                DETAILS
-                                            ================== */}
 
                                             <div className="application-details">
 
@@ -2177,10 +2335,6 @@ export default function AdminApplicants() {
 
                                             </div>
 
-
-                                            {/* ==================
-                                                ACTIONS
-                                            ================== */}
 
                                             <div className="application-actions">
 
