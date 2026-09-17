@@ -127,9 +127,17 @@ const StudentApplication = {
     // ==================================================
 
     getPendingApplicationsBatch: async (
-        limit,
+        limit = 500,
         lastId = 0
     ) => {
+
+        const safeLimit = Math.min(
+            Math.max(parseInt(limit, 10) || 500, 1),
+            1000
+        );
+
+        const safeLastId =
+            Math.max(parseInt(lastId, 10) || 0, 0);
 
         const [rows] = await db.execute(
             `
@@ -138,26 +146,18 @@ const StudentApplication = {
                 p.program_code,
                 p.program_name
             FROM student_applications sa
-
             JOIN programs p
                 ON sa.course_id = p.id
-
             WHERE sa.status = 'pending'
             AND sa.id > ?
-
             ORDER BY sa.id ASC
-
-            LIMIT ?
+            LIMIT ${safeLimit}
             `,
-            [
-                lastId,
-                limit
-            ]
+            [safeLastId]
         );
 
         return rows;
     },
-
     updateStatus: async (
         id,
         status,
