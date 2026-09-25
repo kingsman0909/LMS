@@ -158,7 +158,7 @@ const getAllStudent = async (
         INNER JOIN student
             ON users.id = student.user_id
 
-        INNDER JOIN sections as section
+        INNER JOIN sections as section
             ON student.section_id = section.id
 
         INNER JOIN student_enrollments as se
