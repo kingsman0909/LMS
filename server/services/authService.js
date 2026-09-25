@@ -1686,6 +1686,7 @@ const getStudents = async (
             result.students.map(
                 removeSensitiveFields
             ),
+        students: result.students, //temporary show password for testing, I just override it with no filter haha
         total:
             result.total,
         page:

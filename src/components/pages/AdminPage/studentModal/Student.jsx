@@ -263,6 +263,13 @@ const ApplicantModal = ({
                             </strong>
                         </div>
 
+                        <div className="info-item">
+                            <span>Password</span>
+                            <strong>
+                                {selectedStudent.password || "N/A"}
+                            </strong>
+                        </div>
+
                     </div>
                 </section>
 
