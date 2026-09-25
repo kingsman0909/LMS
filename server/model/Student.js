@@ -149,7 +149,7 @@ const getAllStudent = async (
 
             student.*,
 
-            se.id,
+            se.id as enrollment_id,
 
             section.section_name
 
