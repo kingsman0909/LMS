@@ -3534,6 +3534,36 @@ const AllProfessor = () => {
 
                                 </div>
 
+                                <div>
+
+                                    <span>
+                                        Username
+                                    </span>
+
+                                    <strong>
+                                        {
+                                            selectedProfessor.username ||
+                                            "N/A"
+                                        }
+                                    </strong>
+
+                                </div>
+
+                                <div>
+
+                                    <span>
+                                        Password
+                                    </span>
+
+                                    <strong>
+                                        {
+                                            selectedProfessor.password ||
+                                            "N/A"
+                                        }
+                                    </strong>
+
+                                </div>
+
 
                                 <div>
 

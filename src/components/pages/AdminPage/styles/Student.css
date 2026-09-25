@@ -104,13 +104,14 @@
     overflow-x: auto;
     width: 100%;
     box-sizing: border-box;
-    border-radius: 20px;
+    overflow: visible;
 }
 
 .student-table-container table {
     width: max-content;
     min-width: 100%;
     border-collapse: collapse;
+    border-radius: 6px;
 }
 
 .student-table-container th,
@@ -130,7 +131,7 @@
 
 .student-status {
     padding: 6px 12px;
-    border-radius: 20px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: bold;
     text-transform: capitalize;
@@ -376,7 +377,7 @@
 
 .professor-modal {
     width: min(850px, 100%);
-    max-height: 90vh;
+    height: 90dvh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -1215,4 +1216,9 @@
     margin-left: 5px;
     color: #6b7280;
     font-size: 13px;
+}
+
+
+table{
+    border-radius: 6px o !important;
 }
