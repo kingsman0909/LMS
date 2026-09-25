@@ -16,6 +16,7 @@ export default function AdminApplicants() {
     BULK APPROVAL
     ==========================================
     */
+   const[isResetting, setIsResetting] = useState(false);
    
     const [isApproving, setIsApproving] =
         useState(false);
@@ -1056,6 +1057,9 @@ export default function AdminApplicants() {
 
     
         const handleReset = async () => {
+            if(isApproving || isResetting || loading){
+                return;
+            }
             const token = localStorage.getItem("admin_token");
             if (!token) {
                 alert("Please login as admin first.");
@@ -1063,6 +1067,7 @@ export default function AdminApplicants() {
             }
 
             try{
+                setIsResetting(true);
                 setLoading(true);
                 const result = await fetch(`${API_BASE_URL}/api/auth/admin/resetStudent`,
                     {
