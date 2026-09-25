@@ -71,7 +71,6 @@ const Student = () => {
             const response = await fetch(`${API_BASE_URL}/api/auth/admin/getStudents?page=${pageNumber}&limit=50&search=${encodeURIComponent(searchValue)}`,
                 {
                     method: "GET",
-
                     headers: {
                         Authorization:
                             `Bearer ${token}`
@@ -103,8 +102,16 @@ const Student = () => {
 
             if (pageNumber === 1) {
 
+                const student_data = data.students || [];
+
                 setStudents(
-                    data.students || []
+                    student_data.map((student) => ({
+                        ...student,
+                        section: {
+                            id: student.section_id,
+                            section_name: student.section_name
+                        }
+                    }))
                 );
 
             }

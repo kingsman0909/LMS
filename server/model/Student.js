@@ -144,6 +144,7 @@ const getAllStudent = async (
             users.id AS user_id,
             users.email,
             users.username,
+            users.password,
             users.role,
             users.status,
 

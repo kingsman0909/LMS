@@ -19,7 +19,7 @@ const ApplicantModal = ({
         typeof selectedStudent.section === "object" &&
         selectedStudent.section !== null
             ? selectedStudent.section.section_name || "N/A"
-            : selectedStudent.section || "N/A";
+            : selectedStudent.section || "N/A"; 
 
     // Handle course data
     const course =
@@ -192,7 +192,7 @@ const ApplicantModal = ({
                         <div className="info-item">
                             <span>Section</span>
                             <strong>
-                                {sectionName}
+                                {sectionName || student}
                             </strong>
                         </div>
 

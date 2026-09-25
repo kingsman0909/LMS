@@ -86,6 +86,8 @@
     }
 }
 
+
+
 /* =========================
    PROGRAM CONTENT
 ========================= */
@@ -94,10 +96,18 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    border-radius: 6px;
+
+    .status.active{
+        background: var(--primary-dark);
+        color: black;
+        font-weight: 400;
+    }
 
     /* horizontal scroll only */
     overflow-x: auto;
     overflow-y: visible;
+
 
     table {
         width: 100%;
