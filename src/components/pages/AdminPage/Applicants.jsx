@@ -1077,6 +1077,7 @@ export default function AdminApplicants() {
 
                 if(result.ok){
                     alert(`Success: ${result.message}`)
+                    await fetchApplicants();
                     setLoading(false);
                 }
                 else{
