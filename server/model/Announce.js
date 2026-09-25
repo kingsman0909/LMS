@@ -1,5 +1,7 @@
 const db = require('../config/db');
 
+
+
 const getAnnouncementsByRole = async (role) => {
 
     const [rows] = await db.query(`

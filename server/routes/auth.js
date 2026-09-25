@@ -19,7 +19,7 @@ const {loginProf, login, me, enroll,//this enroll is just a mistake it should be
      getSubjectsForCurriculum, deleteCurriculum, getCurriculumSubjects,
      createAssignment, getProfAssignmentOption, getAssignments,
      updateAssignment, deleteAssignment, toggleStatusAssignment,
-     getStudentAssignments, approveAllApplicants,
+     getStudentAssignments, approveAllApplicants, resetModel,
      announcement, createAnnounce } = require("../controllers/authController");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/CheckRole");
@@ -28,13 +28,15 @@ const uploadAssignmentFile = require("../middleware/uploadAssignmentFile");
 const { verify } = require("jsonwebtoken");
 
 
-
 router.post("/login", login);
 router.post("/login/prof", loginProf);
 router.post("/enroll", enroll);
+router.post("/createAnnouncement", verifyToken, checkRole("admin", "professor"), createAnnounce);
+
+//Admin Post
+router.post("/admin/resetStudent", verifyToken, checkRole("admin"), resetModel);
 router.post("/admin/login", loginAdmin);
 router.post("/admin/applicants/:id/approvedApplicant", verifyToken, checkRole("admin"), approveApplicant );
-router.post("/createAnnouncement", verifyToken, checkRole("admin", "professor"), createAnnounce);
 router.post("/admin/createSections", verifyToken,  checkRole("admin"), createSections);
 router.post("/admin/createSubject", verifyToken,  checkRole("admin"), createSubject); 
 router.post("/admin/createProgram", verifyToken, checkRole("admin"), createProgram);

@@ -865,7 +865,7 @@ export default function AdminApplicants() {
             handleBulkProgress
         );
 
-
+        
         /*
         ==========================================
         NEW APPLICATION
@@ -1052,6 +1052,42 @@ export default function AdminApplicants() {
             }
 
         };
+
+
+    
+        const handleReset = async () => {
+            const token = localStorage.getItem("admin_token");
+            if (!token) {
+                alert("Please login as admin first.");
+                return;
+            }
+
+            try{
+                setLoading(true);
+                const result = await fetch(`${API_BASE_URL}/api/auth/admin/resetStudent`,
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+                
+                const data = await result.json();
+
+                if(result.ok){
+                    alert(`Success: ${result.message}`)
+                    setLoading(false);
+                }
+                else{
+                    alert(`Error ${result.message}`)
+                }
+            }
+            catch(err){
+                alert(err.message || "there is error on reseting students")
+            }
+        }
+
 
 
     /*
@@ -1577,6 +1613,7 @@ export default function AdminApplicants() {
                     <div className="applicants-header-right">
 
                         <div className="a-h-btn">
+                            <button onClick={handleReset} className='a-h-reset'>Reset Student</button>
 
                             {/* ==================================
                                 APPROVE ALL

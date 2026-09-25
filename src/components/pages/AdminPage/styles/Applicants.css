@@ -15,6 +15,19 @@
     display: flex;
     gap: 10px;
 }
+
+.a-h-reset{
+    background: red;
+    border-radius: 6px;
+    padding-inline: 5px;
+    border: none;
+    box-shadow: 0 0 3px red;
+    cursor: pointer;
+}
+.a-h-reset:hover{
+    opacity: 0.9;
+}
+
 .approveAll{
     justify-self: flex-end;
     min-height: 42px;

@@ -10,6 +10,7 @@ const Student = require("../model/Student");
 const professor = require("../model/Prof");
 const assignment = require("../model/Assignment");
 const cloudinary = require("../config/cloudinary");
+const resetModel = require("../model/ResetApplication");
 
 const login = async (req, res) => {
    
@@ -2117,6 +2118,29 @@ const getStudentAssignments = async (req, res) => {
         });
     }
 };
+
+
+const resetController = async (req, res) => {
+    try {
+        const result = await resetModel.reset();
+
+        return res.status(200).json({
+            success: true,
+            message: result.message
+        });
+
+    } catch (error) {
+        console.error('Reset error:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to reset system',
+            error: error.message
+        });
+    }
+};
+
+module.exports = { resetController };
 
 
 module.exports = {
