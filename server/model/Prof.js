@@ -172,9 +172,15 @@ const getProfessor = async () => {
                       AND pr.status = 'active'
                 ),
                 JSON_ARRAY()
-            ) AS programs
+            ) AS programs,
+
+        u.username,
+        u.password
 
         FROM profesor p
+
+        INNER JOIN users as u
+            ON u.id = p.user_id
 
         LEFT JOIN departments d
             ON d.id = p.department_id

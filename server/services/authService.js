@@ -1726,9 +1726,11 @@ const getProfessor = async () => {
         "prof"
     );
 
-    return professor.map(
+    const profSecure = professor.map(
         removeSensitiveFields
     );
+
+    return professor; //temporary add password to display
 };
 
 const getSection = async () => {

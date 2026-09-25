@@ -1674,6 +1674,7 @@ const AllProfessor = () => {
         professor
     ) => {
 
+        console.log(professor, "prof haha")
         setSelectedProfessor(
             professor
         );
