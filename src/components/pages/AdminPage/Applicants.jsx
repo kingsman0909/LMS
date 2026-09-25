@@ -11,13 +11,12 @@ import { API_BASE_URL } from "../../../config";
 import { io } from "socket.io-client";
 
 export default function AdminApplicants() {
-
     /*
     ==========================================
     BULK APPROVAL
     ==========================================
     */
-
+   
     const [isApproving, setIsApproving] =
         useState(false);
 
@@ -75,28 +74,6 @@ export default function AdminApplicants() {
 
     const [lastApplicantId, setLastApplicantId] =
         useState(0);
-
-
-    /*
-    ==========================================
-    CAPACITY
-    ==========================================
-    */
-
-    const [showCapacityModal, setShowCapacityModal] =
-        useState(false);
-
-    const [capacities, setCapacities] =
-        useState([]);
-
-    const [academicTerm, setAcademicTerm] =
-        useState(null);
-
-    const [capacityLoading, setCapacityLoading] =
-        useState(false);
-
-    const [capacityData, setCapacityData] =
-        useState(null);
 
 
     /*
@@ -211,65 +188,6 @@ export default function AdminApplicants() {
                 return null;
             }
         };
-
-
-    /*
-    ==========================================
-    FETCH ACADEMIC TERM
-    ==========================================
-    */
-
-    const fetchAcademicTerm =
-        useCallback(async () => {
-
-            try {
-
-                const token =
-                    localStorage.getItem(
-                        "admin_token"
-                    );
-
-                if (!token) {
-                    return;
-                }
-
-                const response =
-                    await fetch(
-                        `${API_BASE_URL}/api/auth/getAcademicTerm`,
-                        {
-                            method: "GET",
-
-                            headers: {
-                                Authorization:
-                                    `Bearer ${token}`
-                            }
-                        }
-                    );
-
-                const data =
-                    await response.json();
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.message ||
-                        "Failed to fetch academic term."
-                    );
-                }
-
-                setAcademicTerm(
-                    data.term
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Academic term error:",
-                    error
-                );
-            }
-
-        }, []);
 
 
     /*
@@ -525,11 +443,7 @@ export default function AdminApplicants() {
             true
         );
 
-        fetchAcademicTerm();
-
-    }, [
-        fetchAcademicTerm
-    ]);
+    }, []);
 
 
     /*
@@ -1038,100 +952,6 @@ export default function AdminApplicants() {
         };
 
     }, []);
-
-
-    /*
-    ==========================================
-    SIMULATE STUDENTS / CHECK CAPACITY
-    ==========================================
-    */
-
-    const SimulateStudents =
-        async () => {
-
-            try {
-
-                console.log(
-                    "Starting student capacity simulation..."
-                );
-
-                setCapacityLoading(
-                    true
-                );
-
-
-                const response =
-                    await fetch(
-                        `${API_BASE_URL}/api/auth/admin/SimulateStudents`,
-                        {
-                            method: "GET",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json",
-
-                                Authorization:
-                                    `Bearer ${
-                                        localStorage.getItem(
-                                            "admin_token"
-                                        )
-                                    }`
-
-                            }
-                        }
-                    );
-
-
-                const data =
-                    await response.json();
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.message ||
-                        "Failed to simulate student capacity."
-                    );
-
-                }
-
-
-                console.log(
-                    "Student capacity simulation completed:",
-                    data
-                );
-
-
-                setCapacityData(
-                    data
-                );
-
-
-                return data;
-
-            } catch (error) {
-
-                console.error(
-                    "SimulateStudents error:",
-                    error
-                );
-
-
-                alert(
-                    error.message ||
-                    "Failed to check capacity."
-                );
-
-            } finally {
-
-                setCapacityLoading(
-                    false
-                );
-
-            }
-
-        };
 
 
     /*
@@ -1732,12 +1552,7 @@ export default function AdminApplicants() {
 
             <div
                 className="applicants-page"
-                style={{
-                    filter:
-                        capacityLoading
-                            ? "blur(6px)"
-                            : "none"
-                }}
+
             >
 
                 {/* ==================================================
@@ -1803,28 +1618,6 @@ export default function AdminApplicants() {
 
                             </button>
 
-
-                            {/* ==================================
-                                CHECK CAPACITY
-                            ================================== */}
-
-                            <button
-                                onClick={
-                                    SimulateStudents
-                                }
-                                className="capacityBtn"
-                                disabled={
-                                    capacityLoading
-                                }
-                            >
-
-                                {
-                                    capacityLoading
-                                        ? "Checking..."
-                                        : "Check Capacity"
-                                }
-
-                            </button>
 
                         </div>
 

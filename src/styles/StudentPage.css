@@ -1853,7 +1853,7 @@
     display: grid;
 
     grid-template-columns:
-        120px repeat(7, min(120px, 140px));
+        120px repeat(7, min(200px, 300px));
 
     grid-template-rows:
         80px

@@ -637,10 +637,11 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-55%, -50%);
   width: min(620px, 100%);
-  max-height: calc(90vh - 80px);
-
+  height: 80vh;
+  min-height: 300px;
+  scale: 0.9;
   overflow: hidden;
 
   border: 1px solid #d8d8d8;

@@ -36,6 +36,19 @@ html {
   scroll-behavior: smooth;
 }
 
+input{
+  font-size: 16px !important;
+}
+
+textarea{
+  font-size: 16px !important;
+}
+
+select{
+  height: min(30px, fit-content) !important;
+  padding: 10px 15px !important;
+}
+
 h1,
 h2 {
   font-weight: 500;

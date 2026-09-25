@@ -600,9 +600,10 @@
 }
 
 .student-avatar {
-  width: 35px;
-  height: 35px;
+  width: auto !important;
+  height: auto !important;
 
+  padding: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
