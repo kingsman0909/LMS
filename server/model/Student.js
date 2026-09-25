@@ -458,28 +458,14 @@ const getCurrentlyEnrolledStudents = async (
     // =========================================
     // FORMAT STUDENTS
     // =========================================
-
     const students = rows.map(row => ({
 
-        enrollment_id: row.enrollment_id,
-
-        student_id: row.student_id,
-        school_student_id: row.school_student_id,
-
-        firstname: row.firstname,
-        middlename: row.middlename,
-        lastname: row.lastname,
-
-        course: row.course,
-        year_level: row.year_level,
+        ...row,
 
         section: {
             id: row.section_id,
             section_name: row.section_name
-        },
-
-        enrollment_status:
-            row.enrollment_status
+        }
 
     }));
 
