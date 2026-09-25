@@ -446,9 +446,7 @@ section{
     padding-inline: 30px !important;
     color: white;
     box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+    flex: 1;
     overflow: auto;
 }
 

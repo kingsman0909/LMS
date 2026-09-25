@@ -367,7 +367,16 @@ const getCurrentlyEnrolledStudents = async (
             st.middlename,
             st.lastname,
             st.course,
+            st.phone,
+            st.gender,
+            st.address,
+            st.birthdate,
             st.year_level,
+            st.profile_picture,
+
+            -- USER
+            u.email,
+            u.username,
 
             -- ENROLLMENT
             se.id AS enrollment_id,
@@ -404,7 +413,6 @@ const getCurrentlyEnrolledStudents = async (
         limit,
         offset
     ]);
-
 
     // =========================================
     // PROGRAM DETAILS
