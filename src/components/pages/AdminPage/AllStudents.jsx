@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import "./styles/Student.css";
 import { API_BASE_URL } from "../../../config";
+import StudentModal from './studentModal/Student';
 
 const Student = () => {
 
@@ -8,6 +9,10 @@ const Student = () => {
     // STATE
     // =========================================================
 
+    const [showStudent, setShowStudent] = useState({
+        state: false,
+        student: null
+    });
     const [students, setStudents] = useState([]);
 
     const [page, setPage] = useState(1);
@@ -87,7 +92,8 @@ const Student = () => {
                 "PAGE:",
                 pageNumber,
                 "RECEIVED:",
-                data.students?.length
+                data.students?.length,
+                "Student: ", data.students
             );
 
 
@@ -313,6 +319,13 @@ const Student = () => {
                 student.status === "inactive"
         ).length;
 
+    const handleCloseStudent = () => {
+        setShowStudent({
+            state: false,
+            student: null
+        });
+    };
+
 
     // =========================================================
     // RENDER
@@ -323,6 +336,12 @@ const Student = () => {
         <div className="student-dashboard">
 
 
+           {showStudent.state && (
+                <StudentModal
+                    selectedStudent={showStudent.student}
+                    onClose={handleCloseStudent}
+                />
+            )}
             {/* =================================================
                 HEADER
             ================================================= */}
@@ -585,6 +604,12 @@ const Student = () => {
 
                                                 <button
                                                     className="view-student-btn"
+                                                    onClick={()=>{
+                                                        setShowStudent({
+                                                            state: true,
+                                                            student: student
+                                                        })
+                                                    }}
                                                 >
 
                                                     View

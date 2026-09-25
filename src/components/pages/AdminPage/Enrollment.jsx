@@ -235,7 +235,6 @@ const Enrollment = ({ term }) => {
 
                 if (currentRequest !== requestId.current) return;
 
-                console.log(studentList, "students");
                 setStudents(studentList);
                 setTotalStudents(Number(result.total) || 0);
                 setHasMore(Boolean(result.hasMore));

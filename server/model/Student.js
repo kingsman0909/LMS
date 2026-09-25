@@ -147,12 +147,22 @@ const getAllStudent = async (
             users.role,
             users.status,
 
-            student.*
+            student.*,
+
+            se.id,
+
+            section.section_name
 
         FROM users
 
         INNER JOIN student
             ON users.id = student.user_id
+
+        INNDER JOIN sections as section
+            ON student.section_id = section.id
+
+        INNER JOIN student_enrollments as se
+            ON student.id = se.student_id
 
         WHERE users.role = 'student'
 
