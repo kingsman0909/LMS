@@ -7,7 +7,7 @@ const reset = async () => {
         await connection.beginTransaction();
 
         await connection.query(`DELETE FROM class_schedules`);
-        await connection.query(`DELETE FROM users`);
+        await connection.query(`DELETE FROM users where role = 'student'`);
         await connection.query(`DELETE FROM sections`);
 
         await connection.query(`
