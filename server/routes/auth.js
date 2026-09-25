@@ -19,7 +19,7 @@ const {loginProf, login, me, enroll,//this enroll is just a mistake it should be
      getSubjectsForCurriculum, deleteCurriculum, getCurriculumSubjects,
      createAssignment, getProfAssignmentOption, getAssignments,
      updateAssignment, deleteAssignment, toggleStatusAssignment,
-     getStudentAssignments, approveAllApplicants, resetModel,
+     getStudentAssignments, approveAllApplicants, resetController,
      announcement, createAnnounce } = require("../controllers/authController");
 const verifyToken = require("../middleware/authMiddleware");
 const checkRole = require("../middleware/CheckRole");
@@ -34,7 +34,7 @@ router.post("/enroll", enroll);
 router.post("/createAnnouncement", verifyToken, checkRole("admin", "professor"), createAnnounce);
 
 //Admin Post
-router.post("/admin/resetStudent", verifyToken, checkRole("admin"), resetModel);
+router.post("/admin/resetStudent", verifyToken, checkRole("admin"), resetController);
 router.post("/admin/login", loginAdmin);
 router.post("/admin/applicants/:id/approvedApplicant", verifyToken, checkRole("admin"), approveApplicant );
 router.post("/admin/createSections", verifyToken,  checkRole("admin"), createSections);

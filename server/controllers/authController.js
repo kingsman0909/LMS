@@ -2140,12 +2140,12 @@ const resetController = async (req, res) => {
     }
 };
 
-module.exports = { resetController };
 
 
 module.exports = {
     login,
     me,
+    resetController,
     getStudentAssignments,
     toggleStatusAssignment,
     deleteAssignment,
