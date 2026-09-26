@@ -104,13 +104,11 @@
     overflow-x: auto;
     width: 100%;
     box-sizing: border-box;
-    overflow: visible;
+    border-radius: 6px;
 }
 
 .student-table-container table {
     width: max-content;
-    min-width: 100%;
-    border-collapse: collapse;
     border-radius: 6px;
 }
 

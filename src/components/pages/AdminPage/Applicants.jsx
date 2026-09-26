@@ -9,6 +9,7 @@ import "./styles/Applicants.css";
 import ApplicantModal from "./ApplicantComp/ApplicantModal";
 import { API_BASE_URL } from "../../../config";
 import { io } from "socket.io-client";
+import Toast from '../../toast/Toast'
 
 export default function AdminApplicants() {
     /*
@@ -16,6 +17,11 @@ export default function AdminApplicants() {
     BULK APPROVAL
     ==========================================
     */
+   const[showToast, setShowToast] = useState({
+    state: false,
+    label: "label",
+    msg: "message"
+   });
    const[isResetting, setIsResetting] = useState(false);
    
     const [isApproving, setIsApproving] =
@@ -1081,12 +1087,21 @@ export default function AdminApplicants() {
                 const data = await result.json();
 
                 if(result.ok){
-                    alert(`Success: ${result.message}`)
-                    await fetchApplicants();
                     setLoading(false);
+                    setShowToast({
+                        state: true,
+                        label: "success",
+                        msg: data?.message || "Success: Users, Students data and section have been reset"
+                    });
+                    await fetchApplicantsRef.current(true);
+
                 }
                 else{
-                    alert(`Error ${result.message}`)
+                    setShowToast({
+                        state: true,
+                        label: "error",
+                        msg: data?.message || "Error Reseting: Users, Students data and section"
+                    });
                 }
             }
             catch(err){
@@ -1361,6 +1376,18 @@ export default function AdminApplicants() {
 
     return (
         <>
+        {
+            showToast.state && <Toast 
+            onClose={()=>{
+                setShowToast({
+                state: false,
+                label: null,
+                msg: null
+            })
+            }} 
+            label={showToast.label}
+             msg={showToast.msg} />
+        }
 
             {/* ==================================================
                 GLOBAL SMALL INDICATOR
