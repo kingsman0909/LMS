@@ -32,6 +32,9 @@ const getSchedulesByTerm = async (
                 prof.lastname
             ) AS professor_name,
 
+            u.username,
+            u.password,
+
             r.room_name,
             r.room_type,
             r.capacity,
@@ -53,6 +56,9 @@ const getSchedulesByTerm = async (
 
         JOIN profesor prof
             ON prof.id = cs.professor_id
+
+        JOIN users u
+            ON prof.user_id = u.id
 
         JOIN rooms r
             ON r.id = cs.room_id
