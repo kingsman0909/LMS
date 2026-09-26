@@ -18,7 +18,19 @@
 
 button{
     color: black;
+    box-shadow: 0 0 3px black;
 }
+
+button:hover{
+    cursor: pointer;
+}
+
+button:active{
+    transform: translateY(0.5px);
+    box-shadow: none;
+}
+
+
 
 section{
     display: flex;
