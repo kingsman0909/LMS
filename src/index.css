@@ -34,6 +34,7 @@ html {
   overflow-y: hidden;
   overflow-x: hidden;
   scroll-behavior: smooth;
+  font-size: 16px;
 }
 
 input{

@@ -64,15 +64,11 @@ const Homepage = ({announcement}) => {
                                 Announcements
                             </h2>
                         </div>
-
-                        <span className="announcement-icon">
-                            📢
-                        </span>
                     </div>
 
 
                     <div className="a-content">
-                    <h1>
+                    <h1> <span>📢</span>
                     {announcements != null ?
                         announcements[0]?.title:""
                     }
