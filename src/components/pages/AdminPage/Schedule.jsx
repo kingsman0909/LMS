@@ -2229,8 +2229,7 @@ const AdminSchedule = () => {
 
                                                         <span>
                                                             {
-                                                            
-                                                                schedule.professor_email
+                                                                schedule.username
                                                             }
                                                         </span>
 
