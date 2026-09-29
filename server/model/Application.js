@@ -132,7 +132,7 @@ const StudentApplication = {
     ) => {
 
         const safeLimit = Math.min(
-            Math.max(parseInt(limit, 10) || 500, 1),
+            Math.max(parseInt(limit, 10) || 1000, 1),
             1000
         );
 
