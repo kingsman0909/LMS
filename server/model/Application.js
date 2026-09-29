@@ -127,7 +127,7 @@ const StudentApplication = {
     // ==================================================
 
     getPendingApplicationsBatch: async (
-        limit = 500,
+        limit = 1000,
         lastId = 0
     ) => {
 

@@ -394,7 +394,7 @@ const Admin = ({role}) => {
 
                 </div>
             </header>
-        <section admin-main-section>
+        <section className='admin-main-section'>
 
             {/* ================= NAVBAR ================= */}
             <div className={`admin-nav-wrapper ${openMenu ? "":"close"}`} >
